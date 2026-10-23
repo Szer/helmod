@@ -52,11 +52,17 @@ end
 
 ## Sending items to orbit
 
+The rocket button appears when a platform-capable silo is available, such as with Space Age enabled. Without one, existing satellite launch recipes remain available through the recipe selector.
+
 Click the rocket button to select cargo and set how much to send to orbit. Silo quality, modules and beacons are configured in the recipe editor; cargo and rocket ingredients link to their production recipes.
 
 Each cargo recipe calculates its own silo count. The tooltip shows launch and rocket-part rates; the editor shows the minimum launch interval and the crafting speed needed to sustain it.
 
 Capacity, rocket recipes, part counts, buffers and animation properties come from prototypes. Counts assume full cargo loads and immediate launch availability; construction uses average productivity, so discrete craft and dispatch ticks can slightly change observed throughput.
+
+## Silo timing data
+
+`data-final-fixes.lua` copies silo animation fields unavailable through the runtime API into a [mod-data prototype](https://lua-api.factorio.com/latest/prototypes/ModData.html). This stores planner metadata without adding or changing items, entities or recipes.
 
 ## Orbit tests
 

@@ -1,5 +1,4 @@
 local Orbit = require "model.Orbit"
-local Timing = require "model.RocketTiming"
 local function near(actual, expected, label)
     assert(math.abs(actual - expected) < 1e-7, label .. ": " .. tostring(actual) .. " / " .. tostring(expected))
 end
@@ -46,13 +45,6 @@ script.on_init(function()
         for quality in pairs(prototypes.quality) do
             recipe.factory.quality=quality
             ModelCompute.update(model)
-            if script.active_mods["more-quality-scaling"] then
-                local variant=prototypes.entity[quality .. "-" .. name]
-                if variant then
-                    near(recipe.orbit.launch_time, Timing.getLaunchTicks(variant,quality)/60,"replacement silo " .. quality)
-                    assert(Orbit.silo(recipe.factory,cargo).name==variant.name,"quality replacement selected")
-                end
-            end
             assert(recipe.factory.count>0 and recipe.factory.count<math.huge,"quality " .. quality)
         end
         count=count+1

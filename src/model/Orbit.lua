@@ -21,13 +21,7 @@ end
 
 function Orbit.silo(factory, item_name)
     if factory then
-        local silo = prototypes.entity[factory.name]
-        -- More Quality Scaling replaces placed quality silos with hidden variants.
-        if script.active_mods["more-quality-scaling"] and factory.quality then
-            local variant = prototypes.entity[factory.quality .. "-" .. factory.name]
-            if variant and variant.type == "rocket-silo" then return variant end
-        end
-        return silo
+        return prototypes.entity[factory.name]
     end
     local _, silo = next(Orbit.machines(item_name))
     return silo

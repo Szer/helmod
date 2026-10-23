@@ -1,3 +1,5 @@
+-- Store silo animation fields that the runtime API does not expose.
+-- This mod-data prototype contains planner metadata only.
 local function animation_parameters(animation)
   if not animation then return 0, 0, 0, 1 end
   if animation.layers then return animation_parameters(animation.layers[1]) end

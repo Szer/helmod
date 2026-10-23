@@ -80,7 +80,27 @@ script.on_nth_tick(60, function(event)
   assert(recipe.factory.quality=="legendary", "quality click updates silo")
   assert(recipe.factory.effects.productivity>0, "module click updates silo")
   assert(not Player.getLastError(), "Helmod GUI error")
-  log("ORBIT UI SMOKE PASSED")
+  assert(not find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-launch-limit" end), "no success indicator below target")
+  model.parameters.effects.speed=10
+  ModelCompute.update(model)
+  Controller:send("on_gui_update",{item1=model.id,item2=storage.orbit_ui_block,item3=recipe.id},"HMRecipeEdition")
+  game.tick_paused=false
   storage.orbit_ui_step=7
+ elseif storage.orbit_ui_step==7 then
+  local success=find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-launch-limit" end)
+  assert(success and success.sprite=="utility/check_mark_green", "success indicator at launch limit")
+  assert(success.tooltip[1]=="helmod_orbit.target-reached", "success explanation")
+  game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="orbit-target-reached.png"}
+  storage.orbit_ui_step=8
+ elseif storage.orbit_ui_step==8 then
+  local model=storage.models[storage.orbit_ui_model]
+  model.parameters.effects.speed=0
+  ModelCompute.update(model)
+  Controller:send("on_gui_update",{item1=model.id,item2=storage.orbit_ui_block,item3="R1"},"HMRecipeEdition")
+  game.tick_paused=false
+  assert(not find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-launch-limit" end), "success indicator clears below target")
+  assert(not Player.getLastError(), "Helmod GUI error")
+  log("ORBIT UI SMOKE PASSED")
+  storage.orbit_ui_step=9
  end
 end)

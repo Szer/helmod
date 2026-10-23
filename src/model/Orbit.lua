@@ -84,9 +84,10 @@ function Orbit.details(recipe)
     local productivity = 1 + factory.effects.productivity
     local crafting_time = silo.fixed_recipe.energy * silo.rocket_parts_required / productivity / factory.speed_total
     local launch_time = RocketTiming.getLaunchTicks(silo, factory.quality or "normal") / 60
+    local cycle_time = RocketTiming.getCycleTicks(silo, factory.quality or "normal", crafting_time * 60) / 60
     return {capacity=capacity, parts=silo.rocket_parts_required, crafts=silo.rocket_parts_required / productivity,
         crafting_time=crafting_time, launch_time=launch_time,
-        cycle_time=RocketTiming.getCycleTicks(silo, factory.quality or "normal", crafting_time * 60) / 60,
+        cycle_time=cycle_time, at_launch_limit=cycle_time <= launch_time + 1e-9,
         speed_required=silo.fixed_recipe.energy * silo.rocket_parts_required / productivity / launch_time}
 end
 

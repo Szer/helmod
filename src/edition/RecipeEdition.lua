@@ -888,7 +888,14 @@ function RecipeEdition:updateFactoryInfo(event)
         if recipe.type == "orbit" and recipe.orbit then
             for _, detail in ipairs({{"launch-time", recipe.orbit.launch_time}, {"speed-required", recipe.orbit.speed_required}}) do
                 GuiElement.add(input_panel, GuiLabel("orbit-label", detail[1]):caption({"helmod_orbit." .. detail[1] .. "-label"}):tooltip({"helmod_orbit." .. detail[1]}))
-                GuiElement.add(input_panel, GuiLabel("orbit-value", detail[1]):caption(Format.formatNumber(detail[2], 3)))
+                local value_cell = GuiElement.add(input_panel, GuiFlowH("orbit-value-cell", detail[1]))
+                GuiElement.add(value_cell, GuiLabel("orbit-value", detail[1]):caption(Format.formatNumber(detail[2], 3)))
+                if detail[1] == "speed-required" and recipe.orbit.at_launch_limit then
+                    local success = GuiElement.add(value_cell, GuiSprite("orbit-launch-limit"):sprite("utility/check_mark_green"):tooltip({"helmod_orbit.target-reached"}))
+                    success.style.width = 16
+                    success.style.height = 16
+                    value_cell.style.vertical_align = "center"
+                end
             end
         end
 

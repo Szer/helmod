@@ -18,6 +18,7 @@ script.on_init(function()
     assert(block.ingredients["automation-science-pack"], "ground cargo input")
     block.products["orbit/automation-science-pack#normal"].input = 60
     ModelCompute.update(model)
+    assert(not recipe.orbit.at_launch_limit, "slow construction does not reach launch limit")
     near(recipe.factory.count, 9, "60 science/s crafting-limited silos")
     near(block.ingredients["automation-science-pack"].amount, 60, "cargo unchanged")
     local before = block.ingredients["processing-unit"].amount
@@ -26,6 +27,12 @@ script.on_init(function()
     near(block.ingredients["processing-unit"].amount, before / 2, "productivity reduces parts ingredients")
     near(block.ingredients["automation-science-pack"].amount, 60, "productivity never duplicates cargo")
     near(recipe.factory.count, 4.5, "productivity accelerates construction")
+    local target_speed = recipe.orbit.speed_required
+    for _, factor in ipairs{0.999, 1, 1.001} do
+        model.parameters.effects.speed = target_speed * factor - 1
+        ModelCompute.update(model)
+        assert(recipe.orbit.at_launch_limit == (factor >= 1), "launch target boundary " .. factor)
+    end
     model.parameters.effects.speed = 100
     ModelCompute.update(model)
     near(recipe.factory.count, 60 / 1000 * 1617 / 60, "animation cap")
@@ -111,6 +118,11 @@ script.on_init(function()
     custom.parameters.effects.productivity=0.5
     ModelCompute.update(custom)
     near(cb.ingredients["uranium-fuel-cell"].amount, fuel/1.5, "productive construction fuel")
+    Model.setFactory(cr,"orbit-test-unbuffered")
+    custom.parameters.effects.speed=100
+    ModelCompute.update(custom)
+    assert(cr.factory.speed_total>cr.orbit.speed_required,"unbuffered silo exceeds crafting target")
+    assert(not cr.orbit.at_launch_limit,"unbuffered silo cannot sustain minimum launch interval")
     recipe.factory.quality="legendary"
     User.setDefaultFactory(recipe)
     local defaults=Model.newModel()

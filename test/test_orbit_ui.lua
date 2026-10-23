@@ -66,6 +66,8 @@ script.on_nth_tick(60, function(event)
   game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="orbit-edition.png"}
   assert(not Player.getLastError(), "Helmod GUI error")
   assert(player.gui.screen.HMRecipeEdition, "recipe editor exists")
+  local target=find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-value=speed-required" end)
+  assert(target and target.caption=="5.57 (+456.59%)", "target bonus uses normal silo base speed")
   click(find_element(player.gui.screen.HMRecipeEdition, function(element)
    return element.name:find("factory-quality-select",1,true) and element.name:find("legendary",1,true)
   end), player)
@@ -90,6 +92,8 @@ script.on_nth_tick(60, function(event)
   local success=find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-launch-limit" end)
   assert(success and success.sprite=="utility/check_mark_green", "success indicator at launch limit")
   assert(success.tooltip[1]=="helmod_orbit.target-reached", "success explanation")
+  local target=find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-value=speed-required" end)
+  assert(target and target.caption=="7.46 (+198.33%)", "target bonus uses legendary silo base speed")
   game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="orbit-target-reached.png"}
   storage.orbit_ui_step=8
  elseif storage.orbit_ui_step==8 then

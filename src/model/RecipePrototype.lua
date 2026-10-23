@@ -10,6 +10,8 @@
 ---@field is_customized boolean
 ---@field has_quality_limit boolean
 ---@field quality_min LuaQualityPrototype
+local Orbit = require "model.Orbit"
+
 RecipePrototype = newclass(Prototype, function(base, object, object_type)
     base.classname = "HMRecipePrototype"
     base.is_voider = nil
@@ -77,6 +79,9 @@ RecipePrototype = newclass(Prototype, function(base, object, object_type)
             base.output_fluid_name = recipe.output_fluid_name
         elseif base.lua_type == defines.mod.recipes.technology.name then
             Prototype.init(base, Player.getTechnology(base.object_name))
+        elseif base.lua_type == defines.mod.recipes.orbit.name then
+            Prototype.init(base, Orbit.recipe(base.object_name, type(object) == "table" and object.factory or nil))
+            base.is_support_quality = Player.hasFeatureQuality()
         elseif base.lua_type == defines.mod.recipes.rocket.name then
             local recipe = Player.getRocketRecipe(base.object_name)
             Prototype.init(base, recipe)
@@ -110,6 +115,7 @@ end)
 --- Return allowed machines
 ---@return table
 function RecipePrototype:getAllowedMachines()
+    if self.lua_type == "orbit" then return Orbit.machines(self.object_name) end
     local all_productions = {}
     if self.lua_type == defines.mod.recipes.energy.name then
         all_productions[self.lua_prototype.name] = self.lua_prototype
@@ -380,7 +386,7 @@ function RecipePrototype:getProducts(factory)
                         if factory.effects ~= nil then
                             consumption_effect = 1 + (factory.effects.consumption or 0)
                         end
-                        factor = self:getEnergy() * consumption_effect / factory.speed
+                        factor = self:getEnergy(factory) * consumption_effect / factory.speed
                     end
                     table.insert(raw_products,
                         { type = burnt_result.type, name = burnt_result.name, amount = fuel_count.count * factor,
@@ -398,6 +404,14 @@ end
 ---@param quality string
 ---@return table
 function RecipePrototype:getQualityProducts(factory, quality)
+    if self.lua_type == "orbit" then
+        if not self.lua_prototype then return {} end
+        local products = self:getProducts(factory)
+        for _, product in pairs(products) do
+            product.quality = product.burnt and (factory.fuel_quality or "normal") or (quality or "normal")
+        end
+        return products
+    end
     local raw_products = self:getProducts(factory)
     if quality == nil then
         quality = "normal"
@@ -465,6 +479,14 @@ end
 ---@param quality string
 ---@return table
 function RecipePrototype:getQualityIngredients(factory, quality)
+    if self.lua_type == "orbit" then
+        local ingredients = self:getIngredients(factory)
+        if ingredients[1] then ingredients[1].quality = quality or "normal" end
+        for _, ingredient in pairs(ingredients) do
+            if ingredient.burnt and ingredient.type == "item" then ingredient.quality = factory.fuel_quality or "normal" end
+        end
+        return ingredients
+    end
     local raw_ingredients = self:getIngredients(factory)
     for _, raw_ingredient in pairs(raw_ingredients) do
         if raw_ingredient.type == "item" then
@@ -582,6 +604,7 @@ end
 ---@param factory table
 ---@return table
 function RecipePrototype:getRawIngredients(factory)
+    if self.lua_type == "orbit" then return self.lua_prototype and Orbit.ingredients(self.object_name, factory) or {} end
     if self.lua_prototype ~= nil then
         if self.lua_type == defines.mod.recipes.technology.name then
             return self.lua_prototype.research_unit_ingredients
@@ -761,7 +784,7 @@ function RecipePrototype:getIngredients(factory)
             if energy_type == "burner" then
                 if energy_prototype ~= nil and energy_prototype:getFuelCount() ~= nil then
                     local fuel_count = energy_prototype:getFuelCount()
-                    local factor = self:getEnergy() * consumption_effect / factory_speed
+                    local factor = self:getEnergy(factory) * consumption_effect / factory_speed
                     local burner_ingredient = { name = fuel_count.name, type = fuel_count.type,
                         amount = fuel_count.count * factor, burnt = true }
                     table.insert(raw_ingredients, burner_ingredient)
@@ -771,14 +794,14 @@ function RecipePrototype:getIngredients(factory)
                 end
             elseif energy_type == "heat" then
                 local amount = factory_prototype:getEnergyConsumption()
-                local factor = self:getEnergy() * consumption_effect / factory_speed
+                local factor = self:getEnergy(factory) * consumption_effect / factory_speed
                 local ingredient = { name = "steam-heat", type = "energy", amount = amount * factor }
                 table.insert(raw_ingredients, ingredient)
             elseif energy_type == "fluid" then
                 local fluid_fuel = factory_prototype:getFluidFuelPrototype()
                 if fluid_fuel ~= nil and fluid_fuel:native() ~= nil then
                     local amount = factory_prototype:getFluidConsumption()
-                    local factor = self:getEnergy() * consumption_effect / factory_speed
+                    local factor = self:getEnergy(factory) * consumption_effect / factory_speed
                     local burner_ingredient = { name = fluid_fuel:native().name, type = "fluid", amount = amount * factor,
                         burnt = true, temperature = fluid_fuel.temperature }
                     table.insert(raw_ingredients, burner_ingredient)
@@ -823,6 +846,8 @@ function RecipePrototype:getEnergy(factory)
             return 1
         elseif self.lua_type == defines.mod.recipes.technology.name then
             return self.lua_prototype.research_unit_energy / 60
+        elseif self.lua_type == "orbit" then
+            return Orbit.energy(self.object_name, factory)
         elseif self.lua_type == defines.mod.recipes.rocket.name then
             return self:getRocketEnergy(factory)
         elseif self.lua_type == defines.mod.recipes.resource.name then
@@ -986,7 +1011,7 @@ function RecipePrototype:getIcon()
         end
     elseif self.lua_type == defines.mod.recipes.resource.name then
         icon_type = "entity"
-    elseif self.lua_type == defines.mod.recipes.rocket.name then
+    elseif self.lua_type == defines.mod.recipes.rocket.name or self.lua_type == "orbit" then
         icon_type = "item"
     elseif self.lua_type == defines.mod.recipes.energy.name then
         icon_type = "entity"

@@ -52,15 +52,15 @@ end
 
 ## Sending items to orbit
 
-The rocket button opens the cargo selector. Set the “sent to orbit” output demand, then configure silo quality, modules and beacons in the recipe editor; cargo and rocket-building ingredients link to upstream recipes.
+Click the rocket button to select cargo and set how much to send to orbit. Silo quality, modules and beacons are configured in the recipe editor; cargo and rocket ingredients link to their production recipes.
 
-Each orbit row owns its silo count. Its tooltip shows launches, rocket parts and construction rates; the editor shows the launch interval and crafting speed needed for continuous launches.
+Each cargo recipe calculates its own silo count. The tooltip shows launch and rocket-part rates; the editor shows the minimum launch interval and the crafting speed needed to sustain it.
 
 Capacity, rocket recipes, part counts, buffers and animation properties come from prototypes. Counts assume full cargo loads and immediate launch availability; construction uses average productivity, so discrete craft and dispatch ticks can slightly change observed throughput.
 
 ## Orbit tests
 
-`python3 test/run_factorio.py /path/to/factorio --data /path/to/factorio/data` tests the real Factorio prototypes and Helmod solvers in temporary mod/save directories. `--base-only` checks existing planning without Space Age; `--timing` runs actual silos for 40,000 ticks.
+`python3 test/run_factorio.py /path/to/factorio --data /path/to/factorio/data` runs the orbit calculations through Helmod’s solvers inside Factorio, using temporary mod and save directories. `--base-only` checks existing planning without Space Age; `--timing` runs actual silos for 40,000 ticks.
 
 `--ui` uses a graphical Factorio client to exercise the selector and recipe editor. Screenshots are written to `/tmp/helmod-orbit-screenshots`, or the directory selected with `--output`.
 

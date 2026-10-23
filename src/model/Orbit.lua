@@ -39,7 +39,7 @@ function Orbit.recipe(name, factory)
     local silo = Orbit.silo(factory, name)
     local part_recipe = silo and silo.fixed_recipe
     if not part_recipe or Orbit.capacity(name, silo) == 0 or not RocketTiming.getLaunchTicks(silo, "normal") then return nil end
-    local allowed_effects = part_recipe and table.deepcopy(part_recipe.allowed_effects) or {}
+    local allowed_effects = table.deepcopy(part_recipe.allowed_effects or {})
     allowed_effects.quality = false
     return {name=name, category="helmod-orbit", valid=true, enabled=true, hidden=false,
         localised_name={"helmod_orbit.sent", item.localised_name},
@@ -47,8 +47,8 @@ function Orbit.recipe(name, factory)
         group=item.group, subgroup=item.subgroup, order=item.order, energy=1,
         ingredients={{name=name, type="item", amount=1}},
         products={{name=name, type="orbit", amount=1}},
-        maximum_productivity=part_recipe and part_recipe.maximum_productivity,
-        allowed_effects=allowed_effects, allowed_module_categories=part_recipe and part_recipe.allowed_module_categories}
+        maximum_productivity=part_recipe.maximum_productivity,
+        allowed_effects=allowed_effects, allowed_module_categories=part_recipe.allowed_module_categories}
 end
 
 function Orbit.ingredients(name, factory, quality)

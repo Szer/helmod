@@ -2,7 +2,7 @@ local RocketTiming = {}
 
 local function progress_ticks(speed, initial, limit)
   if not speed or speed <= 0 then return nil end
-  -- The engine accumulates animation progress, including floating-point tick boundaries.
+  -- Accumulate progress per tick to match the engine's floating-point rounding.
   local progress, ticks = initial or 0, 0
   limit = limit or 1
   while progress < limit and ticks < 10000 do
@@ -53,7 +53,7 @@ function RocketTiming.calculate(silo, rocket, animation, level)
   return stages and stages.fast_preparation + stages.launch
 end
 
--- A closing silo can resume a quick launch only in a dark warning-light window.
+-- A closing silo can resume a quick launch only while the warning light is off.
 local function dark_window(delay, stages)
   local tick = math.max(1, math.ceil(delay))
   if tick >= stages.blinking then return stages.blinking end
@@ -98,6 +98,7 @@ function RocketTiming.cycle(silo, stages, craft_ticks)
     if not after_full then return full_time end
     return (fast_time + full_time) / 2
   end
+  -- Average launch intervals after the rocket-part buffer settles.
   local fast, stock, elapsed = false, 0, 0
   for index = 1, 2048 do
     local interval

@@ -5,7 +5,7 @@ end
 
 script.on_init(function()
     EventController.onInit()
-    -- Headless map creation has no player; prototypes, force, model builder and solvers are real.
+    -- Map creation has no player, so supply the player context used by Helmod.
     Player.set{name="OrbitTester", index=1, force=game.forces.player, mod_settings=settings.global, admin=true, print=function(message) error(message) end}
     local model = Model.newModel()
     local block, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, "automation-science-pack", "orbit")

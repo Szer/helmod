@@ -887,7 +887,7 @@ function RecipeEdition:updateFactoryInfo(event)
 
         if recipe.type == "orbit" and recipe.orbit then
             for _, detail in ipairs({{"launch-time", recipe.orbit.launch_time}, {"speed-required", recipe.orbit.speed_required}}) do
-                GuiElement.add(input_panel, GuiLabel("orbit-label", detail[1]):caption({"helmod_orbit." .. detail[1]}))
+                GuiElement.add(input_panel, GuiLabel("orbit-label", detail[1]):caption({"helmod_orbit." .. detail[1] .. "-label"}):tooltip({"helmod_orbit." .. detail[1]}))
                 GuiElement.add(input_panel, GuiLabel("orbit-value", detail[1]):caption(Format.formatNumber(detail[2], 3)))
             end
         end

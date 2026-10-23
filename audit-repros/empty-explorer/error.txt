@@ -1,0 +1,4 @@
+__helmod__/dialog/RecipeExplorer.lua:92: attempt to index local 'block' (a nil value)
+Trace of event
+classname:HMRecipeExplorer
+action:generate-block

@@ -1,0 +1,4 @@
+__helmod__/edition/ProductEdition.lua:161: attempt to index upvalue 'input_quantity' (a nil value)
+Trace of event
+classname:HMProductEdition
+action:product-update

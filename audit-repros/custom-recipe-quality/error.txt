@@ -1,0 +1,4 @@
+__helmod__/model/RecipePrototype.lua:52: attempt to call field 'get_ingredient_quality' (a nil value)
+Trace of event
+classname:HMRecipeCustomization
+action:OPEN

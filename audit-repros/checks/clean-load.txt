@@ -1,0 +1,7 @@
+empty-explorer: original packaged Helmod load PASS
+custom-recipe-quality: original packaged Helmod load PASS
+custom-recipe-categories: original packaged Helmod load PASS
+quantity-after-reload: original packaged Helmod load PASS
+blank-selector-rule: original packaged Helmod load PASS
+truncated-import: original packaged Helmod load PASS
+empty-blueprint-book: original packaged Helmod load PASS

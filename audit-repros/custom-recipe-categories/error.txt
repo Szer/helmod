@@ -1,0 +1,4 @@
+__helmod__/model/RecipePrototype.lua:123: bad argument #1 of 2 to 'pairs' (table expected, got nil)
+Trace of event
+classname:HMRecipeCustomization
+action:recipe-select

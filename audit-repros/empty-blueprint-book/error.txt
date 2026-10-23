@@ -1,0 +1,4 @@
+__helmod__/core/Blueprint.lua:14: bad argument #1 of 2 to 'pairs' (table expected, got nil)
+Trace of event
+classname:HMAdminPanel
+action:string-decode

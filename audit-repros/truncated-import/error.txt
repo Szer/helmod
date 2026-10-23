@@ -1,0 +1,4 @@
+__helmod__/core/Converter.lua:47: attempt to call local 'data_table' (a nil value)
+Trace of event
+classname:HMDownload
+action:download-model

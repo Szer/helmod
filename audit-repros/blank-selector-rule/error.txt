@@ -1,0 +1,4 @@
+__helmod__/model/Player.lua:738: table index is nil
+Trace of event
+classname:HMRecipeSelector
+action:OPEN

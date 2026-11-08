@@ -1,4 +1,5 @@
 local check_electricity = require "test_electricity"
+local check_nested = require "test_nested_intermediates"
 local check_cracking = require "test_cracking"
 local check_balance_pivot = require "test_balance_pivot"
 local Orbit = require "model.Orbit"
@@ -135,6 +136,7 @@ script.on_init(function()
     assert(dr.factory.quality=="legendary","saved silo quality default")
     check_electricity()
     check_cracking()
+    check_nested()
     check_balance_pivot()
     log("ORBIT TESTS PASSED")
 end)

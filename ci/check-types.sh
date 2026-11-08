@@ -8,6 +8,23 @@ check() {
 check src/model/launch
 check src/model/energy
 check src/math/balance
+mkdir "$tmp/linked"
+cp src/math/linked/*.lua "$tmp/linked/"
+ln -s "$PWD/doc" "$tmp/doc"
+check_profile() {
+  "${LUA_LANGUAGE_SERVER:-lua-language-server}" --check="$tmp/linked" --checklevel=Warning \
+    --logpath="$tmp/log" --configpath="$PWD/ci/linked-profile.luarc.json"
+}
+check_profile
+sed -i '/^return Profile$/i \---@param recipe RecipeData\nlocal function invalid(recipe) Profile.append(recipe, recipe, 1) end' "$tmp/linked/Profile.lua"
+if check_profile > "$tmp/profile.log" 2>&1; then
+  echo 'A recipe cannot be used as a linked block profile.' >&2
+  exit 1
+fi
+grep -q 'param-type-mismatch' "$tmp/profile.log" && grep -q 'BlockData' "$tmp/profile.log" || {
+  cat "$tmp/profile.log" >&2
+  exit 1
+}
 check src/gui/controls
 
 # Verify the live call site rejects swapped coordinates, without editing the checkout.

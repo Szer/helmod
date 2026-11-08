@@ -1,3 +1,4 @@
+local Profile = require "math.linked.Profile"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class SolverLinkedMatrix
@@ -131,71 +132,52 @@ end
 function SolverLinkedMatrix:solve(block, parameters, debug, factories_prepared)
     block.blocks_linked = nil
     if block.products_linked ~= nil then
-        -- build and compute reduced matrix when there are linked products
-        local blocks_linked = {}
-        for product_name, linked in pairs(block.products_linked) do
-            if block.products[product_name] == nil then
-                block.products_linked[product_name] = nil
-                linked = false
-            end
-            if linked == true then
-                -- work on full copy
-                local linked_block = table.deepcopy(block)
-                linked_block.contraint = nil
-                linked_block.objectives = {}
-                local children = linked_block.children
-                local sorter = defines.sorters.block.sort
-                if block.by_product == false then
-                    sorter = defines.sorters.block.reverse
+        local profiles = {}
+        for key, enabled in pairs(block.products_linked) do
+            if block.products[key] == nil then
+                block.products_linked[key] = nil
+            elseif enabled then
+                local amount = self:linkedOutputAmount(block, key)
+                if amount > 0 then
+                    local profile = table.deepcopy(block)
+                    profile.contraint = nil
+                    profile.product_linked = profile.products[key]
+                    profile.objectives = {[key]={key=key, value=amount}}
+                    profiles[key] = self:solve_block(profile, parameters, debug, factories_prepared)
                 end
-                local child_products = nil
-                local child_ingredients = nil
-                local exit_for = false
-                for _, child in spairs(children, sorter) do
-                    local is_block = Model.isBlock(child)
-                    if is_block then
-                        child_products = child.products
-                        child_ingredients = child.ingredients
-                    else
-                        local recipe = child
-                        -- check recipe doesn't exist
-                        local recipe_prototype = RecipePrototype(recipe)
-                        if recipe_prototype:native() == nil then return end
-                        child_products = recipe_prototype:getQualityProducts(recipe.factory, recipe.quality)
-                        child_ingredients = recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality)
-                    end
-                    for i, lua_product in pairs(child_products) do
-                        -- search the product with the name of linked product
-                        if lua_product.name == product_name then
-                            local factor = 1
-                            local product = Product(lua_product)
-                            local element_key = product:getTableKey()
-                            local product_amount = 0
-                            if is_block then
-                                product_amount = lua_product.amount or 0
-                            else
-                                product_amount = product:getAmount(child)
-                            end
-                            local objective = {}
-                            objective.key = element_key
-                            objective.value = product_amount * factor
-                            linked_block.objectives[element_key] = objective
-                            exit_for = true
-                            linked_block.product_linked=lua_product
-                            break
-                        end
-                    end
-                    if exit_for == true then
-                        break
-                    end
-                end
-                blocks_linked[product_name] = self:solve_block(linked_block, parameters, debug, factories_prepared)
             end
         end
-        block.blocks_linked = blocks_linked
+        block.blocks_linked = profiles
     end
     return self:solve_block(block, parameters, debug, factories_prepared)
 end
+---@param block BlockData
+---@param key string Product table key, including quality or temperature
+---@return number Output supplied by one unit of the child recipe or block profile
+function SolverLinkedMatrix:linkedOutputAmount(block, key)
+    local sorter = defines.sorters.block.sort
+    if block.by_product == false then sorter = defines.sorters.block.reverse end
+    for _, child in spairs(block.children, sorter) do
+        if Model.isBlock(child) then
+            local output = child.products[key]
+            if output and output.amount > 0 then return output.amount end
+            local profile = child.blocks_linked and child.blocks_linked[key]
+            local linked = profile and profile.products[key]
+            if linked and linked.amount > 0 then return linked.amount end
+        else
+            local prototype = RecipePrototype(child)
+            for _, output in pairs(prototype:getQualityProducts(child.factory, child.quality)) do
+                local product = Product(output)
+                if product:getTableKey() == key then
+                    local amount = product:getAmount(child)
+                    if amount > 0 then return amount end
+                end
+            end
+        end
+    end
+    return 0
+end
+
 -------------------------------------------------------------------------------
 ---Return a matrix of block
 ---@param block BlockData
@@ -236,22 +218,25 @@ function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prep
             sorter = defines.sorters.block.reverse
         end
 
-        -- build map to find parameter index by key
-        local parameters_index = {}
-        for index, header in pairs(mC.headers) do
-            local key = header.child_id
-            if header.product_linked ~= nil then
-                key = header.name .. "_" .. header.product_linked.name
-            end
-            if parameters_index[key] == nil then
-                parameters_index[key] = index
+        local primary_rows = {}
+        local linked_rows = {}
+        for index, header in ipairs(mC.headers) do
+            local id = header.child_id
+            if id ~= nil then
+                if header.product_linked ~= nil then
+                    local key = Product(header.product_linked):getTableKey()
+                    linked_rows[id] = linked_rows[id] or {}
+                    linked_rows[id][key] = index
+                elseif primary_rows[id] == nil then
+                    primary_rows[id] = index
+                end
             end
         end
 
         local children = block.children
         for _, child in spairs(children, sorter) do
             local is_block = Model.isBlock(child)
-            local row_index = parameters_index[child.id]
+            local row_index = primary_rows[child.id]
             local parameters = mC.parameters[row_index]
             -- retrieve pivot name
             if parameters ~= nil and parameters.pivot ~= nil then
@@ -273,7 +258,7 @@ function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prep
             end
             
             if is_block then
-                self:solve_block_append(child, mC, parameters_index)
+                self:solve_block_append(child, mC, linked_rows[child.id])
             else
                 local recipe = child
                 ---calcul dependant du recipe count
@@ -294,56 +279,11 @@ end
 ---Append linked block values
 ---@param block BlockData
 ---@param matrix Matrix
----@param parameters_index any
-function SolverLinkedMatrix:solve_block_append(block, matrix, parameters_index)
-    -- append linked block values
-    if block.blocks_linked ~= nil then
-        for key, linked_block in pairs(block.blocks_linked) do
-            -- search the count of linked block
-            local parameter_key = linked_block.name .. "_" .. key
-            local row_index = parameters_index[parameter_key]
-            local parameters = matrix.parameters[row_index]
-            local count = 0
-            if parameters ~= nil and parameters.recipe_count > 0 then
-                if block.count == 0 then
-                    -- Only the linked profile runs. Start an empty unit block for its totals.
-                    block.count = 1
-                    for _, child in pairs(block.children) do child.count = 0 end
-                    for _, product in pairs(block.products) do product.amount = 0 end
-                    for _, ingredient in pairs(block.ingredients) do ingredient.amount = 0 end
-                end
-                count = parameters.recipe_count / block.count
-            end
-            local linked_children = linked_block.children
-            local sorter = defines.sorters.block.sort
-            if block.by_product == false then
-                sorter = defines.sorters.block.reverse
-            end
-            -- Set count on each child
-            for key, child_linked in spairs(linked_children, sorter) do
-                local child = block.children[key]
-                if child ~= nil then
-                    child.count = child.count + child_linked.count * count
-                end
-            end
-            -- Append values
-            for product_key, product in pairs(linked_block.products) do
-                block.products[product_key].amount = block.products[product_key].amount + product.amount * count
-                if block.by_product ~= false then
-                    if block.products[product_key].amount > 0 and block.products[product_key].state == 2 then
-                        block.products[product_key].state = 3
-                    end
-                end
-            end
-            for product_key, ingredient in pairs(linked_block.ingredients) do
-                block.ingredients[product_key].amount = block.ingredients[product_key].amount + ingredient.amount * count
-                if block.by_product == false then
-                    if block.ingredients[product_key].amount > 0 and block.ingredients[product_key].state == 2 then
-                        block.ingredients[product_key].state = 3
-                    end
-                end
-            end
-        end
+---@param linked_rows table<string, integer>?
+function SolverLinkedMatrix:solve_block_append(block, matrix, linked_rows)
+    for key, row in pairs(linked_rows or {}) do
+        local parameters = matrix.parameters[row]
+        if parameters then Profile.append(block, block.blocks_linked[key], parameters.recipe_count) end
     end
 end
 

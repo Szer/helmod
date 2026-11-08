@@ -768,7 +768,7 @@ end
 function RecipePrototype:getIngredients(factory)
     local ingredients = self:getProcessIngredients(factory)
     local recipe = self.planned_recipe
-    if recipe ~= nil and factory == recipe.factory and recipe.type ~= "energy" then
+    if recipe ~= nil and factory == recipe.factory and recipe.type ~= defines.mod.recipes.energy.name then
         local electricity = Electricity.ingredient(recipe.energy_total, recipe.base_time)
         if electricity ~= nil then
             -- Custom recipes can share their ingredient list across multiple plans.

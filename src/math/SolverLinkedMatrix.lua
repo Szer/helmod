@@ -1,4 +1,3 @@
-local Electricity = require "model.energy.Electricity"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class SolverLinkedMatrix
@@ -691,12 +690,7 @@ function SolverLinkedMatrix:add_matrix_row(matrix, child, child_info, is_block, 
 
             row_valid = true
         end
-        if not is_block and child.type ~= "energy" and (child.energy_total or 0) > 0 then
-            rowParameters.vent_material = Electricity.ventMaterial(lua_products, lua_ingredients)
-        end
-        if rowParameters.vent_material ~= nil or (row.values ~= nil and #row.values == 1 and row.values[1] < 0) then
-            rowParameters.voider = 1
-        end
+        rowParameters:setVoider(row, child, is_block, lua_products, lua_ingredients)
     else
         ---prepare header ingredients
         for name, lua_ingredient in pairs(lua_ingredients) do

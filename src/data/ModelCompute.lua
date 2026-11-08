@@ -839,7 +839,7 @@ end
 function ModelCompute.prepareRecipeFactory(recipe, seconds, parameters)
     recipe.base_time = seconds
     ModelCompute.computeModuleEffects(recipe, parameters)
-    if recipe.type == "energy" then
+    if recipe.type == defines.mod.recipes.energy.name then
         ModelCompute.computeEnergyFactory(recipe)
     else
         ModelCompute.computeFactory(recipe)

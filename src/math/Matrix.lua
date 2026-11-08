@@ -1,3 +1,5 @@
+local Electricity = require "model.energy.Electricity"
+
 -------------------------------------------------------------------------------
 ---@class MatrixHeader
 ---@field index uint
@@ -87,6 +89,8 @@ end
 ---@field recipe_count number
 ---@field recipe_production number
 ---@field recipe_energy number
+---@field voider integer?
+---@field vent_material string?
 ---@field coefficient number
 MatrixRowParameters = newclass(function(base)
   base.factory_count = 0
@@ -96,6 +100,20 @@ MatrixRowParameters = newclass(function(base)
   base.recipe_energy = 1
   base.coefficient = 0
 end)
+
+---@param row MatrixRow
+---@param child RecipeData|BlockData
+---@param is_block boolean
+---@param products table
+---@param ingredients table<string, {type: string, amount: number}>
+function MatrixRowParameters:setVoider(row, child, is_block, products, ingredients)
+  if not is_block and child.type ~= defines.mod.recipes.energy.name and (child.energy_total or 0) > 0 then
+    self.vent_material = Electricity.ventMaterial(products, ingredients)
+  end
+  if self.vent_material ~= nil or (row.values ~= nil and #row.values == 1 and row.values[1] < 0) then
+    self.voider = 1
+  end
+end
 
 -------------------------------------------------------------------------------
 ---@class Matrix

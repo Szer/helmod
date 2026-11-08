@@ -48,8 +48,8 @@ echo 'SemVer policy checks passed.'
 # Run the release job against a disposable Git remote; record its workflow dispatch.
 git restore -- src/changelog.txt
 mkdir -p ci bin
-cp "$root/ci/semver.sh" "$root/ci/auto-release.sh" ci/
-git add -- ci/semver.sh ci/auto-release.sh
+cp "$root/ci/semver.sh" "$root/ci/auto-release.sh" "$root/ci/release-note.sh" ci/
+git add -- ci/semver.sh ci/auto-release.sh ci/release-note.sh
 git commit -qm 'ci: Install release tools'
 git init -q --bare "$tmp/remote.git"
 git remote add origin "$tmp/remote.git"

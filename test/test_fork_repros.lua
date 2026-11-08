@@ -59,6 +59,14 @@ return function(case)
             for _, action in ipairs({"remove", "remove-canceled", "remove", "remove-confirmed"}) do
                 click(player, "block-child-" .. action .. target)
                 assert(pane.valid, "block removal controls must preserve the scrolled viewport")
+                if action ~= "remove-confirmed" then
+                    assert(block.children[child.id] == child, "only confirmation may delete the block")
+                end
+                if action == "remove" then
+                    assert(find(pane, "block-child-remove-confirmed" .. target), "request must offer confirmation")
+                elseif action == "remove-canceled" then
+                    assert(not find(pane, "block-child-remove-confirmed" .. target), "cancel must close confirmation")
+                end
             end
             assert(block.children[child.id] == nil, "confirmed block must be removed")
         elseif case == "quantity-confirm" then

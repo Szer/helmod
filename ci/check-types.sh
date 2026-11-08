@@ -32,3 +32,30 @@ if check "$tmp/bad-action" > "$tmp/bad-action.log" 2>&1; then
   exit 1
 fi
 grep -q 'param-type-mismatch' "$tmp/bad-action.log" || { cat "$tmp/bad-action.log" >&2; exit 1; }
+
+# Check action contracts at the production panel's real call sites.
+panel="$tmp/panel"
+mkdir -p "$panel/gui/controls"
+cp src/gui/controls/*.lua "$panel/gui/controls/"
+cp doc/runtime-api-model.lua src/dialog/ProductionPanel.lua "$panel/"
+check_panel() {
+  "${LUA_LANGUAGE_SERVER:-lua-language-server}" --check="$panel" --checklevel=Error \
+    --logpath="$tmp/log" --configpath="$(pwd)/ci/child-removal.luarc.json"
+}
+check_panel
+reject_panel_edit() {
+  local edit=$1 diagnostic=$2 detail=$3
+  sed "$edit" src/dialog/ProductionPanel.lua > "$panel/ProductionPanel.lua"
+  if check_panel > "$tmp/panel.log" 2>&1; then
+    echo "Expected LuaLS to reject $edit" >&2
+    exit 1
+  fi
+  grep -Fq -- "($diagnostic)" "$tmp/panel.log" && grep -Fq -- "$detail" "$tmp/panel.log" || {
+    cat "$tmp/panel.log" >&2
+    exit 1
+  }
+}
+reject_panel_edit 's/action="block-child-remove",/action="block-child-remvoe",/' assign-type-mismatch block-child-remvoe
+reject_panel_edit 's/, child_id=recipe.id//' missing-fields child_id
+reject_panel_edit 's/removal.action == "block-child-remove" then/removal.action == "block-child-remvoe" then/' assign-type-mismatch ConfirmChildRemoval
+echo 'Verified removal button tags, required child IDs and handler narrowing.'

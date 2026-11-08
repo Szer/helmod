@@ -29,6 +29,38 @@ return function(case)
         assert(model and model.block_root, "expected a saved sheet")
         if case == "consumer-controls" then
             checkConsumerControls(player)
+        elseif case == "row-removal-scroll" then
+            model = Model.newModel()
+            local block = model.block_root
+            local rows = {}
+            for i = 1, 24 do
+                local _, row = ModelBuilder.addRecipeIntoProductionBlock(model, block, "firearm-magazine", "recipe")
+                rows[i] = row
+            end
+            local child = Model.newBlock(model, {name="iron-gear-wheel", type="recipe"})
+            child.parent_id, child.index = block.id, #rows
+            block.children[child.id], model.blocks[child.id] = child, child
+            ModelBuilder.addRecipeIntoProductionBlock(model, child, "iron-gear-wheel", "recipe")
+            ModelCompute.update(model)
+            local panel = Controller:getView("HMProductionPanel")
+            panel:close()
+            User.setParameterObjects("HMProductionPanel", model.id, block.id)
+            Controller:send("on_gui_open", {name="OPEN", item1=model.id, item2=block.id}, "HMProductionPanel")
+            local _, _, pane = panel:getDataPanel()
+            for _, i in ipairs({12, 24}) do
+                local button = "block-child-remove=" .. model.id .. "=" .. block.id .. "=" .. rows[i].id
+                pane.scroll_to_element(assert(find(pane, button)))
+                click(player, button)
+                assert(block.children[rows[i].id] == nil, "clicked row must be removed")
+                assert(pane.valid, "row removal must preserve the scrolled viewport")
+                assert(not find(pane, button), "removed row must disappear from the table")
+            end
+            local target = "=" .. model.id .. "=" .. block.id .. "=" .. child.id
+            for _, action in ipairs({"remove", "remove-canceled", "remove", "remove-confirmed"}) do
+                click(player, "block-child-" .. action .. target)
+                assert(pane.valid, "block removal controls must preserve the scrolled viewport")
+            end
+            assert(block.children[child.id] == nil, "confirmed block must be removed")
         elseif case == "quantity-confirm" then
             local input = assert(find(player.gui.screen.HMProductEdition, "product-update", "textfield"))
             input.text = "10"

@@ -1,4 +1,5 @@
 local check_cracking = require "test_cracking"
+local check_balance_pivot = require "test_balance_pivot"
 local Orbit = require "model.Orbit"
 local function near(actual, expected, label)
     assert(math.abs(actual - expected) < 1e-8, label .. ": expected " .. expected .. ", got " .. tostring(actual))
@@ -131,5 +132,6 @@ script.on_init(function()
     local _,dr=ModelBuilder.addRecipeIntoProductionBlock(defaults,defaults.block_root,"transport-belt","orbit")
     assert(dr.factory.quality=="legendary","saved silo quality default")
     check_cracking()
+    check_balance_pivot()
     log("ORBIT TESTS PASSED")
 end)

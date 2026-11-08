@@ -15,7 +15,7 @@ end)
 ---@param ingredients table<K, V>
 ---@return table<K, V>
 function GuiElement.visibleIngredients(ingredients)
-  if User.getPreferenceSetting("show_electricity_inputs") then return ingredients end
+  if User.getPreferenceSetting(defines.constant.preferences.show_electricity_inputs.name) then return ingredients end
   local visible = {}
   for key, ingredient in pairs(ingredients) do
     if ingredient.type ~= "energy" or ingredient.name ~= "energy" then

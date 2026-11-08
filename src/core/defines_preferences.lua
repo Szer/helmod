@@ -314,6 +314,10 @@ defines.constant.preferences = {
   },
 }
 
+for name, preference in pairs(defines.constant.preferences) do
+  preference.name = name
+end
+
 defines.constant.settings_mod = {
   -- display_ratio_horizontal
   display_ratio_horizontal = {

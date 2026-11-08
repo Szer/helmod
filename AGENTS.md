@@ -6,7 +6,7 @@ The maintained branch is `fork`. Keep Helfima’s credits, original history, lic
 - Type new Lua interfaces with LuaLS annotations. Reuse planner types in `doc/runtime-api-model.lua`; annotate units and optional values. Put calculation code that does not need Factorio in a module with no engine globals.
 - Prefer explicit conditions. Use Factorio feature flags and prototype capabilities; do not assume vanilla entity names or mutate gameplay prototypes to implement planner features.
 - Run the relevant engine suite with `lua test/run_orbit.lua`. For rocket timing, use `--timing` and the type gate in `ci/check-types.sh`. For persistence, run `test/run_fork_repros.lua` with the reproduction saves. GUI changes also need a graphical run with `--ui`.
-- Release through GitHub Actions. Let the release workflow synchronize the changelog, manifest and tag version. Never upload from a local working copy, move a published tag or overwrite a released archive. See README for the release steps.
+- Release only when the maintainer manually triggers a batch on the fork branch. Merging a fix runs checks and never publishes on its own. Let the release workflow synchronize the changelog, manifest and tag version. Never upload from a local working copy, move a published tag or overwrite a released archive. See README for the release steps.
 
 ## PR titles are public release notes
 

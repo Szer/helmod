@@ -1,0 +1,36 @@
+name: Upstream drift
+on:
+  schedule:
+    - cron: '23 8 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fork
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Identify upstream changes for review
+        run: |
+          git fetch --no-tags https://github.com/Helfima/helmod.git \
+            refs/heads/master:refs/remotes/upstream/master \
+            refs/heads/dev:refs/remotes/upstream/dev \
+            refs/heads/experimental:refs/remotes/upstream/experimental
+          missing=0
+          for branch in master dev experimental; do
+            upstream=$(git rev-parse "upstream/$branch")
+            if git merge-base --is-ancestor "$upstream" HEAD; then
+              echo "- $branch: all upstream commits through \`$upstream\` included." >> "$GITHUB_STEP_SUMMARY"
+            else
+              base=$(git merge-base HEAD "$upstream")
+              echo "### [$branch: review changes](https://github.com/Helfima/helmod/compare/$base...$upstream)" >> "$GITHUB_STEP_SUMMARY"
+              git log --format='- %h %s' "HEAD..$upstream" >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::Upstream $branch has commits pending review."
+              missing=1
+            fi
+          done
+          exit "$missing"

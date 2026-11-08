@@ -119,6 +119,30 @@ return function(case)
         assert(model and model.block_root, "expected a saved sheet")
         if case == "consumer-controls" then
             checkConsumerControls(player)
+        elseif case == "electricity-inputs" then
+            local sheet = Model.newModel()
+            local block, recipe = ModelBuilder.addRecipeIntoProductionBlock(sheet, sheet.block_root, "iron-gear-wheel", "recipe")
+            Model.setFactory(recipe, "assembling-machine-1")
+            ModelCompute.update(sheet)
+            local demand = block.ingredients.energy.amount
+            assert(demand > 0)
+            assert(User.getPreferenceSetting("show_electricity_inputs") == false)
+            openBlock(sheet, block)
+            Controller:send("on_gui_open", {name="OPEN"}, "HMPreferenceEdition")
+            for _, show in ipairs({false, true, false}) do
+                local checkbox = assert(find(player.gui.screen, "preference-setting=show_electricity_inputs", "checkbox"))
+                if checkbox.state ~= show then
+                    checkbox.state = show
+                    EventController.onGuiClick{player_index=player.index, element=checkbox}
+                end
+                assert(User.getPreferenceSetting("show_electricity_inputs") == show)
+                for _, name in ipairs({"input-table", "ingredients=" .. recipe.id}) do
+                    local container = assert(find(player.gui.screen, name, "table"))
+                    assert((find(container, "=energy") ~= nil) == show, name)
+                    assert(find(container, "=iron-plate"), name)
+                end
+                assert(block.ingredients.energy.amount == demand)
+            end
         elseif case == "header-block-removal" then
             checkHeaderRemoval(player)
         elseif case == "row-removal-scroll" then

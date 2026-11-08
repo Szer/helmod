@@ -740,10 +740,11 @@ function ProductionPanel:updateInputBlock(model, block)
 			local hidden_ingredients = {}
 			
 			local show_hidden_input_products = User.getParameter("show_hidden_input_products")
-			local skip_hidden_products = table.size(block.ingredients) < 2*column_count
+			local visible = GuiElement.visibleIngredients(block.ingredients)
+			local skip_hidden_products = table.size(visible) < 2*column_count
 
 			local max_count = 0
-			for index, lua_ingredient in spairs(block.ingredients, User.getProductSorter()) do
+			for index, lua_ingredient in spairs(visible, User.getProductSorter()) do
 				if all_visible == true or ((lua_ingredient.state or 0) == 1 and not (block_by_product)) or (lua_ingredient.amount or 0) > ModelCompute.waste_value then
 					local ingredient = Product(lua_ingredient):clone()
 					ingredient.key = Product(lua_ingredient):getTableKey()
@@ -1433,8 +1434,8 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			cell_scroll.horizontal_scroll_policy = "never"
 			local cell_ingredients = GuiElement.add(cell_scroll, GuiTable("ingredients", recipe.id):column(display_ingredient_cols):style("helmod_table_list"))
 			local ingredient_color = User.getThumbnailColor(defines.thumbnail_color.names.ingredient_default)
-			local lua_ingredients = recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality)
-			if #lua_ingredients <= 2*display_ingredient_cols then
+			local lua_ingredients = GuiElement.visibleIngredients(recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality))
+			if table.size(lua_ingredients) <= 2*display_ingredient_cols then
 				skip_hidden_products = true
 			end
 
@@ -1689,12 +1690,13 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 				local show_hidden_block_ingredients = User.getParameter("show_hidden_block_ingredients")
 				local skip_hidden_products = show_hidden_block_ingredients == block.id
 				
-				if table.size(block.ingredients) <= 2*display_ingredient_cols then
+				local visible = GuiElement.visibleIngredients(block.ingredients)
+				if table.size(visible) <= 2*display_ingredient_cols then
 					skip_hidden_products = true
 				end
 
 				local max_count = 0
-				for index, lua_ingredient in spairs(block.ingredients, product_sorter) do
+				for index, lua_ingredient in spairs(visible, product_sorter) do
 					if ConstraintView.showFlow(lua_ingredient.state, lua_ingredient.amount, not (block_by_product), ModelCompute.waste_value) then
 						local ingredient_prototype = Product(lua_ingredient)
 						local ingredient = ingredient_prototype:clone()

@@ -1,3 +1,4 @@
+local Electricity = require "model.energy.Electricity"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class SolverMatrix
@@ -125,12 +126,13 @@ end
 ---@param block BlockData
 ---@param parameters ParametersData
 ---@param debug boolean
+---@param factories_prepared boolean?
 ---@return BlockData
-function SolverMatrix:solve(block, parameters, debug)
+function SolverMatrix:solve(block, parameters, debug, factories_prepared)
     local mC, runtimes
 
     local ok, err = pcall(function()
-        local mA = SolverMatrix:get_block_matrix(block, parameters)
+        local mA = self:get_block_matrix(block, parameters, factories_prepared)
         if mA ~= nil then
             mC, runtimes = self:solve_matrix(mA, debug, block.by_factory, block.time)
         end
@@ -265,8 +267,9 @@ end
 ---Return a matrix of block
 ---@param block BlockData
 ---@param parameters ParametersData
+---@param factories_prepared boolean?
 ---@return table
-function SolverMatrix:get_block_matrix(block, parameters)
+function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
     local children = block.children
     if children ~= nil then
         local matrix = Matrix()
@@ -322,12 +325,8 @@ function SolverMatrix:get_block_matrix(block, parameters)
                 child_recipe_energy = recipe_prototype:getEnergy(recipe.factory)
                 child_factory_count = recipe.factory.input or 0
 
-                recipe.base_time = block.time
-                ModelCompute.computeModuleEffects(recipe, parameters)
-                if recipe.type == "energy" then
-                    ModelCompute.computeEnergyFactory(recipe)
-                else
-                    ModelCompute.computeFactory(recipe)
+                if not factories_prepared then
+                    ModelCompute.prepareRecipeFactory(recipe, block.time, parameters)
                 end
                 
                 child_factory_speed = recipe.factory.speed or 0
@@ -479,7 +478,10 @@ function SolverMatrix:get_block_matrix(block, parameters)
 
                     row_valid = true
                 end
-                if row.values ~= nil and #row.values == 1 and row.values[1] < 0 then
+                if not is_block and child.type ~= "energy" and (child.energy_total or 0) > 0 then
+                    rowParameters.vent_material = Electricity.ventMaterial(lua_products, lua_ingredients)
+                end
+                if rowParameters.vent_material ~= nil or (row.values ~= nil and #row.values == 1 and row.values[1] < 0) then
                     rowParameters.voider = 1
                 end
             else

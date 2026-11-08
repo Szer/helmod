@@ -42,3 +42,21 @@ for _, recipe in ipairs({
     recipe.main_product = recipe.results[1].name
     data:extend{recipe}
 end
+
+local turbine = table.deepcopy(data.raw["assembling-machine"]["chemical-plant"])
+turbine.name = "energy-test-turbine"
+turbine.energy_source = {type="void"}
+data:extend{
+    turbine,
+    {
+        type="recipe", name="energy-test-expansion", categories={"chemistry"}, energy_required=1,
+        ingredients={{type="fluid", name="petroleum-gas", amount=15}},
+        results={{type="fluid", name="steam", amount=30, temperature=165}, {type="fluid", name="water", amount=10}},
+        main_product="steam"
+    },
+    {
+        type="recipe", name="energy-test-vent", categories={"chemistry"}, energy_required=1,
+        ingredients={{type="fluid", name="water", amount=10}}, results={},
+        icon="__base__/graphics/icons/fluid/water.png"
+    }
+}

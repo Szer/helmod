@@ -50,6 +50,7 @@ function SolverLinkedMatrixAlgebra:get_col(matrix, xrow, invert)
     local has_master = false
     for icol, column in pairs(matrix.columns) do
         local cell_value = row[icol] or 0
+        if parameters.vent_material ~= nil and column.key ~= parameters.vent_material then cell_value = 0 end
         if parameters.consumer == 1 or parameters.voider == 1 then
             -- to consume value we must use -value
             cell_value = -cell_value

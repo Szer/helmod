@@ -1,3 +1,4 @@
+local check_electricity = require "test_electricity"
 local check_cracking = require "test_cracking"
 local check_balance_pivot = require "test_balance_pivot"
 local Orbit = require "model.Orbit"
@@ -115,6 +116,7 @@ script.on_init(function()
     Model.setFactory(cr,"orbit-test-burner", "normal", "uranium-fuel-cell", "normal")
     custom.parameters.effects.productivity=0
     ModelCompute.update(custom)
+    assert(cb.ingredients.energy == nil, "switching to a burner clears electrical demand")
     local fuel = cb.ingredients["uranium-fuel-cell"].amount
     assert(fuel > 0, "burner fuel consumption")
     near(cb.products["depleted-uranium-fuel-cell"].amount, fuel, "burnt fuel output")
@@ -131,6 +133,7 @@ script.on_init(function()
     local defaults=Model.newModel()
     local _,dr=ModelBuilder.addRecipeIntoProductionBlock(defaults,defaults.block_root,"transport-belt","orbit")
     assert(dr.factory.quality=="legendary","saved silo quality default")
+    check_electricity()
     check_cracking()
     check_balance_pivot()
     log("ORBIT TESTS PASSED")

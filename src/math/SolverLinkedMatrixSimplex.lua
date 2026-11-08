@@ -226,15 +226,14 @@ function SolverLinkedMatrixSimplex:line_compute(matrix, xrow)
 		end
 	end
 
-	local P = parameters.recipe_production
-	local C = parameters.coefficient
+	-- Replay the solved count even when an earlier row has no outstanding demand yet.
 	for icol, column in pairs(matrix.columns) do
 		local cell_value = row[icol] or 0
 		if cell_value ~= 0 then
 			local Z = zrow[icol] ---valeur demandee Z
 			local X = cell_value
 			---calcul du Z
-			zrow[icol] = Z + X * P * C
+			zrow[icol] = Z + X * R * E
 		end
 	end
 	return matrix

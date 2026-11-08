@@ -21,17 +21,22 @@ change 'docs: Update developer instructions'
 [[ -z $(plan) ]]
 change 'fix: Keep entered quantities after reload (#42)'
 [[ $(plan) == helmod-fork-2.3.10 ]]
-change 'feat(ui): Show the quality of orbital cargo'
+fix=$(git rev-parse HEAD)
+mkdir release-notes
+echo 'Release-note: Preserve quantities in saved plans' > "release-notes/$fix.txt"
+git add -- "release-notes/$fix.txt"
+git commit -qm 'docs: Clarify the pending quantity fix'
+git commit --allow-empty -qm 'feat(ui): Show the quality of orbital cargo' -m 'Release-note: See cargo quality in the orbit planner'
 [[ $(plan) == helmod-fork-2.4.0 ]]
 change 'break: Replace the legacy import format'
 change 'ci: Update build tools'
 [[ $(plan) == helmod-fork-3.0.0 ]]
 "$root/ci/semver.sh" prepare
-grep -Fxq '    - Keep entered quantities after reload' src/changelog.txt
+grep -Fxq '    - Preserve quantities in saved plans' src/changelog.txt
 grep -Fxq '  Features:' src/changelog.txt
-grep -Fxq '    - Show the quality of orbital cargo' src/changelog.txt
+grep -Fxq '    - See cargo quality in the orbit planner' src/changelog.txt
 grep -Fxq '    - Replace the legacy import format' src/changelog.txt
-if grep -E 'developer instructions|build tools|#42' src/changelog.txt; then exit 1; fi
+if grep -E 'Keep entered quantities|Show the quality|developer instructions|build tools|#42' src/changelog.txt; then exit 1; fi
 git add -- src/info.json src/changelog.txt
 git commit -qm 'chore(release): Publish 3.0.0'
 git tag helmod-fork-3.0.0

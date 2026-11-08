@@ -10,6 +10,6 @@ The maintained branch is `fork`. Keep Helfima’s credits, original history, lic
 
 ## PR titles are public release notes
 
-Squash PR titles must be user-friendly and readable as standalone changelog bullets. Describe what changes for a player in one short sentence: `fix: Keep the entered quantity after loading a save`, not `fix: Guard input_quantity`. Put implementation details, test logs and issue references in the PR body. For a breaking change, name the incompatible behavior and explain the migration in the body.
+Squash PR titles must be user-friendly and readable as standalone changelog bullets. Describe what changes for a player in one short sentence: `fix: Keep the entered quantity after loading a save`, not `fix: Guard input_quantity`. Describe the scope of the actual change. If the fix applies to matrix planning generally, do not title it as a fix for the oil recipe that exposed it. Put the reproduction, implementation details, and test evidence in the PR body. For better public wording, add one standalone `Release-note: <player-facing sentence>` line to the PR body; the title still sets the version bump. For a breaking change, name the incompatible behavior and explain the migration in the body.
 
 Use `fix:` for patch, `feat:` for minor, and `break:` for major. Keep maintenance under `chore:`, `docs:`, `test:`, `ci:`, `build:`, `refactor:`, or `style:`; these do not publish or appear in release notes. A maintainer reviews clarity; CI checks syntax. Let the release workflow update the version and changelog.

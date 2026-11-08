@@ -7,7 +7,7 @@ Date: {{ timestamp | date(format="%Y-%m-%d") }}
 {%- for group, changes in commits | group_by(attribute="group") %}
   {{ group }}:
 {%- for change in changes %}
-    - {{ change.message | split(pat="\n") | first | trim }}
+    - {% if change.extra.release_note %}{{ change.extra.release_note }}{% else %}{{ change.message | split(pat="\n") | first | trim }}{% endif %}
 {%- endfor %}
 {%- endfor %}
 """
@@ -18,7 +18,7 @@ conventional_commits = true
 filter_unconventional = true
 filter_commits = true
 tag_pattern = '^helmod-fork-[0-9]+\.[0-9]+\.[0-9]+$'
-commit_preprocessors = [{ pattern = ' \(#[0-9]+\)$', replace = "" }]
+commit_preprocessors = [{ pattern = '(?s)\n.*', replace = "" }, { pattern = ' \(#[0-9]+\)$', replace = "" }]
 commit_parsers = [
   { message = "^break(\\(.+\\))?:", group = "Changes" },
   { message = "^feat(\\(.+\\))?:", group = "Features" },

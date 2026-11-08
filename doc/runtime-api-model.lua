@@ -82,7 +82,7 @@
 
 ---@class RecipeData
 ---@field orbit? OrbitDetails
----@field class string
+---@field class "Recipe"
 ---@field id string
 ---@field index uint
 ---@field name string
@@ -117,7 +117,7 @@
 ---@field value number
 
 ---@class BlockData
----@field class string
+---@field class "Block"
 ---@field id string
 ---@field index number
 ---@field name string

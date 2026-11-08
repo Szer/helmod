@@ -260,7 +260,7 @@ function PinPanel:addProductionBlockRow(gui_table, model, block, recipe)
         ---ingredients
         local cell_ingredients = GuiElement.add(gui_table, GuiTable("ingredients", recipe.id):column(3))
         cell_ingredients.style.horizontally_stretchable = false
-        local lua_ingredients = recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality)
+        local lua_ingredients = GuiElement.visibleIngredients(recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality))
         if lua_ingredients ~= nil then
             local hidden_products = {}
 			local show_hidden_pinned_ingredients = User.getParameter("show_hidden_pinned_ingredients")

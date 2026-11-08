@@ -107,6 +107,13 @@ defines.constant.preferences = {
     default_value = true,
     group = "general"
   },
+  show_electricity_inputs = {
+    type = "bool-setting",
+    localised_name = {"helmod_pref_settings.show-electricity-inputs"},
+    localised_description = {"helmod_pref_settings.show-electricity-inputs-desc"},
+    default_value = false,
+    group = "general"
+  },
   --display-pollution
   display_pollution = {
     type = "bool-setting",
@@ -306,6 +313,10 @@ defines.constant.preferences = {
     group = "general"
   },
 }
+
+for name, preference in pairs(defines.constant.preferences) do
+  preference.name = name
+end
 
 defines.constant.settings_mod = {
   -- display_ratio_horizontal

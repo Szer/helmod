@@ -10,11 +10,11 @@ Runner.write(work .. "/mods/mod-list.json", [[{"mods":[{"name":"base","enabled":
 Runner.copy(root .. "/test/test_fork_repros.lua", mod .. "/test_fork_repros.lua")
 Runner.copy(root .. "/test/test_consumer_controls.lua", mod .. "/test_consumer_controls.lua")
 local control = Runner.read(mod .. "/control.lua")
-for _, case in ipairs({"consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
+for _, case in ipairs({"row-removal-scroll", "consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
                        "blank-selector-rule", "truncated-import", "empty-blueprint-book", "quantity-after-reload", "quantity-confirm"}) do
     Runner.write(mod .. "/control.lua", control .. '\nrequire "test_fork_repros"("' .. case .. '")\n')
     local save = saves .. "/" .. case .. "/repro.zip"
-    if case == "consumer-controls" then save = saves .. "/empty-explorer/repro.zip" end
+    if case == "consumer-controls" or case == "row-removal-scroll" then save = saves .. "/empty-explorer/repro.zip" end
     local log
     if case == "quantity-after-reload" then
         if headless then

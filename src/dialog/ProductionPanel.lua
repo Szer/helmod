@@ -7,6 +7,7 @@ ProductionPanel = newclass(FormModel, function(base, classname)
 	FormModel.init(base, classname)
 	base.add_special_button = true
 	base.has_tips = true
+	base.auto_clear = false
 end)
 
 -------------------------------------------------------------------------------
@@ -271,6 +272,18 @@ end
 ---Update
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
+	local action = event.action
+	if action == "block-child-remove" or action == "block-child-remove-confirmed" or action == "block-child-remove-canceled" then
+		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
+		local menu, header, rows = self:getDataPanel()
+		menu.clear()
+		header.clear()
+		rows.clear()
+		self:getNavigatorPanel().clear()
+	else
+		local _, content = self:getPanel()
+		content.clear()
+	end
     self:onEventAutoCancel(event)
 
 	local model, block, _ = self:getParameterObjects()
@@ -2450,7 +2463,6 @@ function ProductionPanel:onEventAccessDelete(event, model, block)
         local is_block = Model.isBlock(child)
         if is_block then
             User.setParameter("block_child_remove_confirm", child.id)
-			User.setParameter("scroll_element", child.id)
 		    Controller:send("on_gui_update", event, self.classname)
         else
             -- remove recipe from block

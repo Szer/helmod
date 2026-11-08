@@ -73,6 +73,29 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+  nightly:
+    needs: check
+    if: github.repository == 'Szer/helmod' && github.event_name == 'push' && github.ref == 'refs/heads/fork'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency: rolling-nightly
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: helmod-fork-package
+          path: dist
+      - name: Update the rolling GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ci/install-cliff.sh "$RUNNER_TEMP/cliff"
+          PATH="$RUNNER_TEMP/cliff:$PATH" ci/nightly.sh dist
+
   publish:
     needs: check
     if: github.repository == 'Szer/helmod' && github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && startsWith(github.ref_name, 'helmod-fork-')

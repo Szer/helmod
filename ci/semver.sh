@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-mode=${1:?use plan, prepare or verify}
+mode=${1:?use plan, notes, prepare or verify}
 start=HEAD
 # Verify a release tag against its predecessor, not against itself.
 if [[ $mode == verify && ${GITHUB_REF_TYPE:-} == tag ]]; then start=HEAD^; fi
@@ -14,7 +14,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 git-cliff "${args[@]}" --context > "$tmp/context"
 if ! jq -e 'any(.[]; .commits | length > 0)' "$tmp/context" >/dev/null; then
-  if [[ $mode == plan ]]; then exit 0; fi
+  if [[ $mode == plan || $mode == notes ]]; then exit 0; fi
   echo 'No release-bearing commits since the previous tag.' >&2
   exit 1
 fi
@@ -44,6 +44,10 @@ jq --arg tag "$tag" --argjson stamp "$timestamp" --slurpfile overrides "$tmp/not
   map(.version = $tag | .timestamp = $stamp |
       .commits |= map(.extra.release_note = $notes[.id]))' "$tmp/context" > "$tmp/render"
 git-cliff --config cliff.toml --no-exec --from-context "$tmp/render" | sed '/./,$!d' > "$tmp/entry"
+if [[ $mode == notes ]]; then
+  sed -n 's/^    - /- /p' "$tmp/entry"
+  exit 0
+fi
 cat "$tmp/entry" > "$tmp/changelog"
 git show "$base:src/changelog.txt" >> "$tmp/changelog"
 case "$mode" in

@@ -19,6 +19,7 @@ plan() { "$root/ci/semver.sh" plan; }
 unset GITHUB_REF_TYPE GITHUB_REF_NAME
 change 'docs: Update developer instructions'
 [[ -z $(plan) ]]
+[[ -z $("$root/ci/semver.sh" notes) ]]
 change 'fix: Keep entered quantities after reload (#42)'
 [[ $(plan) == helmod-fork-2.3.10 ]]
 fix=$(git rev-parse HEAD)
@@ -31,6 +32,9 @@ git commit --allow-empty -qm 'feat(ui): Show the quality of orbital cargo' -m 'R
 change 'break: Replace the legacy import format'
 change 'ci: Update build tools'
 [[ $(plan) == helmod-fork-3.0.0 ]]
+notes=$("$root/ci/semver.sh" notes)
+grep -Fxq -- '- Preserve quantities in saved plans' <<< "$notes"
+[[ $(wc -l <<< "$notes") == 3 ]]
 "$root/ci/semver.sh" prepare
 grep -Fxq '    - Preserve quantities in saved plans' src/changelog.txt
 grep -Fxq '  Features:' src/changelog.txt

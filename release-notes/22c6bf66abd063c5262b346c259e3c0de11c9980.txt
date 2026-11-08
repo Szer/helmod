@@ -1,0 +1,1 @@
+Release-note: The matrix solver now tries to use up intermediate products before leaving a surplus.

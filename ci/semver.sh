@@ -24,8 +24,28 @@ version=${BASH_REMATCH[1]}
 if [[ $mode == plan ]]; then echo "$tag"; exit 0; fi
 # Use a date derived from released changes so checks and retries produce the same notes.
 timestamp=$(jq '[.[].commits[].committer.timestamp] | max' "$tmp/context")
-day=$(date -u -d "@$timestamp" +%F)
-git-cliff "${args[@]}" --bump | sed -e '/./,$!d' -e "s/^Date:.*/Date: $day/" > "$tmp/entry"
+# Read only eligible commits. A tracked correction takes precedence over the squash body.
+while read -r sha; do
+  file="release-notes/$sha.txt"
+  if [[ -f $file ]]; then
+    cp "$file" "$tmp/body"
+  else
+    git show -s --format=%b "$sha" > "$tmp/body"
+  fi
+  mapfile -t notes < <(sed -n 's/^Release-note:[[:blank:]]*//p' "$tmp/body")
+  if [[ ${#notes[@]} == 0 && ! -f $file ]]; then continue; fi
+  if [[ ${#notes[@]} != 1 || ! ${notes[0]:-} =~ [^[:space:]] ]]; then
+    echo "Expected one nonempty Release-note: line for $sha" >&2
+    exit 1
+  fi
+  jq -cn --arg sha "$sha" --arg note "${notes[0]}" '{key:$sha,value:$note}' >> "$tmp/notes"
+done < <(jq -r '.[].commits[].id' "$tmp/context")
+touch "$tmp/notes"
+jq --arg tag "$tag" --argjson stamp "$timestamp" --slurpfile overrides "$tmp/notes" '
+  ($overrides | from_entries) as $notes |
+  map(.version = $tag | .timestamp = $stamp |
+      .commits |= map(.extra.release_note = $notes[.id]))' "$tmp/context" > "$tmp/render"
+git-cliff --config cliff.toml --no-exec --from-context "$tmp/render" | sed '/./,$!d' > "$tmp/entry"
 cat "$tmp/entry" > "$tmp/changelog"
 git show "$base:src/changelog.txt" >> "$tmp/changelog"
 case "$mode" in

@@ -3,4 +3,5 @@ Describe what a player can do or observe after this change.
 
 How was it verified?
 
-<!-- Optional: add one standalone Release-note: line with the exact public wording. Keep reproduction details above. -->
+<!-- Required for fix, feat and break (including scoped titles). Fill in the line below with one player-facing sentence. Maintenance PRs may remove it. -->
+Release-note:

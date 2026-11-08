@@ -32,13 +32,11 @@ while read -r sha; do
   else
     git show -s --format=%b "$sha" > "$tmp/body"
   fi
-  mapfile -t notes < <(sed -n 's/^Release-note:[[:blank:]]*//p' "$tmp/body")
-  if [[ ${#notes[@]} == 0 && ! -f $file ]]; then continue; fi
-  if [[ ${#notes[@]} != 1 || ! ${notes[0]:-} =~ [^[:space:]] ]]; then
-    echo "Expected one nonempty Release-note: line for $sha" >&2
-    exit 1
-  fi
-  jq -cn --arg sha "$sha" --arg note "${notes[0]}" '{key:$sha,value:$note}' >> "$tmp/notes"
+  mode_note=optional
+  if [[ -f $file ]]; then mode_note=required; fi
+  note=$("$(dirname "$0")/release-note.sh" "$mode_note" < "$tmp/body")
+  [[ -n $note ]] || continue
+  jq -cn --arg sha "$sha" --arg note "$note" '{key:$sha,value:$note}' >> "$tmp/notes"
 done < <(jq -r '.[].commits[].id' "$tmp/context")
 touch "$tmp/notes"
 jq --arg tag "$tag" --argjson stamp "$timestamp" --slurpfile overrides "$tmp/notes" '

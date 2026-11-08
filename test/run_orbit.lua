@@ -73,6 +73,9 @@ local success, message = xpcall(function()
         end
         Runner.write(work .. "/mods/mod-list.json", '{"mods":[' .. table.concat(mods, ",") .. ']}')
         local suites = {integration="test_orbit", ["base-only"]="test_orbit_base", timing="test_orbit_timing", ui="test_orbit_ui"}
+        if mode == "integration" then
+            Runner.copy(root .. "/test/test_cracking.lua", work .. "/mods/helmod-fork/test_cracking.lua")
+        end
         Runner.suite(root, work, suites[mode])
         if mode == "integration" or mode == "timing" then
             local fixture = "orbit-prototypes"

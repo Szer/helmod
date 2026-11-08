@@ -27,7 +27,7 @@ mkdir release-notes
 echo 'Release-note: Preserve quantities in saved plans' > "release-notes/$fix.txt"
 git add -- "release-notes/$fix.txt"
 git commit -qm 'docs: Clarify the pending quantity fix'
-git commit --allow-empty -qm 'feat(ui): Show the quality of orbital cargo' -m 'Release-note: See cargo quality in the orbit planner'
+git commit --allow-empty -qm 'feat(ui): Show the quality of orbital cargo' -m $'Release-note: See cargo quality in the\norbit planner\n\nImplementation details.'
 [[ $(plan) == helmod-fork-2.4.0 ]]
 change 'break: Replace the legacy import format'
 change 'ci: Update build tools'

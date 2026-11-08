@@ -102,7 +102,7 @@ function Runner.suite(root, work, name)
     Runner.write(control, Runner.read(control) .. '\nrequire "' .. name .. '"\n')
 end
 
-function Runner.factorio(executable, work, arguments, graphical)
+function Runner.factorio(executable, work, arguments, limit_time)
     local command = quote(executable)
     local parameters = {"--config", work .. "/config.ini", "--mod-directory", work .. "/mods"}
     for _, argument in ipairs(arguments) do
@@ -115,7 +115,7 @@ function Runner.factorio(executable, work, arguments, graphical)
     end
     local posix = command
     local powershell = "& " .. command .. "\nexit $LASTEXITCODE"
-    if graphical == true then
+    if limit_time == true then
         posix = "export SteamAppId=427520\nset +e\ntimeout --signal=TERM --kill-after=5s 45s " .. command
             .. '\nstatus=$?\nif [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi'
         powershell = "$env:SteamAppId = '427520'\n"

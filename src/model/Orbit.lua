@@ -1,6 +1,19 @@
 local RocketTiming = require "model.RocketTiming"
+---@class OrbitDetails
+---@field capacity integer Items per full rocket.
+---@field parts number
+---@field crafts number
+---@field crafting_time number Seconds per rocket.
+---@field launch_time number Minimum seconds between launches.
+---@field cycle_time number Mean seconds between launches at the selected speed.
+---@field at_launch_limit boolean
+---@field speed_required number
+
 local Orbit = {}
 
+---@param item_name string
+---@param silo LuaEntityPrototype?
+---@return integer
 function Orbit.capacity(item_name, silo)
     local item = prototypes.item[item_name]
     if script.feature_flags.space_travel == false then
@@ -12,6 +25,8 @@ function Orbit.capacity(item_name, silo)
     return math.floor(silo.lift_weight / item.weight)
 end
 
+---@param item_name? string
+---@return table<string, LuaEntityPrototype>
 function Orbit.machines(item_name)
     local machines = {}
     if script.feature_flags.space_travel == false then
@@ -28,6 +43,9 @@ function Orbit.machines(item_name)
     return machines
 end
 
+---@param factory FactoryData?
+---@param item_name string
+---@return LuaEntityPrototype?
 function Orbit.silo(factory, item_name)
     if factory ~= nil then
         return prototypes.entity[factory.name]
@@ -36,6 +54,9 @@ function Orbit.silo(factory, item_name)
     return silo
 end
 
+---@param name string
+---@param factory? FactoryData
+---@return table?
 function Orbit.recipe(name, factory)
     local item = prototypes.item[name]
     if item == nil then
@@ -61,6 +82,10 @@ function Orbit.recipe(name, factory)
         allowed_effects=allowed_effects, allowed_module_categories=part_recipe.allowed_module_categories}
 end
 
+---@param name string
+---@param factory FactoryData?
+---@param quality? string
+---@return table[]
 function Orbit.ingredients(name, factory, quality)
     local ingredients = {{name=name, type="item", amount=1, quality=quality or "normal"}}
     local silo = Orbit.silo(factory, name)
@@ -84,6 +109,9 @@ function Orbit.ingredients(name, factory, quality)
     return ingredients
 end
 
+---@param name string
+---@param factory FactoryData?
+---@return number
 function Orbit.energy(name, factory)
     local silo = Orbit.silo(factory, name)
     local capacity = Orbit.capacity(name, silo)
@@ -97,6 +125,8 @@ function Orbit.energy(name, factory)
     return silo.fixed_recipe.energy * silo.rocket_parts_required / capacity / (1 + productivity)
 end
 
+---@param recipe RecipeData
+---@return OrbitDetails
 function Orbit.details(recipe)
     local factory = recipe.factory
     local silo = Orbit.silo(factory, recipe.name)

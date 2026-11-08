@@ -1,0 +1,67 @@
+name: Fork checks and release
+on:
+  pull_request:
+    branches: [fork]
+  push:
+    branches: [fork]
+    tags: ['helmod-fork-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+      - name: Install pinned test tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y lua5.2
+          ci/install-tools.sh "$RUNNER_TEMP/tools"
+      - name: Check Lua syntax and launch model types
+        run: |
+          find src test -type f -name '*.lua' -print0 | xargs -0 -n1 luac5.2 -p
+          LUA_LANGUAGE_SERVER="$RUNNER_TEMP/tools/luals/bin/lua-language-server" ci/check-types.sh
+      - name: Run engine and regression tests
+        run: |
+          engine="$RUNNER_TEMP/tools/factorio"
+          ci/fetch-repros.sh "$RUNNER_TEMP/repros"
+          for mode in integration base-only timing; do
+            flags=()
+            if [[ $mode != integration ]]; then flags=("--$mode"); fi
+            lua5.2 test/run_orbit.lua "$engine/bin/x64/factorio" --data "$engine/data" "${flags[@]}"
+          done
+          lua5.2 test/run_fork_repros.lua "$engine/bin/x64/factorio" "$engine/data" "$RUNNER_TEMP/repros" --headless
+      - name: Package and test the release archive
+        run: |
+          ci/package.sh dist
+          ci/test-package.sh "$RUNNER_TEMP/tools/factorio" dist/*.zip "$RUNNER_TEMP/repros/custom-recipe-quality/repro.zip"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helmod-fork-package
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: check
+    if: github.repository == 'Szer/helmod' && github.ref_type == 'tag' && startsWith(github.ref_name, 'helmod-fork-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency: portal-publish
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: helmod-fork-package
+          path: dist
+      - name: Publish verified archive
+        run: ci/publish.sh dist
+        env:
+          FACTORIO_APIKEY: ${{ secrets.FACTORIO_APIKEY }}

@@ -82,4 +82,12 @@ Use `lua test/run_orbit.lua --help` for the command options. The test suites in 
 
 To replay the [seven original reproduction saves](https://github.com/Szer/helmod/tree/codex/audit-repros/audit-repros), run `lua test/run_fork_repros.lua /path/to/graphical-factorio /path/to/data /path/to/audit-repros`. This also checks storage transfer from Helmod and confirms a quantity after reloading the saved dialog in a new process.
 
-To package a release, run `git archive --format=zip --prefix=helmod-fork_VERSION/ -o helmod-fork_VERSION.zip HEAD:src`, substituting the version from `src/info.json`.
+To build the release ZIP and checksum locally from a committed revision, run `ci/package.sh dist`.
+
+## Development and releases
+
+Target the `fork` branch for pull requests. GitHub Actions parses the Lua files, type-checks the rocket launch model with LuaLS, and runs the integration, base-only, timing and save regression suites on a pinned Factorio 2.1 headless build. It also creates a new map and migrates an old save with the packaged ZIP. The separate graphical suite remains available for UI changes.
+
+To run the same checks locally, install Lua 5.2, then run `ci/install-tools.sh /tmp/helmod-tools` and `ci/fetch-repros.sh /tmp/helmod-repros`. Use `LUA_LANGUAGE_SERVER=/tmp/helmod-tools/luals/bin/lua-language-server ci/check-types.sh` and `lua test/run_fork_repros.lua /tmp/helmod-tools/factorio/bin/x64/factorio /tmp/helmod-tools/factorio/data /tmp/helmod-repros --headless`.
+
+To release, update `src/info.json` and `src/changelog.txt`, get a passing branch check, then push a new tag named `helmod-fork-VERSION` on that commit. Only release tags publish. Actions uploads the exact ZIP tested by the check job and verifies its hash against the Mod Portal. A retry accepts an identical existing release and refuses to replace a different file. The repository Actions secret `FACTORIO_APIKEY` needs the Publish Mods and Upload Mods permissions; it is used only in the tag publish step.

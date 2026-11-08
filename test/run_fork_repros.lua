@@ -1,6 +1,7 @@
 local test_directory = arg[0]:match("^(.*)[/\\]") or "."
 local Runner = dofile(test_directory .. "/orbit_test_runner.lua")
-assert(#arg == 3, "Usage: lua test/run_fork_repros.lua GRAPHICAL_FACTORIO DATA AUDIT_REPROS")
+local headless = arg[4] == "--headless"
+assert(#arg == 3 or (headless and #arg == 4), "Usage: lua test/run_fork_repros.lua FACTORIO DATA AUDIT_REPROS [--headless]")
 local executable, data, saves = Runner.absolute(arg[1]), Runner.absolute(arg[2]), Runner.absolute(arg[3])
 local root = Runner.absolute(test_directory .. "/..")
 local work = Runner.create(root, data)
@@ -14,10 +15,24 @@ for _, case in ipairs({"empty-explorer", "custom-recipe-quality", "custom-recipe
     local save = saves .. "/" .. case .. "/repro.zip"
     local log
     if case == "quantity-after-reload" then
-        log = Runner.factorio(executable, work, {"--load-game", save, "--disable-audio"}, true)
+        if headless then
+            local settings = work .. "/server-settings.json"
+            local template = Runner.read(data .. "/server-settings.example.json")
+            for _, setting in ipairs({"public", "lan", "require_user_verification", "auto_pause"}) do
+                template = template:gsub('("' .. setting .. '"%s*:%s*)true', '%1false')
+            end
+            Runner.write(settings, template)
+            Runner.directory(work .. "/write/saves")
+            Runner.copy(save, work .. "/source.zip")
+            log = Runner.factorio(executable, work, {"--start-server", work .. "/source.zip", "--bind", "127.0.0.1",
+                "--port", "0", "--server-settings", settings}, true)
+        else
+            log = Runner.factorio(executable, work, {"--load-game", save, "--disable-audio"}, true)
+        end
     else
         if case == "quantity-confirm" then
             save = work .. "/write/saves/_autosave-fork-quantity.zip"
+            if headless then save = work .. "/write/saves/fork-quantity.zip" end
         end
         log = Runner.factorio(executable, work, {"--benchmark", save, "--benchmark-ticks", "5"})
     end

@@ -81,6 +81,7 @@
 ---@field input number
 
 ---@class RecipeData
+---@field orbit? OrbitDetails
 ---@field class string
 ---@field id string
 ---@field index uint

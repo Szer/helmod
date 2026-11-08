@@ -99,7 +99,11 @@ return function(case)
                 click(player, "HMProductionPanel=product-edition")
                 assert(player.gui.screen.HMProductEdition)
                 game.tick_paused = false
-                game.auto_save("fork-quantity")
+                if game.is_multiplayer() then
+                    game.server_save("fork-quantity")
+                else
+                    game.auto_save("fork-quantity")
+                end
             end
         end
         assert(Player.getLastError() == nil, tostring(Player.getLastError()))

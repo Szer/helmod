@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------------------------------
-Version: 2.3.8
+Version: 2.3.9
 Date: 2026-11-08
   Features:
     - Send cargo to orbit: link cargo rate, rocket ingredients and silo count, including quality, productivity and launch timing.

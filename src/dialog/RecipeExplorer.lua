@@ -88,6 +88,7 @@ function RecipeExplorer:onEvent(event)
     local parameter_objects = User.getParameter(parameter_name)
     local model, _, _ = Model.getParameterObjects(parameter_objects)
     local block = self:generateBlock(model, model.block_root, recipe_explore)
+    if block == nil then return end
     ModelCompute.update(model)
     User.setParameter(parameter_name, {name=parameter_name, model=model.id, block=block.id})
     Controller:send("on_gui_update", event)

@@ -677,13 +677,13 @@ default_gui["helmod_button_tab"] = {
   bottom_padding = 2,
   left_padding = 8,
   height = 28,
-  default_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {16, 0}),
+  default_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {16, 0}),
   hovered_font_color={r=0, g=0, b=0},
-  hovered_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {16, 8}),
+  hovered_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {16, 8}),
   clicked_font_color={r=1, g=1, b=1},
-  clicked_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {16, 0}),
+  clicked_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {16, 0}),
   disabled_font_color={r=0.5, g=0.5, b=0.5},
-  disabled_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {16, 0}),
+  disabled_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {16, 0}),
   pie_progress_color = {r=1, g=1, b=1}
 }
 
@@ -697,13 +697,13 @@ default_gui["helmod_button_tab_selected"] = {
   bottom_padding = 2,
   left_padding = 8,
   height = 28,
-  default_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {8, 0}),
+  default_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {8, 0}),
   hovered_font_color={r=0, g=0, b=0},
-  hovered_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {8, 8}),
+  hovered_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {8, 8}),
   clicked_font_color={r=1, g=1, b=1},
-  clicked_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {8, 0}),
+  clicked_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {8, 0}),
   disabled_font_color={r=0.5, g=0.5, b=0.5},
-  disabled_graphical_set = compositionIcon("__helmod__/graphics/gui.png", corner_size, {8, 0}),
+  disabled_graphical_set = compositionIcon("__helmod-fork__/graphics/gui.png", corner_size, {8, 0}),
   pie_progress_color = {r=1, g=1, b=1}
 }
 

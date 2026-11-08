@@ -24,14 +24,14 @@ default_gui["helmod_textfield_element_green"] = {
   parent = "helmod_textfield_element",
   default_background =
       {
-        filename = "__helmod__/graphics/gui.png",
+        filename = "__helmod-fork__/graphics/gui.png",
         corner_size = 3,
         position = {8, 16},
         scale = 1
       },
       active_background =
       {
-        filename = "__helmod__/graphics/gui.png",
+        filename = "__helmod-fork__/graphics/gui.png",
         corner_size = 3,
         position = {0, 16},
         scale = 1
@@ -43,14 +43,14 @@ default_gui["helmod_textfield_element_red"] = {
   parent = "helmod_textfield_element",
   default_background =
       {
-        filename = "__helmod__/graphics/gui.png",
+        filename = "__helmod-fork__/graphics/gui.png",
         corner_size = 3,
         position = {8, 24},
         scale = 1
       },
       active_background =
       {
-        filename = "__helmod__/graphics/gui.png",
+        filename = "__helmod-fork__/graphics/gui.png",
         corner_size = 3,
         position = {0, 24},
         scale = 1

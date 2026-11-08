@@ -4,7 +4,7 @@ data:extend(
     type = "item-group",
     name = "helmod",
     order = "zzzz",
-    icon = "__helmod__/graphics/icons/helmod-group.png",
+    icon = "__helmod-fork__/graphics/icons/helmod-group.png",
     icon_size = 64
   },
   {

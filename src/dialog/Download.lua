@@ -35,6 +35,8 @@ function Download:onEvent(event)
       ModelBuilder.copyModel(model, data_table)
       ModelCompute.update(model)
       Controller:send("on_gui_refresh", event)
+    else
+      Player.native().print({"helmod_download-panel.invalid-plan"})
     end
   end
 end

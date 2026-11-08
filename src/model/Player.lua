@@ -739,7 +739,8 @@ function Player.getRules(rule_name)
     local rules_included = {}
     local rules_excluded = {}
     for rule_id, rule in spairs(Model.getRules(), function(t, a, b) return t[b].index > t[a].index end) do
-        if script.active_mods[rule.mod] and rule.name == rule_name then
+        if script.active_mods[rule.mod] and rule.name == rule_name and rule.category ~= nil
+            and rule.type ~= nil and type(rule.value) == "string" and rule.value:find("%S") then
             if rule.excluded then
                 if rules_excluded[rule.category] == nil then rules_excluded[rule.category] = {} end
                 if rules_excluded[rule.category][rule.type] == nil then rules_excluded[rule.category][rule.type] = {} end

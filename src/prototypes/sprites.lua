@@ -2,7 +2,7 @@ function sprite_help(name,width,height)
   return {
     type ="sprite",
     name = "helmod_"..name,
-    filename = "__helmod__/graphics/help/"..name..".png",
+    filename = "__helmod-fork__/graphics/help/"..name..".png",
     priority = "medium",
     width = width,
     height = height
@@ -50,7 +50,7 @@ function sprite_icon(name, width, height, white)
   return {
     type ="sprite",
     name = icon_name,
-    filename = "__helmod__/graphics/icons/"..name..".png",
+    filename = "__helmod-fork__/graphics/icons/"..name..".png",
     priority = "extra-high-no-scale",
     width = width,
     height = height,
@@ -70,7 +70,7 @@ function sprite_icon_sm(name, width, height, white)
   return {
     type ="sprite",
     name = icon_name,
-    filename = "__helmod__/graphics/icons/"..name..".png",
+    filename = "__helmod-fork__/graphics/icons/"..name..".png",
     priority = "extra-high-no-scale",
     width = width,
     height = height,
@@ -86,7 +86,7 @@ function sprite_icon_tool(name, width, height)
   return {
     type ="sprite",
     name = icon_name,
-    filename = "__helmod__/graphics/icons/"..name..".png",
+    filename = "__helmod-fork__/graphics/icons/"..name..".png",
     priority = "extra-high-no-scale",
     width = width,
     height = height,
@@ -101,7 +101,7 @@ function sprite_tooltip(name, size, scale)
   return {
     type ="sprite",
     name = icon_name,
-    filename = "__helmod__/graphics/icons/"..name..".png",
+    filename = "__helmod-fork__/graphics/icons/"..name..".png",
     priority = "extra-high-no-scale",
     width = size,
     height = size,
@@ -114,7 +114,7 @@ local spite_icons = {}
 table.insert(spite_icons, {
   type ="sprite",
   name = "helmod-group",
-  filename = "__helmod__/graphics/icons/helmod-group.png",
+  filename = "__helmod-fork__/graphics/icons/helmod-group.png",
   priority = "extra-high-no-scale",
   width = 64,
   height = 64,
@@ -136,7 +136,7 @@ function sprite_mipmap(name, size, count)
   return {
     type ="sprite",
     name = icon_name,
-    filename = "__helmod__/graphics/icons/"..name..".png",
+    filename = "__helmod-fork__/graphics/icons/"..name..".png",
     size = size,
     mipmap_count = count,
     flags = {"gui-icon"}

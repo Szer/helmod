@@ -193,7 +193,7 @@ function Controller:cleanController(player)
       if children_name ~= "HMPinPanel" and self:getView(children_name) then
         self:getView(children_name):close()
       end
-      if children_name ~= "HMPinPanel" and not(string.find(children_name,"mod_gui")) and lua_gui_element[children_name] ~= nil and lua_gui_element[children_name].get_mod() == "helmod" then
+      if children_name ~= "HMPinPanel" and not(string.find(children_name,"mod_gui")) and lua_gui_element[children_name] ~= nil and lua_gui_element[children_name].get_mod() == script.mod_name then
         lua_gui_element[children_name].destroy()
       end
     end

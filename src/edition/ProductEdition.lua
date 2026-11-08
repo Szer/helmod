@@ -68,15 +68,13 @@ function ProductEdition:after_open(event)
   self:getInfoPanel()
 end
 
-local product = nil
-local product_count = 0
 
 -------------------------------------------------------------------------------
 ---On update
 ---@param event LuaEvent
 function ProductEdition:onUpdate(event)
   local model, block, recipe = self:getParameterObjects()
-  product = nil
+  local product
   if block ~= nil then
     local block_elements = block.products
     if block.by_product == false then
@@ -85,11 +83,10 @@ function ProductEdition:onUpdate(event)
     local element_name = event.item5
     if block_elements ~= nil and block_elements[element_name] ~= nil then
       product = block_elements[element_name]
-      product_count = product.input or 0
     end
   end
 
-  self:updateInfo(model, block)
+  self:updateInfo(model, block, product)
   if product ~= nil and product.type ~= "fluid" and product.type ~= "energy" then
     self:updateTool(model, block)
   end
@@ -99,8 +96,7 @@ end
 ---Update information
 ---@param model table
 ---@param block table
-local input_quantity = nil
-function ProductEdition:updateInfo(model, block)
+function ProductEdition:updateInfo(model, block, product)
   local info_panel = self:getInfoPanel()
   if product ~= nil then
     info_panel.clear()
@@ -110,14 +106,14 @@ function ProductEdition:updateInfo(model, block)
     GuiElement.add(table_panel, GuiLabel("product-label"):caption(Player.getLocalisedName(product)))
 
     local caption = {"helmod_common.quantity"}
-    local count = product_count or 0
+    local count = product.input or 0
     if (product.name == "steam-heat") or (product.name == "energy") then
       caption = {"", {"helmod_common.quantity"}, " (MJ)"}
       count = count/1e6
     end
     
     GuiElement.add(table_panel, GuiLabel("quantity-label"):caption(caption))
-    local cell, button
+    local cell, input_quantity, button
     cell, input_quantity, button = GuiCellInput(self.classname, "product-update", model.id, block.id, product.name, Product(product):getTableKey()):text(count):create(table_panel)
     input_quantity.focus()
     input_quantity.select_all()
@@ -129,7 +125,7 @@ end
 ---Update action
 ---@param model table
 ---@param block table
-function ProductEdition:updateAction(model, block)
+function ProductEdition:updateAction(model, block, product)
   local action_panel = self:getActionPanel()
   if product ~= nil then
     action_panel.clear()
@@ -151,13 +147,26 @@ function ProductEdition:updateTool(model, block)
   end
 end
 -------------------------------------------------------------------------------
+function ProductEdition:getQuantityInput()
+  local inputs = self:getInfoPanel()["input-table"]
+  if inputs == nil then return nil end
+  for _, cell in pairs(inputs.children) do
+    if cell.type == "table" then
+      for _, element in pairs(cell.children) do
+        if element.type == "textfield" then return element end
+      end
+    end
+  end
+end
+
 ---On event
 ---@param event LuaEvent
 function ProductEdition:onEvent(event)
   local model, block, recipe = self:getParameterObjects()
   if User.isWriter(model) then
     if event.action == "product-update" then
-      local products = {}
+      local input_quantity = self:getQuantityInput()
+      if input_quantity == nil then return end
       local operation = input_quantity.text
       local ok , err = pcall(function()
         local quantity = nil 
@@ -178,6 +187,8 @@ function ProductEdition:onEvent(event)
       end
     end
     if event.action == "element-select" then
+      local input_quantity = self:getQuantityInput()
+      if input_quantity == nil then return end
       local belt_speed = EntityPrototype(event.item1):getBeltSpeed()
 
       local text = string.format("%s*%s", belt_speed * Product().belt_ratio, model.time)

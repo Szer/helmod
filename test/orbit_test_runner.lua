@@ -85,7 +85,7 @@ function Runner.create(root, data)
     shell("mkdir " .. quote(work), "New-Item -ItemType Directory -Path " .. quote(work) .. " | Out-Null")
     os.remove(marker)
     Runner.directory(work .. "/mods")
-    Runner.copy(root .. "/src", work .. "/mods/helmod")
+    Runner.copy(root .. "/src", work .. "/mods/helmod-fork")
     Runner.write(work .. "/config.ini", "[path]\nread-data=" .. data .. "\nwrite-data=" .. work .. "/write\n")
     print("Test directory: " .. work)
     return work
@@ -96,7 +96,7 @@ function Runner.cleanup(work)
 end
 
 function Runner.suite(root, work, name)
-    local mod = work .. "/mods/helmod"
+    local mod = work .. "/mods/helmod-fork"
     Runner.copy(root .. "/test/" .. name .. ".lua", mod .. "/" .. name .. ".lua")
     local control = mod .. "/control.lua"
     Runner.write(control, Runner.read(control) .. '\nrequire "' .. name .. '"\n')

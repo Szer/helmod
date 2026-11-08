@@ -1,11 +1,17 @@
 {
-  "name": "helmod",
-  "version": "2.3.6",
-  "title": "Helmod: Assistant for planning your factory",
-  "author": "Helfima",
-  "contact": "Helfima",
-  "homepage": "https://github.com/Helfima/helmod",
-  "description": "Assistant for planning your factory. Can calculate required ingredients, products, machines, modules, and beacons. Can also calculate power production / consumption.",
-  "dependencies": ["base >= 2.1.7"],
-  "factorio_version": "2.1"
+  "name": "helmod-fork",
+  "version": "2.3.8",
+  "title": "Helmod: Szer's Fork",
+  "author": "Helfima and the Helmod contributors; fork maintained by Szer",
+  "contact": "https://github.com/Szer/helmod/issues",
+  "homepage": "https://github.com/Szer/helmod/tree/fork",
+  "description": "An independent fork of Helmod, the factory planner created by Helfima with the Helmod contributors. Maintained by Szer. Plan recipes, machines, power and orbital cargo.",
+  "dependencies": [
+    "base >= 2.1.18",
+    "! helmod"
+  ],
+  "factorio_version": "2.1",
+  "migrates_from": [
+    "helmod"
+  ]
 }

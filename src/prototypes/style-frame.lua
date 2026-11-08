@@ -132,7 +132,7 @@ default_gui["helmod_frame_hidden"] = {
     graphical_set         =
     {
         type = "composition",
-        filename = "__helmod__/graphics/gui.png",
+        filename = "__helmod-fork__/graphics/gui.png",
         load_in_minimal_mode = true,
         corner_size = { 1, 1 },
         position = { 0, 0 }
@@ -230,13 +230,13 @@ for _, style in pairs(style_element_list) do
 
         local style_name = nil
         style_name = table.concat({ "helmod_frame_element_w80", style.suffix, i }, "_")
-        frame_element(style_name, x, y, 80, "__helmod__/graphics/gui.png")
+        frame_element(style_name, x, y, 80, "__helmod-fork__/graphics/gui.png")
 
         style_name = table.concat({ "helmod_frame_element_w50", style.suffix, i }, "_")
-        frame_element(style_name, x, y, 50, "__helmod__/graphics/gui.png")
+        frame_element(style_name, x, y, 50, "__helmod-fork__/graphics/gui.png")
 
         style_name = table.concat({ "helmod_frame_element_w30", style.suffix, i }, "_")
-        frame_element(style_name, x, y, 30, "__helmod__/graphics/gui.png")
+        frame_element(style_name, x, y, 30, "__helmod-fork__/graphics/gui.png")
     end
 end
 
@@ -249,13 +249,13 @@ for _, frame_color in pairs(defines.frame_colors) do
 
             local style_name = nil
             style_name = table.concat({ "helmod_frame_element_w80", value, i }, "_")
-            frame_element(style_name, x, y, 80, "__helmod__/graphics/frame.png")
+            frame_element(style_name, x, y, 80, "__helmod-fork__/graphics/frame.png")
     
             style_name = table.concat({ "helmod_frame_element_w50", value, i }, "_")
-            frame_element(style_name, x, y, 50, "__helmod__/graphics/frame.png")
+            frame_element(style_name, x, y, 50, "__helmod-fork__/graphics/frame.png")
     
             style_name = table.concat({ "helmod_frame_element_w30", value, i }, "_")
-            frame_element(style_name, x, y, 30, "__helmod__/graphics/frame.png")
+            frame_element(style_name, x, y, 30, "__helmod-fork__/graphics/frame.png")
         end
         frame_y = frame_y + 1
     end
@@ -270,7 +270,7 @@ for _, style in pairs(style_element_list) do
         default_gui[style_name] = {
             type                     = "frame_style",
             graphical_set            = {
-                filename = "__helmod__/graphics/gui.png",
+                filename = "__helmod-fork__/graphics/gui.png",
                 corner_size = 1,
                 position = { x, y }
             },
@@ -332,7 +332,7 @@ for _, style in pairs(style_branch_list) do
     default_gui[style_name] = {
         type                     = "frame_style",
         graphical_set            = {
-            filename = "__helmod__/graphics/gui.png",
+            filename = "__helmod-fork__/graphics/gui.png",
             corner_size = 2,
             position = { x, y }
         },

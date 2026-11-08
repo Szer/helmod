@@ -45,7 +45,9 @@ RecipePrototype = newclass(Prototype, function(base, object, object_type)
             end
             Prototype.init(base, recipe)
             base.lua_type = defines.mod.recipes.recipe.name
-            if Player.hasFeatureQuality() then
+            if Player.hasFeatureQuality() and base.is_customized then
+                base.is_support_quality = true
+            elseif Player.hasFeatureQuality() then
                 if base.lua_prototype ~= nil and base.lua_prototype.ingredients ~= nil then
                     base.is_support_quality = base.lua_prototype.can_set_quality
                     local quality_min = nil
@@ -296,6 +298,9 @@ end
 function RecipePrototype:getAllCategories()
     if self.lua_prototype ~= nil then
         if self.lua_prototype.type == "recipe" then
+            if self.is_customized then
+                return {self.lua_prototype.category or defines.mod.recipe_customized_category}
+            end
             return self.lua_prototype.categories
         else
             if defines.mod.recipes[self.lua_type] ~= nil and defines.mod.recipes[self.lua_type].category ~= nil then
@@ -448,7 +453,9 @@ function RecipePrototype:getQualityProducts(factory, quality)
             if raw_product.burnt == true then
                 -- fuel burnt
                 lua_quality = Player.getQualityPrototype(factory.fuel_quality or "normal")
-            elseif self.lua_type == defines.mod.recipes.recipe.name and raw_product.index ~= nil then
+            elseif self.is_customized and raw_product.quality ~= nil then
+                lua_quality = Player.getQualityPrototype(raw_product.quality)
+            elseif not self.is_customized and self.lua_type == defines.mod.recipes.recipe.name and raw_product.index ~= nil then
                 -- Min quality of product
                 lua_quality = self.lua_prototype.get_product_quality(raw_product.index, quality)
             end
@@ -508,6 +515,8 @@ function RecipePrototype:getQualityIngredients(factory, quality)
         if raw_ingredient.type == "item" then
             if self.is_support_fuel_quality == true and raw_ingredient.burnt == true then
                 raw_ingredient.quality = factory.fuel_quality or "normal"
+            elseif self.is_customized then
+                raw_ingredient.quality = raw_ingredient.quality or quality or "normal"
             elseif self.lua_type == defines.mod.recipes.recipe.name then
                 raw_ingredient.quality = self.lua_prototype.get_ingredient_quality(raw_ingredient.index, quality).name
             elseif self.is_support_quality == true then

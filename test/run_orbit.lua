@@ -64,9 +64,9 @@ local success, message = xpcall(function()
         end
     else
         local mods = {}
-        for _, name in ipairs({"base", "quality", "elevated-rails", "space-age", "helmod"}) do
+        for _, name in ipairs({"base", "quality", "elevated-rails", "space-age", "helmod-fork"}) do
             local enabled = true
-            if mode == "base-only" and name ~= "base" and name ~= "helmod" then
+            if mode == "base-only" and name ~= "base" and name ~= "helmod-fork" then
                 enabled = false
             end
             table.insert(mods, '{"name":"' .. name .. '","enabled":' .. tostring(enabled) .. '}')
@@ -79,7 +79,7 @@ local success, message = xpcall(function()
             if mode == "timing" then
                 fixture = "orbit-timing-prototypes"
             end
-            local mod = work .. "/mods/helmod"
+            local mod = work .. "/mods/helmod-fork"
             Runner.copy(root .. "/test/" .. fixture .. ".lua", mod .. "/" .. fixture .. ".lua")
             local capture = mod .. "/data-final-fixes.lua"
             Runner.write(capture, 'require "' .. fixture .. '"\n' .. Runner.read(capture))

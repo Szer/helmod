@@ -11,7 +11,7 @@ function Blueprint.get_entities(data)
     if data.blueprint then
         Blueprint.get_blueprint_entities(entities, data)
     elseif data.blueprint_book then
-        for _, blueprint in pairs(data.blueprint_book.blueprints) do
+        for _, blueprint in pairs(data.blueprint_book.blueprints or {}) do
             Blueprint.get_blueprint_entities(entities, blueprint)
         end
     end
@@ -42,7 +42,7 @@ function Blueprint.get_tiles(data)
     if data.blueprint then
         Blueprint.get_blueprint_tiles(tiles, data)
     elseif data.blueprint_book then
-        for _, blueprint in pairs(data.blueprint_book.blueprints) do
+        for _, blueprint in pairs(data.blueprint_book.blueprints or {}) do
             Blueprint.get_blueprint_tiles(tiles, blueprint)
         end
     end

@@ -42,9 +42,10 @@ function Converter.read(data_string)
       return nil
     end
   end
-  local status, data_table = pcall(loadstring, data_string)
-  if (status) then
-    return data_table()
+  if type(data_string) ~= "string" then return nil end
+  local ok, result = serpent.load(data_string)
+  if ok and type(result) == "table" then
+    return result
   end
   return nil
 end

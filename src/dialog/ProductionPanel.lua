@@ -11,7 +11,7 @@ end)
 -------------------------------------------------------------------------------
 ---On initialization
 function ProductionPanel:onInit()
-	self.panelCaption = string.format("%s %s Experimental", "Helmod", script.active_mods["helmod"])
+	self.panelCaption = string.format("Helmod: Szer's Fork %s", script.active_mods[script.mod_name])
 end
 
 -------------------------------------------------------------------------------

@@ -173,6 +173,10 @@ function RuleEdition:onEvent(event)
         end
 
         if event.action == "save" then
+            if type(rule_value) ~= "string" or not rule_value:find("%S") then
+                Player.native().print({"helmod_rule-edition-panel.value-required"})
+                return
+            end
             local rule_panel = self:getFramePanel("rule_panel")
             local rule_table = rule_panel["list-data"]
 

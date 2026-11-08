@@ -155,8 +155,15 @@ function EventController.onConfigurationChanged(data)
   if not data or not data.mod_changes then
     return
   end
+  local previous = storage._migrated and storage._migrated.helmod
+  if previous ~= nil then
+    for key, value in pairs(previous) do
+      storage[key] = value
+    end
+    storage._migrated.helmod = nil
+  end
   local ok , err = pcall(function()
-    if data.mod_changes["helmod"] then
+    if data.mod_changes[script.mod_name] then
       --initialise au chargement d'une partie existante
       for _,player in pairs(game.players) do
         Player.set(player)

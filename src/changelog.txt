@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.3.8
+Date: 2026-11-08
+  Features:
+    - Send cargo to orbit: link cargo rate, rocket ingredients and silo count, including quality, productivity and launch timing.
+    - Import Helmod planner storage when switching directly from the original mod.
+  Bugfixes:
+    - Generating a block from an empty Recipe Explorer now leaves the sheet unchanged.
+    - Custom recipes use their own item qualities and crafting category without calling native recipe methods.
+    - The quantity editor reads the current player's text field after save and reload.
+    - Incomplete selector rules cannot be saved and existing blank rules no longer break the picker.
+    - Invalid plan imports are rejected and empty blueprint books decode correctly.
+---------------------------------------------------------------------------------------------------
 Version: 2.3.7
 Date: 2026-10-26
   Changes:

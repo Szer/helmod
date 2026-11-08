@@ -1,6 +1,8 @@
-# Helmod
+# Helmod: Szer's Fork
 
-This a mod for Factorio: [Mod Page](https://mods.factorio.com/mod/helmod)
+An independent fork of [Helmod](https://mods.factorio.com/mod/helmod), the factory planner created by Helfima with the [Helmod contributors](https://github.com/Helfima/helmod/graphs/contributors). Szer maintains this fork for Factorio 2.1. Adds linked orbital cargo planning and fixes bugs in the [fork issue tracker](https://github.com/Szer/helmod/issues).
+
+[Install from the Mod Portal](https://mods.factorio.com/mod/helmod-fork). To switch an existing Helmod 2.1 save, keep a backup, disable Helmod and enable Helmod Fork **in the same restart**, then load the original save. The fork takes over Helmod’s stored sheets, custom recipes and rules. Saving with neither mod active can discard the old data. Mods that explicitly require the original `helmod` ID need a compatibility update.
 
 Data model [here](doc/runtime-api-model.lua)
 
@@ -73,7 +75,11 @@ The launcher creates isolated mod and save directories. Successful runs remove t
 * `--base-only` checks existing planning without Space Age.
 * `--timing` measures 18 silo configurations over 40,000 ticks.
 * `--ui` uses a graphical Factorio client to exercise the selector and recipe editor, then closes that test client after 45 seconds. Screenshots go to `orbit-screenshots` in the current directory, or the directory selected with `--output`.
-* `--mods /path/to/mod-set` checks a separately prepared mod set, including compatible silos, cargo demand recalculation and available qualities. The directory supplies mod archives, `mod-list.json` with Helmod enabled, and optional `mod-settings.dat`.
+* `--mods /path/to/mod-set` checks a separately prepared mod set, including compatible silos, cargo demand recalculation and available qualities. The directory supplies mod archives, `mod-list.json` with helmod-fork enabled and helmod disabled, and optional `mod-settings.dat`.
 * `--mods /path/to/mod-set --launches` also measures normal and legendary silo launch intervals using continuously supplied rocket parts. This requires platform-capable silos and the Space Age test platform prototypes.
 
 Use `lua test/run_orbit.lua --help` for the command options. The test suites in `test/test_orbit*.lua` run inside Factorio; the launcher only prepares files and starts the engine.
+
+To replay the [seven original reproduction saves](https://github.com/Szer/helmod/tree/codex/audit-repros/audit-repros), run `lua test/run_fork_repros.lua /path/to/graphical-factorio /path/to/data /path/to/audit-repros`. This also checks storage transfer from Helmod and confirms a quantity after reloading the saved dialog in a new process.
+
+To package a release, run `git archive --format=zip --prefix=helmod-fork_VERSION/ -o helmod-fork_VERSION.zip HEAD:src`, substituting the version from `src/info.json`.

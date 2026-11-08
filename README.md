@@ -86,7 +86,7 @@ To build the release ZIP and checksum locally from a committed revision, run `ci
 
 ## Development and releases
 
-Target the `fork` branch for pull requests. GitHub Actions parses the Lua files, type-checks the rocket launch model and balance pivot selector with LuaLS (including a negative test for swapped coordinates), and runs the integration, base-only, timing and save regression suites on a pinned Factorio 2.1 headless build. It also creates a new map and migrates an old save with the packaged ZIP. The separate graphical suite remains available for UI changes.
+Target the `fork` branch for pull requests. GitHub Actions parses the Lua files, type-checks the rocket launch model, balance pivot selector and constraint controls with LuaLS (including a negative test for swapped coordinates), and runs the integration, base-only, timing and save regression suites on a pinned Factorio 2.1 headless build. It also creates a new map and migrates an old save with the packaged ZIP. The separate graphical suite remains available for UI changes.
 
 To run the same checks locally, install Lua 5.2, then run `ci/install-tools.sh /tmp/helmod-tools` and `ci/fetch-repros.sh /tmp/helmod-repros`. Use `LUA_LANGUAGE_SERVER=/tmp/helmod-tools/luals/bin/lua-language-server ci/check-types.sh` and `lua test/run_fork_repros.lua /tmp/helmod-tools/factorio/bin/x64/factorio /tmp/helmod-tools/factorio/data /tmp/helmod-repros --headless`.
 

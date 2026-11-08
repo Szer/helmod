@@ -7,6 +7,7 @@ check() {
 }
 check src/model/launch
 check src/math/balance
+check src/gui/controls
 
 # Verify the live call site rejects swapped coordinates, without editing the checkout.
 mkdir "$tmp/swapped"
@@ -21,3 +22,13 @@ grep -q 'param-type-mismatch' "$tmp/negative.log" && grep -q 'PivotRow' "$tmp/ne
   exit 1
 }
 echo 'Verified that LuaLS rejects swapped pivot coordinates.'
+
+# A constraint kind is not a button action, even though both are strings.
+mkdir "$tmp/bad-action"
+sed '/^return ConstraintView$/i ConstraintView.hint(false, "master")' \
+  src/gui/controls/ConstraintView.lua > "$tmp/bad-action/ConstraintView.lua"
+if check "$tmp/bad-action" > "$tmp/bad-action.log" 2>&1; then
+  echo 'A constraint kind should not type-check as a control action.' >&2
+  exit 1
+fi
+grep -q 'param-type-mismatch' "$tmp/bad-action.log" || { cat "$tmp/bad-action.log" >&2; exit 1; }

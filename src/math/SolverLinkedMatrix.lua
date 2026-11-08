@@ -303,6 +303,13 @@ function SolverLinkedMatrix:solve_block_append(block, matrix, parameters_index)
             local parameters = matrix.parameters[row_index]
             local count = 0
             if parameters ~= nil and parameters.recipe_count > 0 then
+                if block.count == 0 then
+                    -- Only the linked profile runs. Start an empty unit block for its totals.
+                    block.count = 1
+                    for _, child in pairs(block.children) do child.count = 0 end
+                    for _, product in pairs(block.products) do product.amount = 0 end
+                    for _, ingredient in pairs(block.ingredients) do ingredient.amount = 0 end
+                end
                 count = parameters.recipe_count / block.count
             end
             local linked_children = linked_block.children

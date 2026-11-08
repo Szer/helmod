@@ -5,6 +5,33 @@ SolverLinkedMatrixAlgebra = newclass(SolverLinkedMatrix, function(base, object)
     SolverLinkedMatrix.init(base, object)
 end)
 
+-- A linked output can also supply the primary output. Remove only production
+-- that the whole group can spare after accounting for each of its products.
+---@param matrix Matrix
+---@param first integer
+---@param last integer
+local function trimLinkedSurplus(matrix, first, last)
+    local balance = matrix.rows[#matrix.rows]
+    for i = first, last do
+        local row, params = matrix.rows[i], matrix.parameters[i]
+        if params.recipe_count > 0 and params.contraints == nil and params.unlinked ~= 1 then
+            local reduction = params.recipe_count
+            for col, amount in ipairs(row) do
+                if amount > 0 then
+                    reduction = math.min(reduction, balance[col] / amount)
+                end
+            end
+            if reduction > 1e-8 then
+                params.recipe_count = params.recipe_count - reduction
+                params.coefficient = params.recipe_count / params.recipe_production
+                for col, amount in ipairs(row) do
+                    balance[col] = balance[col] - reduction * amount
+                end
+            end
+        end
+    end
+end
+
 -------------------------------------------------------------------------------
 ---Retourne la colonne
 ---@param matrix Matrix
@@ -167,12 +194,18 @@ function SolverLinkedMatrixAlgebra:solve_matrix(matrix_base, debug, by_factory, 
                 end
             end
         else
+            local primary
             for irow, _ in pairs(Mstep.rows) do
                 if irow < #Mstep.rows then
                     icol = self:get_col(Mstep, irow, false)
                     self:add_runtime(debug, runtime, "Step " .. num_loop, Mstep, { x = icol, y = irow })
                     Mstep = self:line_compute(Mstep, irow, icol)
                     num_loop = num_loop + 1
+                    if Mstep.headers[irow].product_linked == nil then
+                        primary = irow
+                    elseif primary and (Mstep.headers[irow + 1] == nil or Mstep.headers[irow + 1].product_linked == nil) then
+                        trimLinkedSurplus(Mstep, primary, irow)
+                    end
                 end
             end
         end

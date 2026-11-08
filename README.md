@@ -90,4 +90,20 @@ Target the `fork` branch for pull requests. GitHub Actions parses the Lua files,
 
 To run the same checks locally, install Lua 5.2, then run `ci/install-tools.sh /tmp/helmod-tools` and `ci/fetch-repros.sh /tmp/helmod-repros`. Use `LUA_LANGUAGE_SERVER=/tmp/helmod-tools/luals/bin/lua-language-server ci/check-types.sh` and `lua test/run_fork_repros.lua /tmp/helmod-tools/factorio/bin/x64/factorio /tmp/helmod-tools/factorio/data /tmp/helmod-repros --headless`.
 
-To release, update `src/info.json` and `src/changelog.txt`, get a passing branch check, then push a new tag named `helmod-fork-VERSION` on that commit. Only release tags publish. Actions uploads the exact ZIP tested by the check job and verifies its hash against the Mod Portal. A retry accepts an identical existing release and refuses to replace a different file. The repository Actions secret `FACTORIO_APIKEY` needs the Publish Mods and Upload Mods permissions; it is used only in the tag publish step.
+## Versioning and changelogs
+
+Squash PR titles become public release notes. Make each title understandable to a player reading the note without the PR. For example, `fix: Keep the entered quantity after loading a save` describes the outcome; function names and stack traces belong in the PR body.
+
+| Title prefix | Version change | From 2.3.9 |
+|---|---|---|
+| `fix:` | Patch | 2.3.10 |
+| `feat:` | Minor | 2.4.0 |
+| `break:` | Major | 3.0.0 |
+
+The largest change since the last fork tag wins. `docs:`, `ci:`, `chore:`, `test:`, `refactor:`, `style:` and `build:` do not bump the version or appear in the notes. Optional scopes such as `fix(ui):` are supported. Squash commits use the PR title and no body.
+
+Merges test and accumulate without publishing. To release a batch, manually run **Fork checks and release batch** on branch **fork**, or use `gh workflow run fork.yml --repo Szer/helmod --ref fork`. After all checks pass, [git-cliff](https://git-cliff.org/) calculates the version and writes one concise bullet per player-facing commit in Factorio’s changelog format. Actions commits the generated manifest and changelog, atomically pushes that commit and its version tag, then dispatches the tag workflow. Tag CI independently verifies the version and notes and runs Factorio again; only then does it publish the tested ZIP and check the portal hash. An empty or maintenance-only batch creates no release. Do not hand-edit versions or move published tags. To retry a failed tag publication, rerun the failed Actions job, or dispatch `fork.yml` on that tag.
+
+The Actions secret `FACTORIO_APIKEY` needs the Publish Mods and Upload Mods permissions. Only the tag publish step receives it. Test the versioning policy locally with git-cliff on PATH and `ci/test-semver.sh`.
+
+The read-only **Upstream drift** workflow checks Helfima’s `master`, `dev`, and `experimental` branches weekly. If upstream moves ahead, its run lists the commits for review. Bring applicable changes into a tested PR with a player-facing title; the check itself never merges or publishes.

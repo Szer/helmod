@@ -1,0 +1,30 @@
+name: PR title
+on:
+  pull_request:
+    branches: [fork]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+permissions:
+  pull-requests: read
+jobs:
+  title:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            fix
+            feat
+            break
+            chore
+            docs
+            test
+            ci
+            build
+            refactor
+            style
+          headerPattern: '^(\w+)(?:\(([^)]+)\))?: (.+)$'
+          headerPatternCorrespondence: type, scope, subject
+          subjectPattern: '^.{5,90}$'
+          subjectPatternError: 'Use a concise subject that makes sense as a standalone changelog bullet.'

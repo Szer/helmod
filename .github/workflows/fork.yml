@@ -1,10 +1,9 @@
-name: Fork checks and release
+name: Fork checks and release batch
 on:
   pull_request:
     branches: [fork]
   push:
     branches: [fork]
-    tags: ['helmod-fork-*']
   workflow_dispatch:
 
 permissions:
@@ -18,11 +17,38 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Install pinned test tools
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y lua5.2
           ci/install-tools.sh "$RUNNER_TEMP/tools"
+      - name: Check SemVer and changelog policy
+        run: |
+          ci/install-cliff.sh "$RUNNER_TEMP/cliff"
+          export PATH="$RUNNER_TEMP/cliff:$PATH"
+          ci/test-semver.sh
+          ci/test-publisher.sh
+          if [[ $GITHUB_REF_TYPE == tag ]]; then
+            ci/semver.sh verify
+          else
+            base=$(git describe --first-parent --abbrev=0 --tags --match 'helmod-fork-[0-9]*')
+            [[ $(jq -r .version src/info.json) == "${base#helmod-fork-}" ]]
+            git diff --exit-code "$base" -- src/changelog.txt
+          fi
+      - name: Preview the version for this squash title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          preview="$RUNNER_TEMP/title-preview"
+          git worktree add --detach "$preview" "$BASE_SHA"
+          # Read the proposed policy, even on the PR introducing it.
+          cp cliff.toml "$preview/cliff.toml"
+          cd "$preview"
+          tag=$(PATH="$RUNNER_TEMP/cliff:$PATH" "$GITHUB_WORKSPACE/ci/semver.sh" plan "$PR_TITLE")
+          echo "Expected release from this squash title: ${tag:-no release}." >> "$GITHUB_STEP_SUMMARY"
       - name: Check Lua syntax and launch model types
         run: |
           find src test -type f -name '*.lua' -print0 | xargs -0 -n1 luac5.2 -p
@@ -49,7 +75,7 @@ jobs:
 
   publish:
     needs: check
-    if: github.repository == 'Szer/helmod' && github.ref_type == 'tag' && startsWith(github.ref_name, 'helmod-fork-')
+    if: github.repository == 'Szer/helmod' && github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && startsWith(github.ref_name, 'helmod-fork-')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency: portal-publish
@@ -65,3 +91,24 @@ jobs:
         run: ci/publish.sh dist
         env:
           FACTORIO_APIKEY: ${{ secrets.FACTORIO_APIKEY }}
+
+  auto-release:
+    needs: check
+    if: github.repository == 'Szer/helmod' && github.ref == 'refs/heads/fork' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency: fork-version-and-tag
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Version and dispatch eligible releases
+        run: |
+          ci/install-cliff.sh "$RUNNER_TEMP/cliff"
+          export PATH="$RUNNER_TEMP/cliff:$PATH"
+          ci/auto-release.sh
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,3 +1,4 @@
+local Pivot = require "math.balance.Pivot"
 local Balance = {}
 
 -- A second, opposite column makes zero net output an equality for an internal material.
@@ -26,33 +27,6 @@ local function addColumns(matrix, source)
     return changed
 end
 
--- Column one is the current right-hand side, transformed by each pivot.
----@param matrix Matrix
----@return integer? col
----@return integer? row
-local function nextPivot(matrix)
-    local objective = matrix.rows[#matrix.rows]
-    local best = 1e-8
-    local column
-    for i = 2, #matrix.columns do
-        if objective[i] > best then
-            column, best = i, objective[i]
-        end
-    end
-    if column == nil then return nil, nil end
-    local row, ratio
-    for i = 1, #matrix.rows - 1 do
-        local values = matrix.rows[i]
-        if values[column] > 1e-8 then
-            local candidate = values[1] / values[column]
-            if ratio == nil or candidate < ratio then
-                row, ratio = i, candidate
-            end
-        end
-    end
-    return column, row
-end
-
 -- If exact balance is infeasible or degenerates, keep the ordinary surplus solution.
 ---@param solver SolverMatrix|SolverLinkedMatrix
 ---@param prepared Matrix
@@ -61,13 +35,7 @@ end
 function Balance.try(solver, prepared, source)
     local matrix = solver:clone(prepared)
     if not addColumns(matrix, source) then return nil end
-    for _ = 1, 4 * (#matrix.columns + #matrix.rows) do
-        local col, row = nextPivot(matrix)
-        if col == nil then return matrix end
-        if row == nil then return nil end
-        matrix = solver:pivot(matrix, row, col)
-    end
-    return nil
+    return Pivot.solve(solver, matrix, 4 * (#matrix.columns + #matrix.rows))
 end
 
 return Balance

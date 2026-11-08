@@ -49,7 +49,7 @@ jobs:
           cd "$preview"
           tag=$(PATH="$RUNNER_TEMP/cliff:$PATH" "$GITHUB_WORKSPACE/ci/semver.sh" plan "$PR_TITLE")
           echo "Expected release from this squash title: ${tag:-no release}." >> "$GITHUB_STEP_SUMMARY"
-      - name: Check Lua syntax and launch model types
+      - name: Check Lua syntax and typed modules
         run: |
           find src test -type f -name '*.lua' -print0 | xargs -0 -n1 luac5.2 -p
           LUA_LANGUAGE_SERVER="$RUNNER_TEMP/tools/luals/bin/lua-language-server" ci/check-types.sh

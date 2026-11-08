@@ -94,6 +94,8 @@ To run the same checks locally, install Lua 5.2, then run `ci/install-tools.sh /
 
 [Download the latest passing build](https://github.com/Szer/helmod/releases/download/nightly/helmod-fork-nightly.zip) or [see its commit, checksum and pending changes](https://github.com/Szer/helmod/releases/tag/nightly). This single rolling GitHub prerelease is updated after successful pushes to `fork`. It uses the same ZIP tested by CI, with the normal mod ID and version.
 
+On Linux, run `./scripts/install-nightly.sh` from the repository. It verifies the GitHub asset checksum and installs it under the proper filename in `~/.factorio-nightly/mods`. Set the destination with `SAVE_FOLDER="/path/to/test/mods" ./scripts/install-nightly.sh`. This is the **mod ZIP destination**, not the folder containing saved maps. Requires Bash, curl, jq, unzip and GNU coreutils. A different ZIP with the same filename is backed up before replacement.
+
 Rename the download to the filename shown on the prerelease page and put it in a separate test profile’s mod directory. Replace any other copy of the fork in that directory, restart Factorio, and load a **copy** of your save. The nightly does not update through the in-game Mod Portal. To return to the stable version, switch back to your normal profile and save.
 
 ## Versioning and changelogs

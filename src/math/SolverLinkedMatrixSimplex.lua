@@ -1,3 +1,4 @@
+local Balance = require "math.SimplexBalance"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class SolverLinkedMatrixSimplex : SolverLinkedMatrix
@@ -307,8 +308,10 @@ function SolverLinkedMatrixSimplex:solve_matrix(Mbase, debug, by_factory, time)
 		self:add_runtime(debug, runtime, "Initial", Mbase)
 		local Mstep = self:prepare(Mbase)
 		self:add_runtime(debug, runtime, "Prepare", Mstep)
+		local balanced = Balance.try(self, Mstep, Mbase)
 		local loop, xcol, xrow
-		loop = true
+		loop = balanced == nil
+		if balanced then Mstep = balanced end
 		while loop do
 			loop, xcol, xrow = self:get_pivot(Mstep)
 			if loop then

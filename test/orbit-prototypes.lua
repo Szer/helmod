@@ -30,3 +30,15 @@ local unbuffered = table.deepcopy(silo)
 unbuffered.name = "orbit-test-unbuffered"
 unbuffered.rocket_parts_storage_cap = 0
 data:extend{unbuffered}
+
+-- Producing a gear leaves at least one extra plate even when both recipes run.
+for _, recipe in ipairs({
+    {name="balance-test-gear", ingredients={{type="item",name="iron-plate",amount=1}},
+        results={{type="item",name="iron-gear-wheel",amount=1},{type="item",name="copper-plate",amount=2}}},
+    {name="balance-test-plate", ingredients={{type="item",name="copper-plate",amount=1}},
+        results={{type="item",name="iron-plate",amount=1}}}
+}) do
+    recipe.type = "recipe"
+    recipe.main_product = recipe.results[1].name
+    data:extend{recipe}
+end

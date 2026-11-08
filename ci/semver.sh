@@ -30,7 +30,13 @@ while read -r sha; do
   if [[ -f $file ]]; then
     cp "$file" "$tmp/body"
   else
-    git show -s --format=%b "$sha" > "$tmp/body"
+    # GitHub can hard-wrap the PR description when creating a squash commit.
+    git show -s --format=%b "$sha" | awk '
+      /^Release-note:/ { if (open) print note; note=$0; open=1; next }
+      open && NF && $0 !~ /^[[:alnum:]-]+:/ { sub(/^[[:space:]]+/, ""); note=note " " $0; next }
+      open { print note; open=0 }
+      END { if (open) print note }
+    ' > "$tmp/body"
   fi
   mode_note=optional
   if [[ -f $file ]]; then mode_note=required; fi

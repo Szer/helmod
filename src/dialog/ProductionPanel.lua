@@ -1,3 +1,4 @@
+local BlockRemoval = require "gui.controls.BlockRemoval"
 local ChildRemoval = require "gui.controls.ChildRemoval"
 local ConstraintView = require "gui.controls.ConstraintView"
 local Orbit = require "model.Orbit"
@@ -269,11 +270,8 @@ function ProductionPanel:getSubMenuPanel()
 	
 end
 
--------------------------------------------------------------------------------
----Update
----@param event LuaEvent
-function ProductionPanel:onUpdate(event)
-	local removal = ChildRemoval.decode(event)
+---@param removal ChildRemovalAction?
+function ProductionPanel:clearForUpdate(removal)
 	if removal ~= nil then
 		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
 		local menu, header, rows = self:getDataPanel()
@@ -285,6 +283,14 @@ function ProductionPanel:onUpdate(event)
 		local _, content = self:getPanel()
 		content.clear()
 	end
+end
+
+-------------------------------------------------------------------------------
+---Update
+---@param event LuaEvent
+function ProductionPanel:onUpdate(event)
+	local removal = ChildRemoval.decode(event)
+	self:clearForUpdate(removal)
 	self:onEventAutoCancel(event, removal)
 
 	local model, block, _ = self:getParameterObjects()
@@ -385,10 +391,19 @@ function ProductionPanel:updateSubMenuLeftPanel(model, block)
 	local group_delete = GuiElement.add(left_panel, GuiFlowH("group_delete"))
 	local block_remove_confirm = User.getParameter("block_remove_confirm")
 	if block.id == block_remove_confirm then
-		GuiElement.add(group_delete, GuiButton(self.classname, "block-remove-confirmed", model.id, block_id):sprite("menu", defines.sprites.checkmark.black, defines.sprites.checkmark.black):style("helmod_button_menu_sm_actived_green"):tooltip({ "tooltip.remove-block-confirm" }))
-        GuiElement.add(group_delete, GuiButton(self.classname, "block-remove-canceled", model.id, block_id):sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_actived_red"):tooltip({ "tooltip.remove-block-cancel" }))
+		local confirm = GuiButton(self.classname, BlockRemoval.buttonArgs{
+		    action="block-remove-confirmed", model_id=model.id, block_id=block_id
+		})
+		GuiElement.add(group_delete, confirm:sprite("menu", defines.sprites.checkmark.black, defines.sprites.checkmark.black):style("helmod_button_menu_sm_actived_green"):tooltip({ "tooltip.remove-block-confirm" }))
+        local cancel = GuiButton(self.classname, BlockRemoval.buttonArgs{
+            action="block-remove-canceled", model_id=model.id, block_id=block_id
+        })
+        GuiElement.add(group_delete, cancel:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_actived_red"):tooltip({ "tooltip.remove-block-cancel" }))
 	else
-		local delete_button = GuiElement.add(group_delete, GuiButton(self.classname, "block-remove", model.id, block_id):sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_actived_red"):tooltip({"helmod_result-panel.remove-button-production-block" }))
+		local remove = GuiButton(self.classname, BlockRemoval.buttonArgs{
+		    action="block-remove", model_id=model.id, block_id=block_id
+		})
+		local delete_button = GuiElement.add(group_delete, remove:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_actived_red"):tooltip({"helmod_result-panel.remove-button-production-block" }))
 		if not (User.isDeleter(model)) then
 			delete_button.enabled = false
 		end
@@ -2430,30 +2445,10 @@ end
 ---@param model ModelData
 ---@param block BlockData
 function ProductionPanel:onEventAccessDelete(event, model, block)
-	if event.action == "block-remove-confirmed" then
-		if block.parent_id == nil then
-			ModelBuilder.rebuildParentBlockOfModel(model)
-		end
-		if model.id == block.parent_id then
-            ModelBuilder.removeModel(model.id)
-			event.item1 = nil
-			event.item2 = nil
-        else
-            local parent_block = model.blocks[block.parent_id] or model.block_root
-            ModelBuilder.blockChildRemove(model, parent_block, block)
-			ModelCompute.update(model)
-			event.item2 = block.parent_id
-        end
-		Controller:send("on_gui_open", event, self.classname)
-    end
-
-    if event.action == "block-remove-canceled" then
-        Controller:send("on_gui_update", event, self.classname)
-    end
-
-	if event.action == "block-remove" then
-		User.setParameter("block_remove_confirm", block.id)
-		Controller:send("on_gui_update", event, self.classname)
+	local header = BlockRemoval.decode(event)
+	if header ~= nil then
+		self:onBlockRemoval(header, event, model, block)
+		return
 	end
 
 	local removal = ChildRemoval.decode(event)
@@ -2461,6 +2456,38 @@ function ProductionPanel:onEventAccessDelete(event, model, block)
 		self:onChildRemoval(removal, model, block)
 		Controller:send("on_gui_update", event, self.classname)
 	end
+end
+
+---@param removal BlockRemovalAction
+---@param event LuaEvent
+---@param model ModelData
+---@param block BlockData
+function ProductionPanel:onBlockRemoval(removal, event, model, block)
+	if removal.action == "block-remove" then
+		User.setParameter("block_remove_confirm", block.id)
+		Controller:send("on_gui_update", event, self.classname)
+		return
+	end
+	if removal.action == "block-remove-canceled" then
+		Controller:send("on_gui_update", event, self.classname)
+		return
+	end
+
+	---@type ConfirmBlockRemoval
+	local confirmation = removal
+	if block.parent_id == nil then
+		ModelBuilder.rebuildParentBlockOfModel(model)
+	end
+	if block.parent_id == model.id then
+		ModelBuilder.removeModel(model.id)
+		event.item1, event.item2 = nil, nil
+	else
+		local parent = model.blocks[block.parent_id] or model.block_root
+		ModelBuilder.blockChildRemove(model, parent, block)
+		ModelCompute.update(model)
+		event.item1, event.item2 = confirmation.model_id, block.parent_id
+	end
+	Controller:send("on_gui_open", event, self.classname)
 end
 
 ---@param removal ChildRemovalAction
@@ -2489,7 +2516,8 @@ end
 ---@param event LuaEvent
 ---@param removal ChildRemovalAction?
 function ProductionPanel:onEventAutoCancel(event, removal)
-    if event.action ~= "block-remove" and event.action ~= "block-remove-confirmed" then
+    local header = BlockRemoval.tag(event.action)
+    if header == nil or header == "block-remove-canceled" then
         User.setParameter("block_remove_confirm", nil)
     end
     if removal == nil or removal.action == "block-child-remove-canceled" then

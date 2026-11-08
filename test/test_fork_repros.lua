@@ -9,10 +9,100 @@ local function find(element, name, kind)
     end
 end
 
-local function click(player, name)
+local function click(player, name, exact)
     local element = assert(find(player.gui.screen, name), name)
+    if exact then assert(element.name == name, "expected exact button name " .. name) end
     EventController.onGuiClickButton{player_index=player.index, element=element, button=defines.mouse_button_type.left}
     game.tick_paused = false
+end
+
+---@param model ModelData
+---@param block BlockData
+---@return ProductionPanel
+local function openBlock(model, block)
+    local panel = Controller:getView("HMProductionPanel")
+    panel:close()
+    User.setParameterObjects("HMProductionPanel", model.id, block.id)
+    Controller:send("on_gui_open", {name="OPEN", item1=model.id, item2=block.id}, "HMProductionPanel")
+    return panel
+end
+
+---@param player LuaPlayer
+local function checkHeaderRemoval(player)
+    local model = Model.newModel()
+    local root = model.block_root
+    local parent = Model.newBlock(model, {name="iron-gear-wheel", type="recipe"})
+    parent.parent_id, parent.index = root.id, 0
+    root.children[parent.id], model.blocks[parent.id] = parent, parent
+    local child = Model.newBlock(model, {name="iron-gear-wheel", type="recipe"})
+    child.parent_id, child.index = parent.id, 0
+    parent.children[child.id], model.blocks[child.id] = child, child
+    ModelBuilder.addRecipeIntoProductionBlock(model, child, "iron-gear-wheel", "recipe")
+    ModelCompute.update(model)
+    local panel = openBlock(model, child)
+    local target = "=" .. model.id .. "=" .. child.id
+    local _, _, rows = panel:getDataPanel()
+    local navigator = panel:getNavigatorPanel()
+    click(player, "HMProductionPanel=block-remove" .. target, true)
+    assert(not rows.valid and not navigator.valid, "header removal uses a full refresh")
+    click(player, "HMProductionPanel=block-remove-canceled" .. target, true)
+    assert(parent.children[child.id] == child, "cancel must keep the selected block")
+    assert(not find(player.gui.screen, "block-remove-confirmed" .. target), "cancel must close confirmation")
+    click(player, "HMProductionPanel=block-remove" .. target, true)
+    child.parent_id = nil
+    click(player, "HMProductionPanel=block-remove-confirmed" .. target, true)
+    assert(parent.children[child.id] == nil and storage.models[model.id] == model)
+    local current, selected = panel:getParameterObjects()
+    assert(current == model and selected == parent, "nested deletion must open the parent")
+    openBlock(model, root)
+    target = "=" .. model.id .. "=" .. root.id
+    click(player, "HMProductionPanel=block-remove" .. target, true)
+    assert(storage.models[model.id] == model, "request must keep the model")
+    click(player, "HMProductionPanel=block-remove-confirmed" .. target, true)
+    assert(storage.models[model.id] == nil, "root confirmation must delete the model")
+    current = panel:getParameterObjects()
+    assert(current ~= nil and current.id ~= model.id, "root deletion must leave the deleted sheet")
+end
+
+---@param player LuaPlayer
+local function checkRowRemoval(player)
+    local model = Model.newModel()
+    local block = model.block_root
+    local rows = {}
+    for i = 1, 24 do
+        local _, row = ModelBuilder.addRecipeIntoProductionBlock(model, block, "firearm-magazine", "recipe")
+        rows[i] = row
+    end
+    local child = Model.newBlock(model, {name="iron-gear-wheel", type="recipe"})
+    child.parent_id, child.index = block.id, #rows
+    block.children[child.id], model.blocks[child.id] = child, child
+    ModelBuilder.addRecipeIntoProductionBlock(model, child, "iron-gear-wheel", "recipe")
+    ModelCompute.update(model)
+    local panel = openBlock(model, block)
+    local _, _, pane = panel:getDataPanel()
+    local navigator = panel:getNavigatorPanel()
+    for _, i in ipairs({12, 24}) do
+        local button = "block-child-remove=" .. model.id .. "=" .. block.id .. "=" .. rows[i].id
+        pane.scroll_to_element(assert(find(pane, button)))
+        click(player, button)
+        assert(block.children[rows[i].id] == nil, "clicked row must be removed")
+        assert(pane.valid and navigator.valid, "row removal must preserve both scroll panes")
+        assert(not find(pane, button), "removed row must disappear from the table")
+    end
+    local target = "=" .. model.id .. "=" .. block.id .. "=" .. child.id
+    for _, action in ipairs({"remove", "remove-canceled", "remove", "remove-confirmed"}) do
+        click(player, "block-child-" .. action .. target)
+        assert(pane.valid and navigator.valid, "block removal controls must preserve both scroll panes")
+        if action ~= "remove-confirmed" then
+            assert(block.children[child.id] == child, "only confirmation may delete the block")
+        end
+        if action == "remove" then
+            assert(find(pane, "block-child-remove-confirmed" .. target), "request must offer confirmation")
+        elseif action == "remove-canceled" then
+            assert(not find(pane, "block-child-remove-confirmed" .. target), "cancel must close confirmation")
+        end
+    end
+    assert(block.children[child.id] == nil, "confirmed block must be removed")
 end
 
 return function(case)
@@ -29,46 +119,10 @@ return function(case)
         assert(model and model.block_root, "expected a saved sheet")
         if case == "consumer-controls" then
             checkConsumerControls(player)
+        elseif case == "header-block-removal" then
+            checkHeaderRemoval(player)
         elseif case == "row-removal-scroll" then
-            model = Model.newModel()
-            local block = model.block_root
-            local rows = {}
-            for i = 1, 24 do
-                local _, row = ModelBuilder.addRecipeIntoProductionBlock(model, block, "firearm-magazine", "recipe")
-                rows[i] = row
-            end
-            local child = Model.newBlock(model, {name="iron-gear-wheel", type="recipe"})
-            child.parent_id, child.index = block.id, #rows
-            block.children[child.id], model.blocks[child.id] = child, child
-            ModelBuilder.addRecipeIntoProductionBlock(model, child, "iron-gear-wheel", "recipe")
-            ModelCompute.update(model)
-            local panel = Controller:getView("HMProductionPanel")
-            panel:close()
-            User.setParameterObjects("HMProductionPanel", model.id, block.id)
-            Controller:send("on_gui_open", {name="OPEN", item1=model.id, item2=block.id}, "HMProductionPanel")
-            local _, _, pane = panel:getDataPanel()
-            for _, i in ipairs({12, 24}) do
-                local button = "block-child-remove=" .. model.id .. "=" .. block.id .. "=" .. rows[i].id
-                pane.scroll_to_element(assert(find(pane, button)))
-                click(player, button)
-                assert(block.children[rows[i].id] == nil, "clicked row must be removed")
-                assert(pane.valid, "row removal must preserve the scrolled viewport")
-                assert(not find(pane, button), "removed row must disappear from the table")
-            end
-            local target = "=" .. model.id .. "=" .. block.id .. "=" .. child.id
-            for _, action in ipairs({"remove", "remove-canceled", "remove", "remove-confirmed"}) do
-                click(player, "block-child-" .. action .. target)
-                assert(pane.valid, "block removal controls must preserve the scrolled viewport")
-                if action ~= "remove-confirmed" then
-                    assert(block.children[child.id] == child, "only confirmation may delete the block")
-                end
-                if action == "remove" then
-                    assert(find(pane, "block-child-remove-confirmed" .. target), "request must offer confirmation")
-                elseif action == "remove-canceled" then
-                    assert(not find(pane, "block-child-remove-confirmed" .. target), "cancel must close confirmation")
-                end
-            end
-            assert(block.children[child.id] == nil, "confirmed block must be removed")
+            checkRowRemoval(player)
         elseif case == "quantity-confirm" then
             local input = assert(find(player.gui.screen.HMProductEdition, "product-update", "textfield"))
             input.text = "10"

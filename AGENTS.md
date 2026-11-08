@@ -17,6 +17,12 @@ Characterize the current behavior before changing representations. Keep the refa
 - Split bindings that change meaning. Use tagged alternatives for real alternatives; keep `nil`, `false`, and zero distinct. If the contract is ambiguous, stop and discuss it rather than adding `any`, casts, or suppressions to silence the checker.
 - Run the same characterization tests after refactoring, plus a regression for the intended fix. Verify observable quantities or controls in Factorio, not just helper return values.
 
+## Typed GUI actions
+
+- Follow `ChildRemoval` for panel actions. Give each variant a literal `action` and required named fields, and share that discriminated union between button construction and handling.
+- Encode the payload at the button and decode it at the dispatcher boundary. Keep the existing button names and argument order so saved GUI controls still work.
+- Narrow the union in the handler and type the remaining case explicitly. Include live call sites in the LuaLS gate and verify that a misspelled tag, a missing payload field, and an unhandled variant fail CI.
+
 ## PR titles are public release notes
 
 Squash PR titles must be user-friendly and readable as standalone changelog bullets. Describe what changes for a player in one short sentence: `fix: Keep the entered quantity after loading a save`, not `fix: Guard input_quantity`. Describe the scope of the actual change. If the fix applies to matrix planning generally, do not title it as a fix for the oil recipe that exposed it. Put the reproduction, implementation details, and test evidence in the PR body. Every release-worthy PR (fix, feat or break, including scoped titles) must include exactly one nonempty standalone `Release-note: <player-facing sentence>` line to the PR body; the title still sets the version bump. For a breaking change, name the incompatible behavior and explain the migration in the body.

@@ -1,3 +1,4 @@
+local ChildRemoval = require "gui.controls.ChildRemoval"
 local ConstraintView = require "gui.controls.ConstraintView"
 local Orbit = require "model.Orbit"
 -------------------------------------------------------------------------------
@@ -272,8 +273,8 @@ end
 ---Update
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
-	local action = event.action
-	if action == "block-child-remove" or action == "block-child-remove-confirmed" or action == "block-child-remove-canceled" then
+	local removal = ChildRemoval.decode(event)
+	if removal ~= nil then
 		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
 		local menu, header, rows = self:getDataPanel()
 		menu.clear()
@@ -284,7 +285,7 @@ function ProductionPanel:onUpdate(event)
 		local _, content = self:getPanel()
 		content.clear()
 	end
-    self:onEventAutoCancel(event)
+	self:onEventAutoCancel(event, removal)
 
 	local model, block, _ = self:getParameterObjects()
 	self:updateIndexPanel(model)
@@ -1252,18 +1253,19 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 	local cell_action = GuiElement.add(gui_table, GuiTable("action", recipe.id):column(3))
 	---by ingredient
 	local uri_button_top = "block-child-up"
-	local uri_button_remove = "block-child-remove"
 	local uri_button_bottom = "block-child-down"
 	---by product
 	if block.by_product == false then
 		uri_button_top = "block-child-down"
-		uri_button_remove = "block-child-remove"
 		uri_button_bottom = "block-child-up"
 	end
 	local uri_button_copy = "recipe-copy"
 	local tree_down = GuiElement.add(cell_action, GuiButton(self.classname, "tree-recipe-down", model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_left.black, defines.sprites.arrow_left.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element-in-tree", User.getModSetting("row_move_step") }))
 	GuiElement.add(cell_action, GuiButton(self.classname, uri_button_top, model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_top.black, defines.sprites.arrow_top.black):style("helmod_button_menu_sm"):tooltip({"tooltip.up-element", User.getModSetting("row_move_step") }))
-	GuiElement.add(cell_action, GuiButton(self.classname, uri_button_remove, model.id, block.id, recipe.id):sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_red"):tooltip({"tooltip.remove-element" }))
+	local remove = GuiButton(self.classname, ChildRemoval.buttonArgs{
+	    action="block-child-remove", model_id=model.id, block_id=block.id, child_id=recipe.id
+	})
+	GuiElement.add(cell_action, remove:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_red"):tooltip({"tooltip.remove-element" }))
 
 	local tree_up = GuiElement.add(cell_action, GuiButton(self.classname, "tree-recipe-up", model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_right.black, defines.sprites.arrow_right.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.up-element-in-tree", User.getModSetting("row_move_step") }))
 	GuiElement.add(cell_action, GuiButton(self.classname, uri_button_bottom, model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_bottom.black, defines.sprites.arrow_bottom.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element", User.getModSetting("row_move_step") }))
@@ -1498,22 +1500,29 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
     local block_child_remove_confirm = User.getParameter("block_child_remove_confirm")
     
     if block.id == block_child_remove_confirm then
-        GuiElement.add(cell_action, GuiButton(self.classname, "block-child-remove-confirmed", model.id, parent.id, block.id):sprite("menu", defines.sprites.checkmark.black, defines.sprites.checkmark.black):style("helmod_button_menu_sm_actived_green"):tooltip({ "tooltip.remove-element-confirm" }))
-        GuiElement.add(cell_action, GuiButton(self.classname, "block-child-remove-canceled", model.id, parent.id, block.id):sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_actived_red"):tooltip({ "tooltip.remove-element-cancel" }))
+        local confirm = GuiButton(self.classname, ChildRemoval.buttonArgs{
+            action="block-child-remove-confirmed", model_id=model.id, block_id=parent.id, child_id=block.id
+        })
+        GuiElement.add(cell_action, confirm:sprite("menu", defines.sprites.checkmark.black, defines.sprites.checkmark.black):style("helmod_button_menu_sm_actived_green"):tooltip({ "tooltip.remove-element-confirm" }))
+        local cancel = GuiButton(self.classname, ChildRemoval.buttonArgs{
+            action="block-child-remove-canceled", model_id=model.id, block_id=parent.id, child_id=block.id
+        })
+        GuiElement.add(cell_action, cancel:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_actived_red"):tooltip({ "tooltip.remove-element-cancel" }))
     else
         ---by ingredient
         local uri_button_top = "block-child-up"
-        local uri_button_remove = "block-child-remove"
         local uri_button_bottom = "block-child-down"
         ---by product
         if parent.by_product == false then
             uri_button_top = "block-child-down"
-            uri_button_remove = "block-child-remove"
             uri_button_bottom = "block-child-up"
         end
         GuiElement.add(cell_action, GuiButton(self.classname, "tree-block-down", model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_left.black, defines.sprites.arrow_left.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element-in-tree", User.getModSetting("row_move_step") }))
         GuiElement.add(cell_action, GuiButton(self.classname, uri_button_top, model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_top.black, defines.sprites.arrow_top.black):style("helmod_button_menu_sm"):tooltip({"tooltip.up-element", User.getModSetting("row_move_step") }))
-        GuiElement.add(cell_action, GuiButton(self.classname, uri_button_remove, model.id, parent.id, block.id):sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_red"):tooltip({ "tooltip.remove-element" }))
+        local remove = GuiButton(self.classname, ChildRemoval.buttonArgs{
+            action="block-child-remove", model_id=model.id, block_id=parent.id, child_id=block.id
+        })
+        GuiElement.add(cell_action, remove:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_red"):tooltip({ "tooltip.remove-element" }))
 
         local tree_up = GuiElement.add(cell_action, GuiButton(self.classname, "tree-block-up", model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_right.black, defines.sprites.arrow_right.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element-in-tree", User.getModSetting("row_move_step") }))
         GuiElement.add(cell_action, GuiButton(self.classname, uri_button_bottom, model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_bottom.black, defines.sprites.arrow_bottom.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element", User.getModSetting("row_move_step") }))
@@ -2447,40 +2456,43 @@ function ProductionPanel:onEventAccessDelete(event, model, block)
 		Controller:send("on_gui_update", event, self.classname)
 	end
 
-    if event.action == "block-child-remove-confirmed" then
-        local child = block.children[event.item3]
-		ModelBuilder.blockChildRemove(model, block, child)
-		ModelCompute.update(model)
+	local removal = ChildRemoval.decode(event)
+	if removal ~= nil then
+		self:onChildRemoval(removal, model, block)
 		Controller:send("on_gui_update", event, self.classname)
-    end
-
-    if event.action == "block-child-remove-canceled" then
-        Controller:send("on_gui_update", event, self.classname)
-    end
-
-	if event.action == "block-child-remove" then
-		local child = block.children[event.item3]
-        local is_block = Model.isBlock(child)
-        if is_block then
-            User.setParameter("block_child_remove_confirm", child.id)
-		    Controller:send("on_gui_update", event, self.classname)
-        else
-            -- remove recipe from block
-            ModelBuilder.blockChildRemove(model, block, child)
-            ModelCompute.update(model)
-            Controller:send("on_gui_update", event, self.classname)
-        end
 	end
+end
+
+---@param removal ChildRemovalAction
+---@param model ModelData
+---@param block BlockData
+function ProductionPanel:onChildRemoval(removal, model, block)
+	if removal.action == "block-child-remove-canceled" then return end
+	local child
+	if removal.action == "block-child-remove" then
+		child = block.children[removal.child_id]
+		if Model.isBlock(child) then
+			User.setParameter("block_child_remove_confirm", child.id)
+			return
+		end
+	else
+		---@type ConfirmChildRemoval
+		local confirmation = removal
+		child = block.children[confirmation.child_id]
+	end
+	ModelBuilder.blockChildRemove(model, block, child)
+	ModelCompute.update(model)
 end
 
 -------------------------------------------------------------------------------
 ---On event
 ---@param event LuaEvent
-function ProductionPanel:onEventAutoCancel(event)
+---@param removal ChildRemovalAction?
+function ProductionPanel:onEventAutoCancel(event, removal)
     if event.action ~= "block-remove" and event.action ~= "block-remove-confirmed" then
         User.setParameter("block_remove_confirm", nil)
     end
-    if event.action ~= "block-child-remove" and event.action ~= "block-child-remove-confirmed" then
+    if removal == nil or removal.action == "block-child-remove-canceled" then
         User.setParameter("block_child_remove_confirm", nil)
     end
 end

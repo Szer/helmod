@@ -1,0 +1,10 @@
+{
+  "runtime.version": "Lua 5.2",
+  "workspace.checkThirdParty": false,
+  "diagnostics.severity": {
+    "assign-type-mismatch": "Error",
+    "param-type-mismatch": "Error",
+    "missing-fields": "Error",
+    "missing-parameter": "Error"
+  }
+}

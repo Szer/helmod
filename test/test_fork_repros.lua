@@ -1,4 +1,5 @@
 -- Exercise the fixed paths with the planner data and player from the original repro save.
+local checkConsumerControls = require "test_consumer_controls"
 local Blueprint = require "core.Blueprint"
 local function find(element, name, kind)
     if element.name:find(name, 1, true) and (kind == nil or element.type == kind) then return element end
@@ -26,7 +27,9 @@ return function(case)
         assert(storage.models, "original sheets must migrate")
         local _, model = next(storage.models)
         assert(model and model.block_root, "expected a saved sheet")
-        if case == "quantity-confirm" then
+        if case == "consumer-controls" then
+            checkConsumerControls(player)
+        elseif case == "quantity-confirm" then
             local input = assert(find(player.gui.screen.HMProductEdition, "product-update", "textfield"))
             input.text = "10"
             EventController.onGuiClick{player_index=player.index, element=input}

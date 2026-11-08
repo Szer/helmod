@@ -90,6 +90,12 @@ Target the `fork` branch for pull requests. GitHub Actions parses the Lua files,
 
 To run the same checks locally, install Lua 5.2, then run `ci/install-tools.sh /tmp/helmod-tools` and `ci/fetch-repros.sh /tmp/helmod-repros`. Use `LUA_LANGUAGE_SERVER=/tmp/helmod-tools/luals/bin/lua-language-server ci/check-types.sh` and `lua test/run_fork_repros.lua /tmp/helmod-tools/factorio/bin/x64/factorio /tmp/helmod-tools/factorio/data /tmp/helmod-repros --headless`.
 
+## Testing a preview
+
+[Download the latest passing build](https://github.com/Szer/helmod/releases/download/nightly/helmod-fork-nightly.zip) or [see its commit, checksum and pending changes](https://github.com/Szer/helmod/releases/tag/nightly). This single rolling GitHub prerelease is updated after successful pushes to `fork`. It uses the same ZIP tested by CI, with the normal mod ID and version.
+
+Rename the download to the filename shown on the prerelease page and put it in a separate test profile’s mod directory. Replace any other copy of the fork in that directory, restart Factorio, and load a **copy** of your save. The nightly does not update through the in-game Mod Portal. To return to the stable version, switch back to your normal profile and save.
+
 ## Versioning and changelogs
 
 Squash PR titles become public release notes. Make each title understandable to a player reading the note without the PR. For example, `fix: Keep the entered quantity after loading a save` describes the outcome; function names and stack traces belong in the PR body.

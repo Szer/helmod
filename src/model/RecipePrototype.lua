@@ -1,3 +1,6 @@
+local Electricity = require "model.energy.Electricity"
+local Orbit = require "model.Orbit"
+
 ---
 ---Description of the module.
 ---@class RecipePrototype : Prototype
@@ -10,8 +13,7 @@
 ---@field is_customized boolean
 ---@field has_quality_limit boolean
 ---@field quality_min LuaQualityPrototype
-local Orbit = require "model.Orbit"
-
+---@field planned_recipe RecipeData?
 RecipePrototype = newclass(Prototype, function(base, object, object_type)
     base.classname = "HMRecipePrototype"
     base.is_voider = nil
@@ -25,6 +27,9 @@ RecipePrototype = newclass(Prototype, function(base, object, object_type)
             base.object_name = object
             base.lua_type = object_type
         elseif object.name ~= nil then
+            if type(object) == "table" and object.object_name == nil and object.factory ~= nil then
+                base.planned_recipe = object
+            end
             base.object_name = object.name
             base.lua_type = object_type or object.type
         end
@@ -761,6 +766,24 @@ end
 ---@param factory table
 ---@return table
 function RecipePrototype:getIngredients(factory)
+    local ingredients = self:getProcessIngredients(factory)
+    local recipe = self.planned_recipe
+    if recipe ~= nil and factory == recipe.factory and recipe.type ~= defines.mod.recipes.energy.name then
+        local electricity = Electricity.ingredient(recipe.energy_total, recipe.base_time)
+        if electricity ~= nil then
+            -- Custom recipes can share their ingredient list across multiple plans.
+            local with_electricity = {}
+            for key, ingredient in pairs(ingredients) do with_electricity[key] = ingredient end
+            table.insert(with_electricity, electricity)
+            return with_electricity
+        end
+    end
+    return ingredients
+end
+
+---@param factory table?
+---@return table
+function RecipePrototype:getProcessIngredients(factory)
     local raw_ingredients = self:getRawIngredients(factory)
     if self.lua_prototype ~= nil and factory ~= nil then
         local factory_prototype = EntityPrototype(factory)

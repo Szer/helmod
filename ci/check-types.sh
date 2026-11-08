@@ -6,6 +6,7 @@ check() {
   "${LUA_LANGUAGE_SERVER:-lua-language-server}" --check="$1" --checklevel=Warning --logpath="$tmp/log" --configpath="$(pwd)/.luarc.json"
 }
 check src/model/launch
+check src/model/energy
 check src/math/balance
 check src/gui/controls
 

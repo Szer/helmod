@@ -126,8 +126,9 @@ end
 ---@param block BlockData
 ---@param parameters ParametersData
 ---@param debug boolean
+---@param factories_prepared boolean?
 ---@return BlockData
-function SolverLinkedMatrix:solve(block, parameters, debug)
+function SolverLinkedMatrix:solve(block, parameters, debug, factories_prepared)
     block.blocks_linked = nil
     if block.products_linked ~= nil then
         -- build and compute reduced matrix when there are linked products
@@ -188,24 +189,25 @@ function SolverLinkedMatrix:solve(block, parameters, debug)
                         break
                     end
                 end
-                blocks_linked[product_name] = self:solve_block(linked_block, parameters, debug)
+                blocks_linked[product_name] = self:solve_block(linked_block, parameters, debug, factories_prepared)
             end
         end
         block.blocks_linked = blocks_linked
     end
-    return self:solve_block(block, parameters, debug)
+    return self:solve_block(block, parameters, debug, factories_prepared)
 end
 -------------------------------------------------------------------------------
 ---Return a matrix of block
 ---@param block BlockData
 ---@param parameters ParametersData
 ---@param debug boolean
+---@param factories_prepared boolean?
 ---@return BlockData
-function SolverLinkedMatrix:solve_block(block, parameters, debug)
+function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prepared)
     local mC, runtimes
 
     local ok, err = pcall(function()
-        local mA = self:get_block_matrix(block, parameters)
+        local mA = self:get_block_matrix(block, parameters, factories_prepared)
         if mA ~= nil then
             mC, runtimes = self:solve_matrix(mA, debug, block.by_factory, block.time)
         end
@@ -418,8 +420,9 @@ end
 ---Return a matrix of block
 ---@param block BlockData
 ---@param parameters ParametersData
+---@param factories_prepared boolean?
 ---@return table
-function SolverLinkedMatrix:get_block_matrix(block, parameters)
+function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepared)
     local children = block.children
     if children ~= nil then
         local matrix = Matrix()
@@ -493,12 +496,8 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters)
                 end
                 child_info.consumer = recipe.consumer
 
-                recipe.base_time = block.time
-                ModelCompute.computeModuleEffects(recipe, parameters)
-                if recipe.type == "energy" then
-                    ModelCompute.computeEnergyFactory(recipe)
-                else
-                    ModelCompute.computeFactory(recipe)
+                if not factories_prepared then
+                    ModelCompute.prepareRecipeFactory(recipe, block.time, parameters)
                 end
                 
                 child_info.factory_speed = 0
@@ -691,9 +690,7 @@ function SolverLinkedMatrix:add_matrix_row(matrix, child, child_info, is_block, 
 
             row_valid = true
         end
-        if row.values ~= nil and #row.values == 1 and row.values[1] < 0 then
-            rowParameters.voider = 1
-        end
+        rowParameters:setVoider(row, child, is_block, lua_products, lua_ingredients)
     else
         ---prepare header ingredients
         for name, lua_ingredient in pairs(lua_ingredients) do

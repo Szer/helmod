@@ -243,7 +243,7 @@ end
 function Product:getDrainedAmount(recipe)
   local amount = self:getElementAmount()
   local drain = 1
-  if recipe.type == "technology" and recipe.factory ~= nil then
+  if recipe.type == "technology" and recipe.factory ~= nil and not (self.lua_prototype.type == "energy" and self.lua_prototype.name == "energy") then
     local machine = EntityPrototype(recipe.factory)
     -- science_pack_drain_rate_percent = percent value
     drain = machine:getSciencePackDrainRatePercent() / 100

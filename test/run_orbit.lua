@@ -74,6 +74,7 @@ local success, message = xpcall(function()
         Runner.write(work .. "/mods/mod-list.json", '{"mods":[' .. table.concat(mods, ",") .. ']}')
         local suites = {integration="test_orbit", ["base-only"]="test_orbit_base", timing="test_orbit_timing", ui="test_orbit_ui"}
         if mode == "integration" then
+            Runner.copy(root .. "/test/test_electricity.lua", work .. "/mods/helmod-fork/test_electricity.lua")
             Runner.copy(root .. "/test/test_cracking.lua", work .. "/mods/helmod-fork/test_cracking.lua")
             Runner.copy(root .. "/test/test_balance_pivot.lua", work .. "/mods/helmod-fork/test_balance_pivot.lua")
         end

@@ -127,6 +127,8 @@ function ModelCompute.updateBlock(model, block)
             local is_block = Model.isBlock(child)
             if is_block then
                 ModelCompute.updateBlock(model, child)
+            elseif RecipePrototype(child):native() ~= nil then
+                ModelCompute.prepareRecipeFactory(child, block.time, model.parameters)
             end
         end
         ---prepare block
@@ -134,7 +136,7 @@ function ModelCompute.updateBlock(model, block)
 
         ModelCompute.prepareBlockObjectives(block)
 
-        ModelCompute.computeBlock(block, model.parameters)
+        ModelCompute.computeBlock(block, model.parameters, true)
         
         -- TODO
         --ModelCompute.computeResources(model)
@@ -801,7 +803,8 @@ end
 -------------------------------------------------------------------------------
 ---Compute production block
 ---@param block table
-function ModelCompute.computeBlock(block, parameters)
+---@param factories_prepared boolean?
+function ModelCompute.computeBlock(block, parameters, factories_prepared)
     local children = block.children
     block.power = 0
     block.count = 1
@@ -825,12 +828,25 @@ function ModelCompute.computeBlock(block, parameters)
         end
 
         local debug = User.getModGlobalSetting("debug_solver")
-        my_solver:solve(block, parameters, debug)
+        my_solver:solve(block, parameters, debug, factories_prepared)
         
     end
 end
 
---------------------------------------------------------------------------------
+----@param recipe RecipeData
+---@param seconds number Planning period in seconds
+---@param parameters ParametersData?
+function ModelCompute.prepareRecipeFactory(recipe, seconds, parameters)
+    recipe.base_time = seconds
+    ModelCompute.computeModuleEffects(recipe, parameters)
+    if recipe.type == defines.mod.recipes.energy.name then
+        ModelCompute.computeEnergyFactory(recipe)
+    else
+        ModelCompute.computeFactory(recipe)
+    end
+end
+
+-------------------------------------------------------------------------------
 ---Compute module effects of factory
 ---@param recipe RecipeData
 ---@param parameters ParametersData

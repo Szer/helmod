@@ -5,7 +5,7 @@
   "author": "Helfima and the Helmod contributors; fork maintained by Szer",
   "contact": "https://github.com/Szer/helmod/issues",
   "homepage": "https://github.com/Szer/helmod/tree/fork",
-  "description": "An independent fork of Helmod, the factory planner created by Helfima with the Helmod contributors. Maintained by Szer. Adds features and bug fixes, with performance improvements planned.",
+  "description": "An independent fork of Helmod, the factory planner created by Helfima with the Helmod contributors. Maintained by Szer. Adds features and bug fixes.",
   "dependencies": [
     "base >= 2.1.18",
     "! helmod"

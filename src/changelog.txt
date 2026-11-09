@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.5.0
+Date: 2026-11-09
+  Bugfixes:
+    - Items marked as main or excluded stay visible in production rows, so you can clear the constraint even when their flow drops to zero.
+    - Production block rows hide a constrained zero output when the same constraint can be cleared from its input.
+    - Fixed scroll resets when editing a production block.
+  Features:
+    - Change a sub-block’s consumer mode and input direction from its icon while keeping your place in the parent block.
+---------------------------------------------------------------------------------------------------
 Version: 2.4.0
 Date: 2026-11-08
   Bugfixes:

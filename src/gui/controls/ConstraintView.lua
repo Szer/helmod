@@ -74,6 +74,15 @@ function ConstraintView.showFlow(state, amount, drivingSide, threshold, constrai
     return (state == 1 and drivingSide) or (amount or 0) > threshold or keepVisible(constraint, state, amount)
 end
 
+---@param constraint ConstraintKind?
+---@param outputCount number
+---@param hasVisibleInput boolean
+---@param inputAction ConstraintAction
+---@return boolean
+function ConstraintView.duplicateOutput(constraint, outputCount, hasVisibleInput, inputAction)
+    return constraint ~= nil and outputCount == 0 and hasVisibleInput and inputAction == ConstraintView.action.ingredient
+end
+
 ---@param rowCount number?
 ---@param expanded boolean
 ---@param mode ProductDisplayMode

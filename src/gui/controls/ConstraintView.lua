@@ -1,3 +1,4 @@
+local DisplayMode = require "gui.controls.DisplayMode"
 local ConstraintView = {}
 
 ---@enum ConstraintAction
@@ -73,15 +74,23 @@ function ConstraintView.showFlow(state, amount, drivingSide, threshold, constrai
     return (state == 1 and drivingSide) or (amount or 0) > threshold or keepVisible(constraint, state, amount)
 end
 
----@param cell {count:number, state:integer?, contraint_type:ConstraintKind?}
----@param maxCount number
+---@param rowCount number?
+---@param expanded boolean
+---@param mode ProductDisplayMode
 ---@param threshold number
----@param mode "absolute"|"relative"
+---@param maxCount number
+---@return number? threshold Nil shows every cell in the row.
+function ConstraintView.rowThreshold(rowCount, expanded, mode, threshold, maxCount)
+    if (rowCount or 0) == 0 or expanded or threshold == 0 then return nil end
+    if mode == DisplayMode.relative then return threshold * maxCount end
+    return threshold
+end
+
+---@param cell {count:number, state:integer?, contraint_type:ConstraintKind?}
+---@param threshold number?
 ---@return boolean
-function ConstraintView.showCell(cell, maxCount, threshold, mode)
-    if threshold == 0 or keepVisible(cell.contraint_type, cell.state, cell.count) then return true end
-    if mode == "relative" then threshold = threshold * maxCount end
-    return cell.count > threshold
+function ConstraintView.showCell(cell, threshold)
+    return threshold == nil or cell.count > threshold or keepVisible(cell.contraint_type, cell.state, cell.count)
 end
 
 return ConstraintView

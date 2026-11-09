@@ -1,3 +1,4 @@
+local DisplayMode = require "gui.controls.DisplayMode"
 local BlockRemoval = require "gui.controls.BlockRemoval"
 local ChildRemoval = require "gui.controls.ChildRemoval"
 local ConstraintView = require "gui.controls.ConstraintView"
@@ -810,7 +811,7 @@ function ProductionPanel:updateInputBlock(model, block)
 			local combinator_selection = combinator_select_mode and (User.getParameter("combinator_selection") or {}) or {}
 			for index, ingredient in pairs(all_ingredients) do
 				local is_visible = ingredient.count > display_hidden_products
-				if display_hidden_products_mode == "relative" then
+				if display_hidden_products_mode == DisplayMode.relative then
 					is_visible = ingredient.count > max_count*display_hidden_products
 				end
 				local combinator_selected = combinator_select_mode and combinator_selection[ingredient.key] ~= nil
@@ -961,7 +962,7 @@ function ProductionPanel:updateOutputBlock(model, block)
 			local combinator_selection = combinator_select_mode and (User.getParameter("combinator_selection") or {}) or {}
 			for index, product in pairs(all_products) do
 				local is_visible = product.count > display_hidden_products
-				if display_hidden_products_mode == "relative" then
+				if display_hidden_products_mode == DisplayMode.relative then
 					is_visible = product.count > max_count*display_hidden_products
 				end
 				local combinator_selected = combinator_select_mode and combinator_selection[product.key] ~= nil
@@ -1430,8 +1431,9 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 				max_count = math.max(max_count, product.count)
 			end
 
+			local threshold = ConstraintView.rowThreshold(recipe.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 			for index, product in pairs(all_products) do
-				if (recipe.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(product, max_count, display_hidden_products, display_hidden_products_mode) then
+				if ConstraintView.showCell(product, threshold) then
 					GuiElement.add(cell_products, GuiCellElement(self.classname, ConstraintView.action.product, model.id, block.id, recipe.id):element(product):tooltip("tooltip.add-recipe")
 					:color(product_color):index(index):byLimit(block.by_limit):contraintIcon(product.contraint_type):isPivot(product.is_pivot):controlInfo(product.control_info))
 				else
@@ -1499,8 +1501,9 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 				max_count = math.max(max_count, ingredient.count)
 			end
 			
+			local threshold = ConstraintView.rowThreshold(recipe.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 			for index, ingredient in pairs(all_ingredients) do
-				if (recipe.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(ingredient, max_count, display_hidden_products, display_hidden_products_mode) then
+				if ConstraintView.showCell(ingredient, threshold) then
 					GuiElement.add(cell_ingredients, GuiCellElement(self.classname, ConstraintView.action.ingredient, model.id, block.id, recipe.id):element(ingredient):tooltip("tooltip.add-recipe")
 					:color(ingredient_color):index(index):byLimit(block.by_limit):contraintIcon(ingredient.contraint_type):isPivot(ingredient.is_pivot):controlInfo(ingredient.control_info))
 				else
@@ -1675,8 +1678,9 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 					end
 				end
 
+				local threshold = ConstraintView.rowThreshold(block.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 				for index, product in pairs(all_products) do
-					if (block.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(product, max_count, display_hidden_products, display_hidden_products_mode) then
+					if ConstraintView.showCell(product, threshold) then
 						GuiElement.add(cell_products, GuiCellElement(self.classname, product.button_action, model.id, product.parent_id, block.id):element(product):byLimit(by_limit)
 						:tooltip(product.button_tooltip):color(product.product_color):index(index):contraintIcon(product.contraint_type):isPivot(product.is_pivot):controlInfo(product.control_info))
 					else
@@ -1762,8 +1766,9 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 					end
 				end
 
+				local threshold = ConstraintView.rowThreshold(block.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 				for index, ingredient in pairs(all_ingredients) do
-					if (block.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(ingredient, max_count, display_hidden_products, display_hidden_products_mode) then
+					if ConstraintView.showCell(ingredient, threshold) then
 							GuiElement.add(cell_ingredients, GuiCellElement(self.classname, ingredient.button_action, model.id, ingredient.parent_id, block.id, ingredient.name):element(ingredient):byLimit(by_limit)
 							:tooltip(ingredient.button_tooltip):color(ingredient.ingredient_color):index(index):contraintIcon(ingredient.contraint_type):isPivot(ingredient.is_pivot):controlInfo(ingredient.control_info))
 					else

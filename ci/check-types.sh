@@ -43,6 +43,7 @@ echo 'Verified that LuaLS rejects swapped pivot coordinates.'
 
 # A constraint kind is not a button action, even though both are strings.
 mkdir "$tmp/bad-action"
+cp src/gui/controls/DisplayMode.lua "$tmp/bad-action/"
 sed '/^return ConstraintView$/i ConstraintView.hint(false, "master")' \
   src/gui/controls/ConstraintView.lua > "$tmp/bad-action/ConstraintView.lua"
 if check "$tmp/bad-action" > "$tmp/bad-action.log" 2>&1; then
@@ -83,4 +84,5 @@ reject_panel_edit 's/removal.action == "block-remove-canceled" then/removal.acti
 reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event))/self:clearForUpdate(BlockRemoval.decode(event), nil)/' param-type-mismatch RequestChildRemoval
 reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event))/self:clearForUpdate(nil, BlockRemoval.decode(event))/' param-type-mismatch RowConstraintEdit
 reject_panel_edit 's/addRowScroll(gui_table, ConstraintView.side.products, recipe.id)/addRowScroll(gui_table, "produtcs", recipe.id)/' param-type-mismatch produtcs
-echo 'Verified removal contracts, constraint pane sides and viewport refresh scope.'
+reject_panel_edit 's/skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)/skip_hidden_products, "relativ", display_hidden_products, max_count)/' param-type-mismatch relativ
+echo 'Verified removal contracts, display modes, constraint pane sides and viewport refresh scope.'

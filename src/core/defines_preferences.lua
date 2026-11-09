@@ -1,3 +1,5 @@
+local DisplayMode = require "gui.controls.DisplayMode"
+
 defines.constant = defines.constant or {}
 
 defines.constant.preferences = {
@@ -60,8 +62,8 @@ defines.constant.preferences = {
     type = "string-setting",
     localised_name = {"helmod_pref_settings.display-hidden-products-mode"},
     localised_description = {"helmod_pref_settings.display-hidden-products-mode-desc"},
-    default_value = "relative",
-    allowed_values = {"absolute","relative"},
+    default_value = DisplayMode.relative,
+    allowed_values = {DisplayMode.absolute, DisplayMode.relative},
     group = "general"
   },
   --display hidden products

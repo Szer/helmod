@@ -31,7 +31,7 @@ SHA-256: \`$digest\`
 
 Pending player-facing changes since the last portal version:
 
-${pending:-No player-facing changes.}
+${pending:-No pending release notes.}
 NOTES
 
 git push --force-with-lease="refs/tags/nightly:$previous" origin "$GITHUB_SHA:refs/tags/nightly"

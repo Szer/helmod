@@ -176,6 +176,50 @@ local function checkTreeControls(player)
 end
 
 ---@param player LuaPlayer
+local function checkHeaderScroll(player)
+    local model = Model.newModel()
+    local block = model.block_root
+    local last
+    for i = 1, 24 do
+        local _, row = ModelBuilder.addRecipeIntoProductionBlock(model, block, "iron-gear-wheel", "recipe")
+        last = row
+    end
+    for _, byProduct in ipairs({true, false}) do
+        block.by_product = byProduct
+        ModelCompute.update(model)
+        local elements = byProduct and block.products or block.ingredients
+        local key = byProduct and "iron-gear-wheel" or "iron-plate"
+        elements[key].input = 12
+        ModelCompute.update(model)
+        local panel = openBlock(model, block)
+        local function press(action)
+            local _, _, pane = panel:getDataPanel()
+            local _, _, left = panel:getLeftInfoPanel2()
+            local _, _, right = panel:getRightInfoPanel2()
+            local row = assert(find(pane, "block-child-remove=" .. model.id .. "=" .. block.id .. "=" .. last.id))
+            pane.scroll_to_element(row)
+            click(player, "HMProductionPanel=" .. action .. "=" .. model.id .. "=" .. block.id, true)
+            assert(pane.valid and left.valid and right.valid, action .. " replaced the scrolled viewport")
+        end
+        for _, side in ipairs({"ingredient", "product"}) do
+            local setting = "block_all_" .. side .. "_visible"
+            local original = User.getParameter(setting) == true
+            for _ = 1, 2 do
+                local before = User.getParameter(setting) == true
+                press("block-all-" .. side .. "-visible")
+                assert((User.getParameter(setting) == true) ~= before)
+            end
+            assert((User.getParameter(setting) == true) == original)
+        end
+        elements = byProduct and block.products or block.ingredients
+        assert(elements[key].input == 12)
+        press("block-reset-input")
+        elements = byProduct and block.products or block.ingredients
+        assert(elements[key].input == nil, "clear must remove the entered quantity")
+    end
+end
+
+---@param player LuaPlayer
 local function checkRowRemoval(player)
     local model = Model.newModel()
     local block = model.block_root
@@ -258,6 +302,8 @@ return function(case)
             end
         elseif case == "header-block-removal" then
             checkHeaderRemoval(player)
+        elseif case == "header-scroll" then
+            checkHeaderScroll(player)
         elseif case == "tree-controls" then
             checkTreeControls(player)
         elseif case == "row-removal-scroll" then

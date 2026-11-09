@@ -34,6 +34,13 @@ return function(player)
         EventController.onGuiClickButton{player_index=player.index,element=el,button=defines.mouse_button_type.left,control=not shift,shift=shift,alt=false}
         assert(viewport.valid and inner.valid, "constraint edit must preserve both scroll panes")
     end
+    assert(child.products.concrete.amount == 0 and child.ingredients.concrete.amount > 0)
+    assert(not button(player.gui.screen, "product", "concrete"), "duplicate zero concrete output")
+    for i = 1, 2 do
+        clickConstraint(assert(button(player.gui.screen, "ingredient", "concrete")), false)
+        assert((child.contraints.concrete ~= nil) == (i == 2))
+    end
+    assert(not button(player.gui.screen, "product", "concrete"), "duplicate after restoring the constraint")
     local function clickSteel(shift)
         local steel = assert(button(player.gui.screen,"ingredient","steel-plate"), "missing steel input control")
         clickConstraint(steel, shift)

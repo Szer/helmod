@@ -1601,6 +1601,11 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 	cell_beacons.style.horizontal_spacing = 2
 
 	local product_sorter = User.getProductSorter()
+	local visibleInputs = GuiElement.visibleIngredients(block.ingredients or {})
+	local inputAction = ConstraintView.action.ingredient
+	if not block_by_product and block.unlinked and block.by_factory ~= true then
+		inputAction = ConstraintView.action.edition
+	end
 
 	local display_hidden_products_mode = User.getPreferenceSetting("display_hidden_products_mode")
 	local display_hidden_products = User.getPreferenceSetting("display_hidden_products")
@@ -1627,14 +1632,17 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 				local max_count = 0
 				for index, lua_product in spairs(block.products, product_sorter) do
 					local constraint = ConstraintView.icon(block.contraints, index)
-					if ConstraintView.showFlow(lua_product.state, lua_product.amount, block_by_product, ModelCompute.waste_value, constraint) then
+					local amount = lua_product.amount or 0
+					local count = amount * (block.count or 0)
+					local duplicate = ConstraintView.duplicateOutput(constraint, count, visibleInputs[index] ~= nil, inputAction)
+					if not duplicate and ConstraintView.showFlow(lua_product.state, lua_product.amount, block_by_product, ModelCompute.waste_value, constraint) then
 						local product_prototype = Product(lua_product)
 						local product = product_prototype:clone()
 						product.parent_id = parent.id
 						product.time = model.time
-						product.count = lua_product.amount * (block.count or 0)
-						product.count_limit = lua_product.amount * (block.count_limit or 0)
-						product.count_deep = lua_product.amount * (block.count_deep or 0)
+						product.count = count
+						product.count_limit = amount * (block.count_limit or 0)
+						product.count_deep = amount * (block.count_deep or 0)
 
 						product.button_action = ConstraintView.action.product
 						product.button_tooltip = "tooltip.product"
@@ -1709,13 +1717,12 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 				local show_hidden_block_ingredients = User.getParameter("show_hidden_block_ingredients")
 				local skip_hidden_products = show_hidden_block_ingredients == block.id
 				
-				local visible = GuiElement.visibleIngredients(block.ingredients)
-				if table.size(visible) <= 2*display_ingredient_cols then
+				if table.size(visibleInputs) <= 2*display_ingredient_cols then
 					skip_hidden_products = true
 				end
 
 				local max_count = 0
-				for index, lua_ingredient in spairs(visible, product_sorter) do
+				for index, lua_ingredient in spairs(visibleInputs, product_sorter) do
 					local constraint = ConstraintView.icon(block.contraints, index)
 					if ConstraintView.showFlow(lua_ingredient.state, lua_ingredient.amount, not (block_by_product), ModelCompute.waste_value, constraint) then
 						local ingredient_prototype = Product(lua_ingredient)
@@ -1726,13 +1733,10 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 						ingredient.count_deep = lua_ingredient.amount * (block.count_deep or 0)
 
 						ingredient.parent_id = parent.id
-						ingredient.button_action = ConstraintView.action.ingredient
-						ingredient.button_tooltip = "tooltip.ingredient"
-						if block_by_product == true or not (block.unlinked) or block.by_factory == true then
-							ingredient.button_action = ConstraintView.action.ingredient
+						ingredient.button_action = inputAction
+						if inputAction == ConstraintView.action.ingredient then
 							ingredient.button_tooltip = "tooltip.add-recipe"
 						else
-							ingredient.button_action = ConstraintView.action.edition
 							ingredient.button_tooltip = "tooltip.edit-product"
 							ingredient.parent_id = block.id
 						end

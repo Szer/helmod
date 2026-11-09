@@ -277,6 +277,11 @@ local function check(player)
     assert(not Planner.failure(mixed.id))
     local cache = storage.percentage_planner.units[mixed.id]
     assert(not cache or (not cache.recipes[steam.id] and not cache.recipes[orbit.id]), "synthetic recipes must be prepared afresh")
+    ModelCompute.update(mixed)
+    Planner.tick()
+    local research = player.force.technologies["rocket-part-productivity"]
+    research.level = research.level + 1
+    compareJob(mixed)
     settings.global.helmod_debug_solver = {value=true}
     ModelCompute.update(mixed)
     compareJob(mixed)
@@ -290,6 +295,15 @@ local function check(player)
     ModelCompute.updateFull(expected)
     assert(not ModelCompute.update(clone), "detached plan must finish before returning")
     equal(expected.block_root, clone.block_root, "detached")
+    ModelBuilder.updateProduct(mixedBlock, "iron-plate", 20)
+    ModelCompute.update(mixed)
+    Planner.tick()
+    local disabled = table.deepcopy(mixed)
+    ModelCompute.updateFull(disabled)
+    settings.global.helmod_incremental_percentages = {value=false}
+    EventController.onRuntimeModSettingChanged{setting="helmod_" .. Planner.setting}
+    assert(not storage.percentage_planner)
+    equal(disabled.block_root, mixed.block_root, "disabling while a sheet is pending")
 end
 
 local function queueForSave(player)
@@ -299,7 +313,8 @@ local function queueForSave(player)
     for _ = 1, 4 do child(model, model.block_root, "iron-plate") end
     ModelCompute.updateFull(model)
     ModelBuilder.updateRecipeProduction(gear, 0.85)
-    Planner.enqueue(model, block, player.index)
+    ModelBuilder.addRecipeIntoProductionBlock(model, block, "copper-cable", "recipe")
+    assert(ModelCompute.update(model), "structural edit should still be pending at save time")
     Planner.tick()
     Planner.tick()
     local oracle = table.deepcopy(model)

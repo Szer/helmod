@@ -263,8 +263,6 @@ function RecipeEdition:onEvent(event)
     end
 
     if User.isWriter(model) then
-        User.setParameter("scroll_element", recipe.id)
-
         if event.action == "neighbour-bonus-update" then
             local index = event.element.selected_index
             local items = { 1, 2, 4, 8, "∞" }

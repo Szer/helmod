@@ -78,11 +78,7 @@ function ProductionPanel:getResultPanel()
 	if panel[panel_name1] ~= nil and panel[panel_name1].valid then
 		return panel[panel_name1], panel[panel_name2]
 	end
-	local display_width, display_height, scale = User.getMainSizes()
-	local width_main = display_width / scale
-	local height_main = display_height / scale
-	panel.style.natural_width = width_main - 25
-	
+
 	local panel1 = GuiElement.add(panel, GuiFlowH(panel_name1))
 	panel1.style.horizontally_stretchable = true
 	panel1.style.padding = 2
@@ -157,15 +153,11 @@ function ProductionPanel:getInfoPanel2()
 	if header_panel[info_name] ~= nil and header_panel[info_name].valid then
 		return header_panel[info_name][info_scroll_name], header_panel[left_name], header_panel[right_name]
 	end
-	local model = self:getParameterObjects()
-
 	header_panel.style.horizontal_spacing = 10
 	self:setStyle(header_panel, "block_info", "height")
 
-	local tooltip = GuiTooltipModel("tooltip.info-model"):element(model)
-
 	local info_panel = GuiElement.add(header_panel, GuiFlowV(info_name))
-	GuiElement.add(info_panel, GuiLabel("label-info"):caption({ "", self:getButtonCaption(), " [img=info]" }):style(defines.styles.label.frame_title):tooltip(tooltip))
+	GuiElement.add(info_panel, GuiLabel("label-info"):style(defines.styles.label.frame_title))
 	local info_scroll = GuiElement.add(info_panel, GuiScroll(info_scroll_name):style("helmod_scroll_pane"))
 	info_scroll.style.width = 300
 
@@ -278,47 +270,37 @@ function ProductionPanel:getSubMenuPanel()
 	
 end
 
----@param target ProductionScrollTarget?
-function ProductionPanel:clearForUpdate(target)
-	if target == nil then
-		local _, content = self:getPanel()
-		content.clear()
-		return
-	end
-
-	local menu, header, rows = self:getDataPanel()
-	menu.clear()
-	if target ~= ProductionScroll.pane.header then header.clear() end
-	local list = rows[resultTableName]
-	local pane
-	if type(target) == "table" and list then
-		pane = list[GuiScroll(target.side, target.child_id):getName()]
-	end
-	if pane then
-		for _, cell in pairs(list.children) do
-			if cell ~= pane then cell.destroy() end
-		end
-		pane.clear()
-	else
-		rows.clear()
-	end
-	self:getNavigatorPanel().clear()
-end
-
 -------------------------------------------------------------------------------
 ---Update
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
 	local removal = ChildRemoval.decode(event)
 	local model, block = self:getParameterObjects()
-	self:clearForUpdate(ProductionScroll.forUpdate(event, model, removal))
+	local _, content = self:getPanel()
+	local displayed = block or model.block_root
+	local sameBlock = false
+	if displayed then
+		---@type ProductionView
+		local view = {model_id=model.id, block_id=displayed.id}
+		sameBlock = ProductionScroll.sameBlock(content.tags, view)
+		content.tags = view
+	end
+	if sameBlock then
+		local menu = self:getDataPanel()
+		menu.clear()
+		self:getNavigatorPanel().clear()
+	else
+		content.clear()
+	end
 	self:onEventAutoCancel(event, removal)
 
 	self:updateIndexPanel(model)
+	local width, _, scale = User.getMainSizes()
+	self:getFramePanel("result", nil, "horizontal").style.natural_width = width / scale - 25
 
 	self:updateSubMenuPanel(model, block)
 
-	self:updateData(event)
+	self:updateData(not sameBlock)
 end
 
 -------------------------------------------------------------------------------
@@ -330,11 +312,13 @@ function ProductionPanel:updateIndexPanel(model)
 	---index panel
 	local index_panel = self:getFrameDeepPanel("model_index")
 	index_panel.style.padding = 2
-	index_panel.clear()
-	local scroll_table = GuiElement.add(index_panel, GuiScroll("scroll_table"))
+	local scroll_table = index_panel.scroll_table or GuiElement.add(index_panel, GuiScroll("scroll_table"))
+	scroll_table.clear()
 	local top_lines = User.getPreferenceSetting("ui_production_lines_menu")
 	if top_lines > 0 then
 		scroll_table.style.maximal_height = top_lines * 40
+	else
+		scroll_table.style = GuiScroll("scroll_table").options.style
 	end
 	local table_index = GuiElement.add(scroll_table, GuiTable("table_index"):column(GuiElement.getIndexColumnNumber()):style("helmod_table_list"))
 	local button = GuiElement.add(table_index, GuiButton(self.classname, "new-model"):sprite("menu", defines.sprites.add_table.black, defines.sprites.add_table.black):style(defines.styles.button.menu_actived_green):tooltip({"helmod_button.add-production-line" }))
@@ -651,6 +635,9 @@ end
 ---@param block table
 function ProductionPanel:updateInfoBlock(model, block)
 	local info_scroll, output_scroll, input_scroll = self:getInfoPanel2()
+	local label = info_scroll.parent["label-info"]
+	label.caption = { "", self:getButtonCaption(), " [img=info]" }
+	label.tooltip = GuiTooltipModel("tooltip.info-model"):element(model):create()
 	info_scroll.clear()
 	---info panel
 
@@ -1008,9 +995,9 @@ end
 
 -------------------------------------------------------------------------------
 ---Update data
----@param event LuaEvent
-function ProductionPanel:updateData(event)
-	local model, block, recipe = self:getParameterObjects()
+---@param focusBlock boolean
+function ProductionPanel:updateData(focusBlock)
+	local model, block = self:getParameterObjects()
 
 	if model.block_root == nil then
         -- TODO this is must be in update file --
@@ -1029,9 +1016,8 @@ function ProductionPanel:updateData(event)
 		model.block_root = block_root
 	end
 	
-	self:bluidNavigator(model, block)
+	self:bluidNavigator(model, block, focusBlock)
 
-	local last_element = nil
 	---col recipe
 	if block == nil then
 		self:updateDataBlock(model, model.block_root)
@@ -1078,7 +1064,14 @@ function ProductionPanel:updateDataBlock(model, block)
 			extra_cols = extra_cols + 2
 		end
 
-		local result_table = scroll_panel[resultTableName] or GuiElement.add(scroll_panel, GuiTable(resultTableName):column(7 + extra_cols):style("helmod_table_result"))
+		local columns = 7 + extra_cols
+		local result_table = scroll_panel[resultTableName]
+		if result_table and result_table.column_count == columns then
+			ProductionScroll.clearRowCells(result_table, block)
+		else
+			scroll_panel.clear()
+			result_table = GuiElement.add(scroll_panel, GuiTable(resultTableName):column(columns):style("helmod_table_result"))
+		end
 		result_table.vertical_centering = false
 		self:addTableHeader(result_table, block)
 
@@ -1098,16 +1091,19 @@ function ProductionPanel:updateDataBlock(model, block)
 
 		if last_element ~= nil then
 			scroll_panel.scroll_to_element(last_element)
-			User.setParameter("scroll_element", nil)
 		end
+	else
+		scroll_panel.clear()
 	end
+	User.setParameter("scroll_element", nil)
 end
 
 -------------------------------------------------------------------------------
 ---Build Navigator
 ---@param model table
 ---@param current_block table
-function ProductionPanel:bluidNavigator(model, current_block)
+---@param focusBlock boolean
+function ProductionPanel:bluidNavigator(model, current_block, focusBlock)
 	local scroll_panel = self:getNavigatorPanel()
 
 	---bluid tree
@@ -1117,7 +1113,7 @@ function ProductionPanel:bluidNavigator(model, current_block)
 		local root_node = self:bluidTreeNodes(model.block_root)
 		local tree_view = GuiElement.add(scroll_panel, GuiTreeView():source(root_node):class_decorator(self)
 			:item_decorator(ProductionPanel.item_decorator):item_changed(ProductionPanel.on_item_changed))
-		if root_node.scroll_to_element ~= nil then
+		if focusBlock and root_node.scroll_to_element ~= nil then
 			scroll_panel.scroll_to_element(root_node.scroll_to_element)
 		end
 	end

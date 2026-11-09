@@ -186,15 +186,18 @@ end
 ---
 ---@param player table
 ---
-function Controller:cleanController(player)
+---@param keepForm? string
+function Controller:cleanController(player, keepForm)
   for _,location in pairs({"center", "left", "top", "screen"}) do
     local lua_gui_element = player.gui[location]
     for _,children_name in pairs(lua_gui_element.children_names) do
-      if children_name ~= "HMPinPanel" and self:getView(children_name) then
-        self:getView(children_name):close()
-      end
-      if children_name ~= "HMPinPanel" and not(string.find(children_name,"mod_gui")) and lua_gui_element[children_name] ~= nil and lua_gui_element[children_name].get_mod() == script.mod_name then
-        lua_gui_element[children_name].destroy()
+      if children_name ~= keepForm and children_name ~= "HMPinPanel" then
+        local view = self:getView(children_name)
+        if view then view:close() end
+        local element = lua_gui_element[children_name]
+        if element and not string.find(children_name, "mod_gui") and element.get_mod() == script.mod_name then
+          element.destroy()
+        end
       end
     end
   end
@@ -485,8 +488,11 @@ function Controller:onGuiSetting(event)
 
   self:bindController(Player.native())
   if self:isOpened() then
-    self:cleanController(Player.native())
-    self:openMainPanel()
+    local panel = self:getView("HMProductionPanel")
+    self:cleanController(Player.native(), panel.classname)
+    panel:style()
+    panel:setFlowStyle(panel:getPanel())
+    panel:update(event)
   else
     -- prevent change location
     self:cleanController(Player.native())

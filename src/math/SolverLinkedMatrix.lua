@@ -456,6 +456,7 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepar
         ---end loop recipes
 
         matrix = self:linkTemperatureFluid(matrix, block.by_product)
+        if block.by_product ~= false then matrix.external_supplies = block.matrix_supplies end
         matrix.objectives = block.objectives
         return matrix
     end

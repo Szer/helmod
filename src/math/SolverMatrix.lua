@@ -330,14 +330,14 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                 
                 child_factory_speed = recipe.factory.speed or 0
 
-                child_products = recipe_prototype:getProducts(recipe.factory)
-                child_ingredients = recipe_prototype:getIngredients(recipe.factory)
+                child_products = recipe_prototype:getQualityProducts(recipe.factory, recipe.quality)
+                child_ingredients = recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality)
             end
 
             
 
             local rowParameters = MatrixRowParameters()
-            local row = MatrixRow(child_type, child_name, child_tooltip)
+            local row = MatrixRow(child_type, child_name, child.quality, child_tooltip)
 
             rowParameters.base = row.header
             if child.contraint ~= nil then
@@ -370,6 +370,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                 lua_products[product_key] = {
                     name = lua_product.name,
                     type = lua_product.type,
+                    quality = lua_product.quality,
                     amount = product_amount,
                     temperature = lua_product.temperature,
                     minimum_temperature = lua_product.minimum_temperature,
@@ -394,6 +395,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                     lua_ingredients[ingredient_key] = {
                         name = lua_ingredient.name,
                         type = lua_ingredient.type,
+                        quality = lua_ingredient.quality,
                         amount = ingredient_amount,
                         temperature = lua_ingredient.temperature,
                         minimum_temperature = lua_ingredient.minimum_temperature,
@@ -559,6 +561,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
         ---end loop recipes
 
         matrix = self:linkTemperatureFluid(matrix, block.by_product)
+        if block.by_product ~= false then matrix.external_supplies = block.matrix_supplies end
         matrix.objectives = block.objectives
         return matrix
     end

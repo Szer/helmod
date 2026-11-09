@@ -1,6 +1,35 @@
 local Pivot = require "math.balance.Pivot"
 local Balance = {}
 
+---@param rows number[][]
+---@param col integer
+---@return boolean produced, boolean consumed
+local function materialFlows(rows, col)
+    local produced, consumed = false, false
+    for _, row in ipairs(rows) do
+        local amount = row[col] or 0
+        produced = produced or amount > 0
+        consumed = consumed or amount < 0
+        if produced and consumed then break end
+    end
+    return produced, consumed
+end
+
+---A recycled ingredient can still draw its shortfall from a selected external supply.
+---@param source Matrix
+---@return integer[] columns
+function Balance.supplyColumns(source)
+    local columns = {}
+    for col, element in ipairs(source.columns) do
+        local produced, consumed = materialFlows(source.rows, col)
+        local selected = source.external_supplies and source.external_supplies[element.key]
+        if not produced or (selected and consumed and not source.objectives[element.key]) then
+            table.insert(columns, col)
+        end
+    end
+    return columns
+end
+
 -- A second, opposite column makes zero net output an equality for an internal material.
 ---@param matrix Matrix Prepared simplex tableau
 ---@param source Matrix Recipe coefficients before external inputs were added
@@ -9,12 +38,7 @@ local function addColumns(matrix, source)
     local position = #matrix.columns - #source.rows + 1
     local changed = false
     for col, element in ipairs(source.columns) do
-        local produced, consumed = false, false
-        for _, row in ipairs(source.rows) do
-            local value = row[col] or 0
-            produced = produced or value > 0
-            consumed = consumed or value < 0
-        end
+        local produced, consumed = materialFlows(source.rows, col)
         if produced and consumed and source.objectives[element.key] == nil then
             table.insert(matrix.columns, position, table.deepcopy(element))
             for _, row in ipairs(matrix.rows) do
@@ -28,7 +52,7 @@ local function addColumns(matrix, source)
 end
 
 -- If exact balance is infeasible or degenerates, keep the ordinary surplus solution.
----@param solver SolverMatrix|SolverLinkedMatrix
+---@param solver SolverMatrixSimplex|SolverLinkedMatrixSimplex
 ---@param prepared Matrix
 ---@param source Matrix
 ---@return Matrix?

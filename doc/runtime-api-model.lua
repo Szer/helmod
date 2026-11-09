@@ -145,6 +145,8 @@
 ---@field has_input boolean
 ---@field objectives {[string] : ObjectiveData}
 ---@field expanded {[string] : boolean}
+---@field solver? boolean
+---@field matrix_supplies? table<string,boolean>
 ---@field products_linked {[string] : boolean}
 ---@field blocks_linked {[string] : BlockData}
 ---@field runtimes {[uint] : Matrix}

@@ -763,6 +763,7 @@ function ModelBuilder.copyBlock(into_model, into_block, from_block)
             if from_block.ingredients ~= nil then
                 into_block.ingredients = table.deepcopy(from_block.ingredients)
             end
+            into_block.matrix_supplies = table.deepcopy(from_block.matrix_supplies)
             if from_block.products_linked ~= nil then
                 into_block.products_linked = table.deepcopy(from_block.products_linked)
             end

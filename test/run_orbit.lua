@@ -73,6 +73,9 @@ local success, message = xpcall(function()
         end
         Runner.write(work .. "/mods/mod-list.json", '{"mods":[' .. table.concat(mods, ",") .. ']}')
         local suites = {integration="test_orbit", ["base-only"]="test_orbit_base", timing="test_orbit_timing", ui="test_orbit_ui"}
+        if mode == "integration" or mode == "ui" then
+            Runner.copy(root .. "/test/test_recycling_balance.lua", work .. "/mods/helmod-fork/test_recycling_balance.lua")
+        end
         if mode == "integration" then
             Runner.copy(root .. "/test/test_electricity.lua", work .. "/mods/helmod-fork/test_electricity.lua")
             Runner.copy(root .. "/test/test_nested_intermediates.lua", work .. "/mods/helmod-fork/test_nested_intermediates.lua")
@@ -118,12 +121,12 @@ local success, message = xpcall(function()
         Runner.directory(output)
         local count = 0
         for _, name in ipairs(Runner.files(work .. "/write/script-output")) do
-            if name:match("^orbit%-.+%.png$") ~= nil then
+            if name:match("^orbit%-.+%.png$") or name == "copper-external-supply.png" then
                 Runner.copy(work .. "/write/script-output/" .. name, output .. "/" .. name)
                 count = count + 1
             end
         end
-        assert(count == 6, "Expected GUI screenshots, got " .. count)
+        assert(count == 7, "Expected GUI screenshots, got " .. count)
         print("Screenshots: " .. output)
     end
 end, debug.traceback)

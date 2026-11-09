@@ -57,8 +57,11 @@ panel="$tmp/panel"
 mkdir -p "$panel/gui/controls" "$panel/model" "$panel/data" "$panel/math/incremental"
 cp src/data/{SheetPlanner,SheetDependencies,ModelCompute}.lua "$panel/data/"
 echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
+mkdir -p "$panel/math/balance"
+cp src/math/{SimplexBalance,Matrix,SolverMatrix,SolverLinkedMatrix,SolverMatrixSimplex,SolverLinkedMatrixSimplex}.lua "$panel/math/"
+cp src/math/balance/Pivot.lua "$panel/math/balance/"
 cp src/math/incremental/Unit.lua "$panel/math/incremental/"
-cp src/edition/RecipeEdition.lua "$panel/"
+cp src/edition/{RecipeEdition,BlockEdition}.lua "$panel/"
 cp src/model/ProductionBlockMode.lua "$panel/model/"
 cp src/gui/controls/*.lua "$panel/gui/controls/"
 cp src/gui/ProductionScroll.lua "$panel/gui/"
@@ -68,6 +71,16 @@ check_panel() {
     --logpath="$tmp/log" --configpath="$(pwd)/ci/production-panel.luarc.json"
 }
 check_panel
+sed 's/, material=key//' src/edition/BlockEdition.lua > "$panel/BlockEdition.lua"
+if check_panel > "$tmp/supply.log" 2>&1; then
+  echo 'An external supply control must identify its material.' >&2
+  exit 1
+fi
+grep -q '(missing-fields)' "$tmp/supply.log" && grep -q 'material' "$tmp/supply.log" || {
+  cat "$tmp/supply.log" >&2
+  exit 1
+}
+cp src/edition/BlockEdition.lua "$panel/"
 reject_panel_edit() {
   local edit=$1 diagnostic=$2 detail=$3
   sed "$edit" src/dialog/ProductionPanel.lua > "$panel/ProductionPanel.lua"

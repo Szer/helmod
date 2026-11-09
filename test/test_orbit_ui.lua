@@ -1,3 +1,5 @@
+local MatrixSupply = require "gui.controls.MatrixSupply"
+local recycling = require "test_recycling_balance"
 local function find_element(element, predicate)
  if predicate(element) then return element end
  for _, child in pairs(element.children) do
@@ -115,6 +117,30 @@ script.on_nth_tick(60, function(event)
   game.tick_paused=false
   assert(not find_element(player.gui.screen.HMRecipeEdition, function(element) return element.name=="orbit-launch-limit" end), "success indicator clears below target")
   assert(not Player.getLastError(), "Helmod GUI error")
+  Controller:getView("HMRecipeEdition"):close()
+  local loop = recycling.buildLoop()
+  local block = loop.block_root
+  ModelCompute.update(loop)
+  Controller:send("on_gui_open",{name="OPEN",item1=loop.id,item2=block.id},"HMProductionPanel")
+  click(find_element(player.gui.screen.HMProductionPanel, function(el)
+   return el.name == "HMBlockEdition=OPEN=" .. loop.id .. "=" .. block.id .. "=block"
+  end), player)
+  local function supply(key)
+   local name = GuiCheckBox("HMBlockEdition", MatrixSupply.buttonArgs{
+    action=MatrixSupply.action, model_id=loop.id, block_id=block.id, material=key
+   }):getName()
+   return assert(find_element(player.gui.screen.HMBlockEdition, function(el) return el.name == name end))
+  end
+  for _, state in ipairs({true, false, true}) do
+   local box = supply("copper-plate")
+   assert(box.state ~= state and not supply("copper-plate#uncommon").state)
+   box.state = state
+   EventController.onGuiClick{player_index=player.index, element=box}
+   assert(supply("copper-plate").state == state)
+   if state then recycling.checkBalances(block) end
+  end
+  assert(not Player.getLastError(), "supply control raised a GUI error")
+  game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="copper-external-supply.png"}
   log("ORBIT UI SMOKE PASSED")
   storage.orbit_ui_step=9
  end

@@ -23,7 +23,7 @@ Characterize the current behavior before changing representations. Keep the refa
 - Encode the payload at the button and decode it at the dispatcher boundary. Keep the existing button names and argument order so saved GUI controls still work.
 - Narrow the union in the handler and type the remaining case explicitly. Include live call sites in the LuaLS gate and verify that a misspelled tag, a missing payload field, and an unhandled variant fail CI.
 - Use shared named actions in buttons and handlers. When using a handler table, type its required entries and make CI reject a missing handler.
-- For edits that keep the production panel open, choose the panes to retain in `ProductionScroll.forUpdate`. Cover the affected controls in a scrolled Factorio block.
+- The production panel keeps scroll panes when the displayed sheet and block stay the same. Reserve explicit scroll targets for navigation, added recipes, and moved rows.
 
 ## PR titles are public release notes
 

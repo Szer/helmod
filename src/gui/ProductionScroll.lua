@@ -1,36 +1,30 @@
-local BlockHeader = require "gui.controls.BlockHeader"
-local BlockMode = require "gui.controls.BlockMode"
-local BlockToolbar = require "gui.controls.BlockToolbar"
 local ConstraintView = require "gui.controls.ConstraintView"
-local TreeAction = require "gui.controls.TreeAction"
-
 local ProductionScroll = {}
 
----@enum ProductionScrollPane
-ProductionScroll.pane = {rows = "rows", header = "header"}
+---@class ProductionView
+---@field model_id string
+---@field block_id string
 
----@alias ProductionScrollTarget ProductionScrollPane|RowConstraintEdit
+---@param previous {model_id?:string,block_id?:string}
+---@param current ProductionView
+---@return boolean
+function ProductionScroll.sameBlock(previous, current)
+    return previous.model_id == current.model_id and previous.block_id == current.block_id
+end
 
----@param event LuaEvent
----@param model ModelData
----@param removal ChildRemovalAction?
----@return ProductionScrollTarget? target A nil target rebuilds the whole panel.
-function ProductionScroll.forUpdate(event, model, removal)
-    local constraint = ConstraintView.edit(event)
-    if constraint then return constraint end
-    if BlockHeader.decode(event) then return ProductionScroll.pane.header end
-    if removal or BlockToolbar.decodePanel(event) or BlockToolbar.decodeBlock(event) or event.action == BlockMode.action.consumer then
-        return ProductionScroll.pane.rows
-    end
-    if event.action == BlockMode.action.icon and event.button == defines.mouse_button_type.left
-        and event.control ~= event.shift then
-        return ProductionScroll.pane.rows
-    end
-    local tree = TreeAction.decode(event)
-    if tree and (tree.action == TreeAction.name.toggleLink or model.blocks[tree.block_id] or model.block_root.id == tree.block_id) then
-        return ProductionScroll.pane.rows
-    end
-    return nil
+---@param list LuaGuiElement
+---@param block BlockData
+function ProductionScroll.clearRowCells(list, block)
+	local keep = {}
+	for id in pairs(block.children) do
+		keep[GuiScroll(ConstraintView.side.products, id):getName()] = true
+		keep[GuiScroll(ConstraintView.side.ingredients, id):getName()] = true
+	end
+	local cells = list.children
+	for i = #cells, 1, -1 do
+		local cell = cells[i]
+		if keep[cell.name] then cell.clear() else cell.destroy() end
+	end
 end
 
 return ProductionScroll

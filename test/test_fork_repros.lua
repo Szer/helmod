@@ -72,7 +72,7 @@ local function checkHeaderRemoval(player)
     local _, _, rows = panel:getDataPanel()
     local navigator = panel:getNavigatorPanel()
     click(player, "HMProductionPanel=block-remove" .. target, true)
-    assert(not rows.valid and not navigator.valid, "header removal uses a full refresh")
+    assert(rows.valid and navigator.valid, "requesting removal must keep the current block viewport")
     click(player, "HMProductionPanel=block-remove-canceled" .. target, true)
     assert(parent.children[child.id] == child, "cancel must keep the selected block")
     assert(not find(player.gui.screen, "block-remove-confirmed" .. target), "cancel must close confirmation")
@@ -81,7 +81,7 @@ local function checkHeaderRemoval(player)
     click(player, "HMProductionPanel=block-remove-confirmed" .. target, true)
     assert(parent.children[child.id] == nil and storage.models[model.id] == model)
     local current, selected = panel:getParameterObjects()
-    assert(current == model and selected == parent, "nested deletion must open the parent")
+    assert(current == model and selected == parent and not rows.valid, "nested deletion must open a fresh parent viewport")
     openBlock(model, root)
     target = "=" .. model.id .. "=" .. root.id
     click(player, "HMProductionPanel=block-remove" .. target, true)
@@ -237,6 +237,106 @@ local function checkToolbarScroll(player)
 end
 
 ---@param player LuaPlayer
+local function checkRefreshScroll(player)
+    local model = Model.newModel()
+    local root = model.block_root
+    local last
+    for _ = 1, 24 do
+        local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, root, "iron-gear-wheel", "recipe")
+        last = recipe
+    end
+    ModelCompute.update(model)
+    local panel = openBlock(model, root)
+    local _, _, rows = panel:getDataPanel()
+    local target = "block-child-remove=" .. model.id .. "=" .. root.id .. "=" .. last.id
+    rows.scroll_to_element(assert(find(rows, target)))
+    local inputs = assert(find(rows, "ingredients=" .. last.id, "scroll-pane"))
+    local _, _, header = panel:getLeftInfoPanel2()
+    local nav = panel:getNavigatorPanel()
+    local sheets = assert(find(player.gui.screen, "scroll_table", "scroll-pane"))
+    local function assertView()
+        assert(rows.valid and header.valid and nav.valid and sheets.valid and inputs.valid, "same block lost a scroll pane")
+        assert(find(rows, target), "refreshed table must still contain the recipe")
+    end
+    click(player, "HMProductionPanel=refresh-model=" .. model.id, true)
+    assertView()
+    for _, refresh in ipairs({"on_gui_update", "on_gui_refresh", "on_gui_recipe_update"}) do
+        Controller:send(refresh, {}, panel.classname)
+        assertView()
+    end
+    User.setSetting("recipe_edition_scroll_groups", false)
+    click(player, "HMRecipeEdition=OPEN=" .. model.id .. "=" .. root.id .. "=" .. last.id)
+    local dialog = assert(player.gui.screen.HMRecipeEdition)
+    local tab = assert(find(dialog, "change-tab", "tabbed-pane"))
+    tab.selected_tab_index = 2
+    EventController.onGuiClick{player_index=player.index, element=tab}
+    assert(User.getParameter("scroll_element") == nil, "changing editor tabs must not queue a row jump")
+    local field = assert(find(dialog, "recipe-update-production", "textfield"))
+    field.text = "50"
+    EventController.onGuiClick{player_index=player.index, element=field}
+    assert(last.production == 0.5)
+    assertView()
+    local rowIndex = last.index
+    click(player, "block-child-up=" .. model.id .. "=" .. root.id .. "=" .. last.id)
+    assert(last.index == rowIndex - 1 and User.getParameter("scroll_element") == nil)
+    local list = rows["list-data"]
+    local action = list["action=" .. last.id]
+    local columns = list.column_count
+    assert(math.floor((inputs.get_index_in_parent() - 1) / columns) == math.floor((action.get_index_in_parent() - 1) / columns),
+        "retained ingredients must move with their recipe")
+    assertView()
+    EventController.onRuntimeModSettingChanged{player_index=player.index}
+    assertView()
+    local before = rows["list-data"].column_count
+    local pollution = User.getPreferenceSetting("display_pollution")
+    User.setPreference("display_pollution", nil, not pollution)
+    Controller:send("on_gui_refresh", {}, panel.classname)
+    assert(rows.valid and header.valid and rows["list-data"].column_count ~= before)
+    assert(not inputs.valid, "changing column count rebuilds the inner table")
+    User.setPreference("display_pollution", nil, pollution)
+    local model2 = Model.newModel()
+    panel:updateIndexPanel(model)
+    assert(model2.block_root.id == root.id, "fixture needs colliding block IDs across sheets")
+    click(player, "HMProductionPanel=change-model=" .. model2.id)
+    assert(not rows.valid and select(1, panel:getParameterObjects()) == model2, "switching sheets needs a fresh viewport")
+end
+
+---@param player LuaPlayer
+local function checkQuantityScroll(player)
+    local model = Model.newModel()
+    local block = model.block_root
+    local last
+    for _ = 1, 24 do
+        local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, block, "iron-gear-wheel", "recipe")
+        last = recipe
+    end
+    for _, byProduct in ipairs({true, false}) do
+        block.by_product = byProduct
+        ModelCompute.update(model)
+        local panel = openBlock(model, block)
+        local _, _, rows = panel:getDataPanel()
+        rows.scroll_to_element(assert(find(rows, "block-child-remove=" .. model.id .. "=" .. block.id .. "=" .. last.id)))
+        local name = byProduct and "iron-gear-wheel" or "iron-plate"
+        local _, _, header = panel:getLeftInfoPanel2()
+        local product = assert(find(header, "HMProductionPanel=product-edition"))
+        EventController.onGuiClickButton{player_index=player.index, element=product, button=defines.mouse_button_type.left}
+        assert(rows.valid, "opening Edit Product must keep the viewport")
+        local dialog = assert(player.gui.screen.HMProductEdition)
+        local field = assert(find(dialog, "product-update", "textfield"))
+        field.text = "2*6"
+        if byProduct then
+            click(player, field.name .. "=validation", true)
+        else
+            EventController.onGuiClick{player_index=player.index, element=field}
+        end
+        assert(not dialog.valid, "confirm must close the editor")
+        local element = (byProduct and block.products or block.ingredients)[name]
+        assert(element.input == 12 and element.amount == 12, "quantity must recalculate")
+        assert(rows.valid, "confirming Edit Product replaced the scrolled production table")
+    end
+end
+
+---@param player LuaPlayer
 local function checkHeaderScroll(player)
     local model = Model.newModel()
     local block = model.block_root
@@ -365,6 +465,10 @@ return function(case)
             checkHeaderRemoval(player)
         elseif case == "toolbar-scroll" then
             checkToolbarScroll(player)
+        elseif case == "refresh-scroll" then
+            checkRefreshScroll(player)
+        elseif case == "quantity-scroll" then
+            checkQuantityScroll(player)
         elseif case == "header-scroll" then
             checkHeaderScroll(player)
         elseif case == "tree-controls" then

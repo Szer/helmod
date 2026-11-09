@@ -83,8 +83,7 @@ reject_panel_edit 's/action="block-remove",/action="block-remvoe",/' assign-type
 reject_panel_edit 's/, block_id=block_id$//' missing-fields block_id
 reject_panel_edit 's/model_id=model.id, block_id=block_id/block_id=block_id/' missing-fields model_id
 reject_panel_edit 's/removal.action == "block-remove-canceled" then/removal.action == "block-remvoe-canceled" then/' assign-type-mismatch ConfirmBlockRemoval
-reject_panel_edit 's/ProductionScroll.forUpdate(event, model, removal)/ProductionScroll.forUpdate(event, model, BlockRemoval.decode(event))/' param-type-mismatch RequestChildRemoval
-reject_panel_edit 's/self:clearForUpdate(ProductionScroll.forUpdate(event, model, removal))/self:clearForUpdate(BlockRemoval.decode(event))/' param-type-mismatch ProductionScrollPane
+reject_panel_edit 's/model_id=model.id, block_id=displayed.id/model_id=model.id/' missing-fields block_id
 reject_panel_edit 's/addRowScroll(gui_table, ConstraintView.side.products, recipe.id)/addRowScroll(gui_table, "produtcs", recipe.id)/' param-type-mismatch produtcs
 reject_panel_edit 's/skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)/skip_hidden_products, "relativ", display_hidden_products, max_count)/' param-type-mismatch relativ
 reject_panel_edit 's/action=TreeAction.name.blockToChild, model_id=model.id, block_id=parent.id, child_id=block.id/action=TreeAction.name.blockToChild, model_id=model.id, block_id=parent.id/' missing-fields child_id

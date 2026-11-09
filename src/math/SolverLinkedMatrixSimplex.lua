@@ -11,8 +11,9 @@ end)
 ---@param matrix Matrix
 ---@param xrow integer
 ---@param xcol integer
+---@param preserve_precision? boolean
 ---@return Matrix
-function SolverLinkedMatrixSimplex:pivot(matrix, xrow, xcol)
+function SolverLinkedMatrixSimplex:pivot(matrix, xrow, xcol, preserve_precision)
 	local rows = matrix.rows
 
 	local matrix_clone = self:clone(matrix)
@@ -35,7 +36,7 @@ function SolverLinkedMatrixSimplex:pivot(matrix, xrow, xcol)
 				local B = rows[irow][xcol] or 0
 				local D = rows[xrow][icol] or 0
 				local value = cell_value - (B * D) / pivot_value
-				if math.abs(value) < 1e-8 then
+				if not preserve_precision and math.abs(value) < 1e-8 then
 					rows_clone[irow][icol] = 0
 				else
 					rows_clone[irow][icol] = value

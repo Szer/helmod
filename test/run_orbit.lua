@@ -121,12 +121,12 @@ local success, message = xpcall(function()
         Runner.directory(output)
         local count = 0
         for _, name in ipairs(Runner.files(work .. "/write/script-output")) do
-            if name:match("^orbit%-.+%.png$") or name == "copper-external-supply.png" then
+            if name:match("^orbit%-.+%.png$") or name == "copper-external-supply.png" or name == "circuit-external-supplies.png" then
                 Runner.copy(work .. "/write/script-output/" .. name, output .. "/" .. name)
                 count = count + 1
             end
         end
-        assert(count == 7, "Expected GUI screenshots, got " .. count)
+        assert(count == 8, "Expected GUI screenshots, got " .. count)
         print("Screenshots: " .. output)
     end
 end, debug.traceback)

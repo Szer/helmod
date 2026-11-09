@@ -1,3 +1,4 @@
+local MatrixSupplies = require "model.MatrixSupplies"
 local MatrixSupply = require "gui.controls.MatrixSupply"
 -------------------------------------------------------------------------------
 ---Class to build product edition dialog
@@ -78,7 +79,7 @@ function BlockEdition:updateInfo(event)
         GuiElement.add(form, GuiLabel("value-owner"):caption(model.owner))
     end
 
-    if MatrixSupply.available(block) then
+    if MatrixSupplies.available(block) then
         self:addSupplyOptions(form, model, block)
     end
 
@@ -238,8 +239,7 @@ function BlockEdition:addSupplyOptions(form, model, block)
             local button = GuiCheckBox(self.classname, MatrixSupply.buttonArgs{
                 action=MatrixSupply.action, model_id=model.id, block_id=block.id, material=key
             }):caption(caption):tooltip({"helmod_block_edition_panel.external-supplies-help"})
-            local selected = block.matrix_supplies and block.matrix_supplies[key] == true
-            local checkbox = GuiElement.add(list, button:state(selected == true))
+            local checkbox = GuiElement.add(list, button:state(MatrixSupplies.editable(block, key) and MatrixSupplies.selected(block, key)))
             checkbox.enabled = User.isWriter(model)
             if block.products[key].input ~= nil then
                 checkbox.enabled = false
@@ -255,10 +255,8 @@ function BlockEdition:onEvent(event)
     local model, block = self:getParameterObjects()
     if User.isWriter(model) then
         local edit = MatrixSupply.decode(event)
-        if edit and edit.model_id == model.id and edit.block_id == block.id and MatrixSupply.available(block)
-            and block.ingredients[edit.material] and block.products[edit.material] then
-            block.matrix_supplies = block.matrix_supplies or {}
-            block.matrix_supplies[edit.material] = event.element.state or nil
+        if edit and edit.model_id == model.id and edit.block_id == block.id
+            and MatrixSupplies.set(block, edit.material, event.element.state) then
             ModelCompute.update(model, block)
             Controller:send("on_gui_refresh", event)
             return

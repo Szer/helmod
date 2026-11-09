@@ -54,7 +54,7 @@ end
 
 ## Balancing recycling loops
 
-In a product-driven **Matrix Solver** block, open **Block Edition → External supplies** and select the material and quality you can supply from outside. For copper upcycling, select **Copper plate (Normal)**, craft cable at normal through epic quality, recycle cable at every quality, and set the legendary plate output target.
+In a product-driven **Matrix Solver** block, Ctrl-click an internally produced material in the top **Input** row to allow external supply for its quality, or Shift-click to clear it. Use the Input filter to show zero flows or select the same materials in **Block Edition → External supplies**. For copper upcycling, select **Copper plate (Normal)**, craft cable at normal through epic quality, recycle cable at every quality, and set the legendary plate output target.
 
 ## Experimental background solver
 

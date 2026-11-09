@@ -1,3 +1,5 @@
+local MatrixSupply = require "gui.controls.MatrixSupply"
+local MatrixSupplies = require "model.MatrixSupplies"
 local SheetPlanner = require "data.SheetPlanner"
 local ProductionScroll = require "gui.ProductionScroll"
 local BlockToolbar = require "gui.controls.BlockToolbar"
@@ -802,12 +804,15 @@ function ProductionPanel:updateInputBlock(model, block)
 			local hidden_ingredients = {}
 			
 			local show_hidden_input_products = User.getParameter("show_hidden_input_products")
+			local canEditSupplies = MatrixSupplies.available(block) and User.isWriter(model)
 			local visible = GuiElement.visibleIngredients(block.ingredients)
 			local skip_hidden_products = table.size(visible) < 2*column_count
 
 			local max_count = 0
 			for index, lua_ingredient in spairs(visible, User.getProductSorter()) do
-				if all_visible == true or ((lua_ingredient.state or 0) == 1 and not (block_by_product)) or (lua_ingredient.amount or 0) > ModelCompute.waste_value then
+				local supplyEligible = not combinator_select_mode and MatrixSupplies.editable(block, index)
+				local supplied = supplyEligible and MatrixSupplies.selected(block, index)
+				if supplied or all_visible == true or ((lua_ingredient.state or 0) == 1 and not (block_by_product)) or (lua_ingredient.amount or 0) > ModelCompute.waste_value then
 					local ingredient = Product(lua_ingredient):clone()
 					ingredient.key = Product(lua_ingredient):getTableKey()
 					ingredient.time = model.time
@@ -822,7 +827,8 @@ function ProductionPanel:updateInputBlock(model, block)
 					if block_by_product then
 						ingredient.button_action = ConstraintView.action.ingredient
 						ingredient.button_tooltip = "tooltip.add-recipe"
-						ingredient.control_info = nil
+						ingredient.control_info = canEditSupplies and supplyEligible and MatrixSupply.hint or nil
+						if supplied then ingredient.contraint_type = ConstraintView.kind.master end
 					else
 						if not (block.unlinked or true) or block.by_factory == true then
 							ingredient.button_action = "product-info"
@@ -868,7 +874,7 @@ function ProductionPanel:updateInputBlock(model, block)
 				if combinator_selected then
 					ingredient.ingredient_color = User.getThumbnailColor(defines.thumbnail_color.names.combinator_pick)
 				end
-				if combinator_select_mode or skip_hidden_products == true or all_visible == true or show_hidden_input_products or display_hidden_products == 0 or is_visible then
+				if ingredient.contraint_type == ConstraintView.kind.master or combinator_select_mode or skip_hidden_products == true or all_visible == true or show_hidden_input_products or display_hidden_products == 0 or is_visible then
 					local input_cell = GuiCellElementM(self.classname, ingredient.button_action, model.id, block.id, ConstraintView.noTarget):element(ingredient)
 					:tooltip(ingredient.button_tooltip):index(index):color(ingredient.ingredient_color):byLimit(block.by_limit)
 					:contraintIcon(ingredient.contraint_type):hasInput(ingredient.has_input):controlInfo(ingredient.control_info)
@@ -2463,6 +2469,17 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 		ModelCompute.update(model)
 		User.setParameter("scroll_element", child.id)
 		Controller:send("on_gui_update", event)
+	end
+
+	if event.button == defines.mouse_button_type.left and block then
+		local supply, enabled = MatrixSupply.headerEdit(event)
+		if supply and supply.model_id == model.id and supply.block_id == block.id then
+			if MatrixSupplies.set(block, supply.material, enabled) then
+				ModelCompute.update(model, block)
+				Controller:send("on_gui_refresh", event)
+			end
+			return
+		end
 	end
 
 	local edit = ConstraintView.edit(event)

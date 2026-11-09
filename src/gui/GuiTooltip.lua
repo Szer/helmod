@@ -1,3 +1,4 @@
+local MatrixSupply = require "gui.controls.MatrixSupply"
 -------------------------------------------------------------------------------
 ---Class to help to build GuiTooltip
 ---@class GuiTooltip : GuiElement
@@ -214,6 +215,10 @@ function GuiTooltip:appendControlInfo(tooltip, element)
 		if self.m_with_control_info == "contraint" then
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.contraint-plus" } })
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.contraint-minus" } })
+		end
+		if self.m_with_control_info == MatrixSupply.hint then
+			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {"controls.matrix-supply-add"}})
+			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {"controls.matrix-supply-remove"}})
 		end
 		if self.m_with_control_info == "link-intermediate" then
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.link-intermediate" } })

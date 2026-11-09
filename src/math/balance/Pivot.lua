@@ -5,7 +5,7 @@ local Pivot = {}
 ---@field rows number[][]
 
 ---@class BalancePivotSolver<T>
----@field pivot fun(self: BalancePivotSolver<T>, matrix: T, row: integer, column: integer): T
+---@field pivot fun(self: BalancePivotSolver<T>, matrix: T, row: integer, column: integer, preserve_precision?: boolean): T
 
 ---@class PivotRow
 ---@field row integer
@@ -47,7 +47,7 @@ local function nextPivot(matrix)
     return {kind="pivot", row={row=row}, column={column=column}}
 end
 
--- Unwrap the coordinates only at the legacy numeric solver boundary.
+-- Small coefficients from earlier pivots can contribute to later material balances.
 ---@generic T: BalanceTableau
 ---@param solver BalancePivotSolver<T>
 ---@param matrix T
@@ -55,7 +55,7 @@ end
 ---@param column PivotColumn
 ---@return T
 local function apply(solver, matrix, row, column)
-    return solver:pivot(matrix, row.row, column.column)
+    return solver:pivot(matrix, row.row, column.column, true)
 end
 
 ---@generic T: BalanceTableau

@@ -1,4 +1,5 @@
-local MatrixSupply = {action = "matrix-external-supply"}
+local ConstraintView = require "gui.controls.ConstraintView"
+local MatrixSupply = {action = "matrix-external-supply", hint = "matrix-external-supply"}
 
 ---@class MatrixSupplyEdit
 ---@field action "matrix-external-supply"
@@ -20,10 +21,15 @@ function MatrixSupply.decode(event)
     end
 end
 
----@param block {solver?:boolean, by_product?:boolean, by_factory?:boolean}
----@return boolean
-function MatrixSupply.available(block)
-    return block.solver == true and block.by_product ~= false and block.by_factory ~= true
+---Header ingredient buttons encode the full material key after the prototype name.
+---@param event {action?:string,item1?:string,item2?:string,item3?:string,item5?:string,control?:boolean,shift?:boolean}
+---@return MatrixSupplyEdit?, boolean enabled
+function MatrixSupply.headerEdit(event)
+    if event.action == ConstraintView.action.ingredient and event.item3 == ConstraintView.noTarget
+        and event.item1 and event.item2 and event.item5 and (event.control or event.shift) then
+        return {action=MatrixSupply.action, model_id=event.item1, block_id=event.item2, material=event.item5}, event.control == true
+    end
+    return nil, false
 end
 
 return MatrixSupply

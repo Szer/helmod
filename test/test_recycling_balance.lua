@@ -45,10 +45,47 @@ local function buildLoop()
     return model, plants, recyclers
 end
 
+local function buildCircuitLoop()
+    local sheet = Model.newModel()
+    sheet.time = 1
+    local block = sheet.block_root
+    block.solver = true
+    for _, grade in ipairs(grades) do
+        for _, recycle in ipairs({true, false}) do
+            if not recycle or grade ~= "legendary" then
+                local name = recycle and "electronic-circuit-recycling" or "electronic-circuit"
+                local _, row = ModelBuilder.addRecipeIntoProductionBlock(sheet, block, name, "recipe")
+                row.quality = grade
+                Model.setFactory(row, recycle and "recycler" or "electromagnetic-plant", "legendary")
+                ModelBuilder.addFactoryModule(row, "quality-module-3", "legendary", true)
+            end
+        end
+    end
+    ModelCompute.update(sheet)
+    local goal = "electronic-circuit#legendary"
+    block.products[goal].input = 1
+    return sheet
+end
+
+local function checkCircuitBalances(block)
+    local goal = "electronic-circuit#legendary"
+    -- Each craft takes one iron and three cables. Recycling returns a quarter of each on average.
+    local feed = {["iron-plate"]=29.5677776340656, ["copper-cable"]=88.7033329021969}
+    for key, product in pairs(block.products) do near(product.amount, key == goal and 1 or 0, key) end
+    for key, input in pairs(block.ingredients) do
+        if key ~= "energy" then near(input.amount, feed[key] or 0, key) end
+    end
+    for key, amount in pairs(feed) do near(block.ingredients[key].amount, amount, key) end
+end
+
 local function check()
     local previous = User.getParameter("solver_selected")
     for _, solver in ipairs({defines.constant.solvers.default, defines.constant.solvers.matrix}) do
         User.setParameter("solver_selected", solver)
+        local circuits = buildCircuitLoop()
+        circuits.block_root.matrix_supplies = {["iron-plate"]=true, ["copper-cable"]=true}
+        ModelCompute.update(circuits)
+        checkCircuitBalances(circuits.block_root)
         local model, plants, recyclers = buildLoop()
         local block = model.block_root
         block.matrix_supplies = {["copper-plate"]=true, [target]=true}
@@ -93,4 +130,4 @@ local function check()
     User.setParameter("solver_selected", previous)
 end
 
-return {check=check, buildLoop=buildLoop, checkBalances=checkBalances}
+return {check=check, buildLoop=buildLoop, checkBalances=checkBalances, buildCircuitLoop=buildCircuitLoop, checkCircuitBalances=checkCircuitBalances}

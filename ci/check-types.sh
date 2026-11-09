@@ -62,7 +62,7 @@ cp src/math/{SimplexBalance,Matrix,SolverMatrix,SolverLinkedMatrix,SolverMatrixS
 cp src/math/balance/Pivot.lua "$panel/math/balance/"
 cp src/math/incremental/Unit.lua "$panel/math/incremental/"
 cp src/edition/{RecipeEdition,BlockEdition}.lua "$panel/"
-cp src/model/ProductionBlockMode.lua "$panel/model/"
+cp src/model/{ProductionBlockMode,MatrixSupplies}.lua "$panel/model/"
 cp src/gui/controls/*.lua "$panel/gui/controls/"
 cp src/gui/ProductionScroll.lua "$panel/gui/"
 cp doc/runtime-api-model.lua src/dialog/ProductionPanel.lua "$panel/"

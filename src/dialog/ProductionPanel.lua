@@ -1,3 +1,4 @@
+local ProductionScroll = require "gui.ProductionScroll"
 local BlockToolbar = require "gui.controls.BlockToolbar"
 local BlockHeader = require "gui.controls.BlockHeader"
 local ProductionBlockMode = require "model.ProductionBlockMode"
@@ -277,32 +278,31 @@ function ProductionPanel:getSubMenuPanel()
 	
 end
 
----@param removal ChildRemovalAction?
----@param edit RowConstraintEdit?
----@param treeEdit TreeEdit?
----@param keepScroll boolean?
----@param headerEdit BlockHeaderEdit?
-function ProductionPanel:clearForUpdate(removal, edit, treeEdit, keepScroll, headerEdit)
-	if removal ~= nil or edit ~= nil or treeEdit ~= nil or keepScroll or headerEdit ~= nil then
-		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
-		local menu, header, rows = self:getDataPanel()
-		menu.clear()
-		if headerEdit == nil then header.clear() end
-		local list = rows[resultTableName]
-		local pane = edit and list and list[GuiScroll(edit.side, edit.child_id):getName()]
-		if pane then
-			for _, cell in pairs(list.children) do
-				if cell ~= pane then cell.destroy() end
-			end
-			pane.clear()
-		else
-			rows.clear()
-		end
-		self:getNavigatorPanel().clear()
-	else
+---@param target ProductionScrollTarget?
+function ProductionPanel:clearForUpdate(target)
+	if target == nil then
 		local _, content = self:getPanel()
 		content.clear()
+		return
 	end
+
+	local menu, header, rows = self:getDataPanel()
+	menu.clear()
+	if target ~= ProductionScroll.pane.header then header.clear() end
+	local list = rows[resultTableName]
+	local pane
+	if type(target) == "table" and list then
+		pane = list[GuiScroll(target.side, target.child_id):getName()]
+	end
+	if pane then
+		for _, cell in pairs(list.children) do
+			if cell ~= pane then cell.destroy() end
+		end
+		pane.clear()
+	else
+		rows.clear()
+	end
+	self:getNavigatorPanel().clear()
 end
 
 -------------------------------------------------------------------------------
@@ -310,14 +310,8 @@ end
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
 	local removal = ChildRemoval.decode(event)
-	local model, block, _ = self:getParameterObjects()
-	local treeEdit = TreeAction.decode(event)
-	if treeEdit and treeEdit.action ~= TreeAction.name.toggleLink and model.blocks[treeEdit.block_id] == nil and model.block_root.id ~= treeEdit.block_id then
-		treeEdit = nil
-	end
-	local rowModeEdit = event.action == BlockMode.action.icon and event.button == defines.mouse_button_type.left and event.control ~= event.shift
-	local keepScroll = rowModeEdit or event.action == BlockMode.action.consumer or BlockToolbar.decode(event) ~= nil
-	self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, keepScroll, BlockHeader.decode(event))
+	local model, block = self:getParameterObjects()
+	self:clearForUpdate(ProductionScroll.forUpdate(event, model, removal))
 	self:onEventAutoCancel(event, removal)
 
 	self:updateIndexPanel(model)

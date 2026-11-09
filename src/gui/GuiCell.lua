@@ -1,3 +1,4 @@
+local BlockMode = require "gui.controls.BlockMode"
 -------------------------------------------------------------------------------
 ---Class to help to build GuiSlider
 ---@class GuiCell
@@ -805,17 +806,17 @@ function GuiCellBlock:create(parent)
     row1.style.top_padding = 2
     row1.style.bottom_padding = 3
 
+    local mode = element.consumer and BlockMode.label.consumer or BlockMode.label.producer
+    local input = element.by_product == false and BlockMode.label.ingredient or BlockMode.label.product
+    local tooltip = GuiTooltipElement(self.options.tooltip, {mode}, {input}):element(element)
     local button = nil
     if block_infos.primary_icon ~= nil then
-        local tooltip = GuiTooltipElement(self.options.tooltip):element(element)
         button = GuiElement.add(row1,
             GuiButtonSprite(unpack(self.name)):sprite(block_infos.primary_icon.type, block_infos.primary_icon.name.name)
             :tooltip(tooltip))
     else
         local first_recipe = Model.firstChild(element.children)
         if first_recipe ~= nil then
-            local tooltip = GuiTooltipElement(self.options.tooltip):element(element)
-
             local recipe_prototype = RecipePrototype(first_recipe)
             local icon_type, icon_name = recipe_prototype:getIcon()
             button = GuiElement.add(row1,
@@ -828,9 +829,9 @@ function GuiCellBlock:create(parent)
                 row1.style = "helmod_frame_element_w30_red_1"
             end
         else
-            local button = GuiElement.add(row1,
-                GuiButtonSprite(unpack(self.name)):sprite("menu", defines.sprites.status_help.white,
-                    defines.sprites.status_help.black))
+            button = GuiElement.add(row1,
+                GuiButtonSprite(unpack(self.name)):sprite(defines.sprite_type.menu, defines.sprites.status_help.white,
+                    defines.sprites.status_help.black):tooltip(tooltip))
             button.style.width = 36
         end
     end

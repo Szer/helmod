@@ -191,6 +191,8 @@ defines.styles.button.select_icon_sm_flat = "helmod_button_select_icon_sm_flat"
 
 defines.sprite_size=14
 
+defines.sprite_type = {menu = "menu"}
+
 defines.sprite_tooltips = {}
 defines.sprite_tooltips["energy"] = defines.sprites.event.white
 defines.sprite_tooltips["steam-heat"] = defines.sprites.steam_heat.white

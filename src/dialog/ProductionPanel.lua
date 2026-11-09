@@ -1,3 +1,5 @@
+local ProductionScroll = require "gui.ProductionScroll"
+local BlockToolbar = require "gui.controls.BlockToolbar"
 local BlockHeader = require "gui.controls.BlockHeader"
 local ProductionBlockMode = require "model.ProductionBlockMode"
 local BlockMode = require "gui.controls.BlockMode"
@@ -276,32 +278,31 @@ function ProductionPanel:getSubMenuPanel()
 	
 end
 
----@param removal ChildRemovalAction?
----@param edit RowConstraintEdit?
----@param treeEdit TreeEdit?
----@param rowModeEdit boolean?
----@param headerEdit BlockHeaderEdit?
-function ProductionPanel:clearForUpdate(removal, edit, treeEdit, rowModeEdit, headerEdit)
-	if removal ~= nil or edit ~= nil or treeEdit ~= nil or rowModeEdit or headerEdit ~= nil then
-		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
-		local menu, header, rows = self:getDataPanel()
-		menu.clear()
-		if headerEdit == nil then header.clear() end
-		local list = rows[resultTableName]
-		local pane = edit and list and list[GuiScroll(edit.side, edit.child_id):getName()]
-		if pane then
-			for _, cell in pairs(list.children) do
-				if cell ~= pane then cell.destroy() end
-			end
-			pane.clear()
-		else
-			rows.clear()
-		end
-		self:getNavigatorPanel().clear()
-	else
+---@param target ProductionScrollTarget?
+function ProductionPanel:clearForUpdate(target)
+	if target == nil then
 		local _, content = self:getPanel()
 		content.clear()
+		return
 	end
+
+	local menu, header, rows = self:getDataPanel()
+	menu.clear()
+	if target ~= ProductionScroll.pane.header then header.clear() end
+	local list = rows[resultTableName]
+	local pane
+	if type(target) == "table" and list then
+		pane = list[GuiScroll(target.side, target.child_id):getName()]
+	end
+	if pane then
+		for _, cell in pairs(list.children) do
+			if cell ~= pane then cell.destroy() end
+		end
+		pane.clear()
+	else
+		rows.clear()
+	end
+	self:getNavigatorPanel().clear()
 end
 
 -------------------------------------------------------------------------------
@@ -309,13 +310,8 @@ end
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
 	local removal = ChildRemoval.decode(event)
-	local model, block, _ = self:getParameterObjects()
-	local treeEdit = TreeAction.decode(event)
-	if treeEdit and treeEdit.action ~= TreeAction.name.toggleLink and model.blocks[treeEdit.block_id] == nil and model.block_root.id ~= treeEdit.block_id then
-		treeEdit = nil
-	end
-	local rowModeEdit = event.action == BlockMode.action.icon and event.button == defines.mouse_button_type.left and event.control ~= event.shift
-	self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit, BlockHeader.decode(event))
+	local model, block = self:getParameterObjects()
+	self:clearForUpdate(ProductionScroll.forUpdate(event, model, removal))
 	self:onEventAutoCancel(event, removal)
 
 	self:updateIndexPanel(model)
@@ -465,18 +461,20 @@ function ProductionPanel:updateSubMenuLeftPanel(model, block)
 
 		GuiElement.add(group_tool, GuiButton("HMPinPanel", "OPEN", model.id, block_id):sprite("menu", defines.sprites.push_pin.black, defines.sprites.push_pin.black):style("helmod_button_menu"):tooltip({"helmod_result-panel.tab-button-pin" }))
 
-		local display_count_deep = User.getParameter("display_count_deep")
+		local display_count_deep = User.getParameter(BlockToolbar.setting.deep)
+		local deepButton = GuiButton(self.classname, BlockToolbar.buttonArgs{action=BlockToolbar.action.deep, model_id=model.id, block_id=block_id})
 		if display_count_deep then
-			GuiElement.add(group_tool, GuiButton(self.classname, "display-count-deep", model.id, block_id):sprite("menu", defines.sprites.three_rows.white, defines.sprites.three_rows.black):style("helmod_button_menu_selected"):tooltip({ "tooltip.display-deep-count" }))
+			GuiElement.add(group_tool, deepButton:sprite(defines.sprite_type.menu, defines.sprites.three_rows.white, defines.sprites.three_rows.black):style(defines.styles.button.menu_selected):tooltip({ BlockToolbar.tooltip.deep }))
 		else
-			GuiElement.add(group_tool, GuiButton(self.classname, "display-count-deep", model.id, block_id):sprite("menu", defines.sprites.two_rows.black, defines.sprites.two_rows.black):style("helmod_button_menu"):tooltip({ "tooltip.display-deep-count" }))
+			GuiElement.add(group_tool, deepButton:sprite(defines.sprite_type.menu, defines.sprites.two_rows.black, defines.sprites.two_rows.black):style(defines.styles.button.menu):tooltip({ BlockToolbar.tooltip.deep }))
 		end
 
 		---by limit
+		local limitButton = GuiButton(self.classname, BlockToolbar.buttonArgs{action=BlockToolbar.action.limit, model_id=model.id, block_id=block_id})
 		if block.by_limit == true then
-			GuiElement.add(group_tool, GuiButton(self.classname, "block-limit", model.id, block_id):sprite("menu", defines.sprites.gauge_round.white, defines.sprites.gauge_round.black):style("helmod_button_menu_selected"):tooltip({ "helmod_label.assembler-limitation" }))
+			GuiElement.add(group_tool, limitButton:sprite(defines.sprite_type.menu, defines.sprites.gauge_round.white, defines.sprites.gauge_round.black):style(defines.styles.button.menu_selected):tooltip({ BlockToolbar.tooltip.limit }))
 		else
-			GuiElement.add(group_tool, GuiButton(self.classname, "block-limit", model.id, block_id):sprite("menu", defines.sprites.gauge_round.black, defines.sprites.gauge_round.black):style("helmod_button_menu"):tooltip({ "helmod_label.assembler-limitation" }))
+			GuiElement.add(group_tool, limitButton:sprite(defines.sprite_type.menu, defines.sprites.gauge_round.black, defines.sprites.gauge_round.black):style(defines.styles.button.menu):tooltip({ BlockToolbar.tooltip.limit }))
 		end
 
 		---by product
@@ -496,7 +494,7 @@ function ProductionPanel:updateSubMenuLeftPanel(model, block)
 		end
 
 		-- reset production %
-		GuiElement.add(group_tool, GuiButton(self.classname, "reset-production", model.id, block_id):sprite("menu", defines.sprites.reset.black, defines.sprites.reset.black):style("helmod_button_menu"):tooltip({ "helmod_button.reset-block-production" }))
+		GuiElement.add(group_tool, GuiButton(self.classname, BlockToolbar.buttonArgs{action=BlockToolbar.action.reset, model_id=model.id, block_id=block_id}):sprite(defines.sprite_type.menu, defines.sprites.reset.black, defines.sprites.reset.black):style(defines.styles.button.menu):tooltip({ BlockToolbar.tooltip.reset }))
 
 		---computing
 		local block_compunting = GuiElement.add(group_tool, GuiFlowH("block-computing"))
@@ -549,15 +547,15 @@ function ProductionPanel:updateSubMenuRightPanel(model, block)
 			end
 			table.insert(locations, item_location)
 		end
-		local selector_logistic_fluid = GuiElement.add(group_locations, GuiDropDown(self.classname, "change-location"):items(locations, default_surface):tooltip(default_surface))
-		selector_logistic_fluid.style.font = "helmod_font_default"
-		selector_logistic_fluid.style.height = 32
-		selector_logistic_fluid.style.width = 64
+		local locationSelector = GuiElement.add(group_locations, GuiDropDown(self.classname, BlockToolbar.panelAction{action=BlockToolbar.action.location}):items(locations, default_surface):tooltip(default_surface))
+		locationSelector.style.font = "helmod_font_default"
+		locationSelector.style.height = 32
+		locationSelector.style.width = 64
 	end
 	---logistics
-	local display_logistic_row = User.getParameter("display_logistic_row")
+	local display_logistic_row = User.getParameter(BlockToolbar.setting.logistics)
 	if display_logistic_row == true then
-		local logistic_row_item = User.getParameter("logistic_row_item") or "belt"
+		local logistic_row_item = User.getParameter(BlockToolbar.setting.item) or "belt"
 		local logistic2 = GuiElement.add(right_panel, GuiFlowH("logistic2"))
 		logistic2.style.horizontal_spacing = button_spacing
 		
@@ -573,12 +571,12 @@ function ProductionPanel:updateSubMenuRightPanel(model, block)
 			end
 			table.insert(items, item)
 		end
-		local selector_logistic_item = GuiElement.add(logistic2, GuiDropDown(self.classname, "change-logistic-item"):items(items, default_logistic_item):tooltip(tooltip_item))
+		local selector_logistic_item = GuiElement.add(logistic2, GuiDropDown(self.classname, BlockToolbar.panelAction{action=BlockToolbar.action.item}):items(items, default_logistic_item):tooltip(tooltip_item))
 		selector_logistic_item.style.font = "helmod_font_default"
 		selector_logistic_item.style.height = 32
 		selector_logistic_item.style.width = 64
 
-		local logistic_row_fluid = User.getParameter("logistic_row_fluid") or "pipe"
+		local logistic_row_fluid = User.getParameter(BlockToolbar.setting.fluid) or "pipe"
 		local logistic3 = GuiElement.add(right_panel, GuiFlowH("logistic3"))
 		logistic3.style.horizontal_spacing = button_spacing
 
@@ -594,7 +592,7 @@ function ProductionPanel:updateSubMenuRightPanel(model, block)
 			end
 			table.insert(fluids, fluid)
 		end
-		local selector_logistic_fluid = GuiElement.add(logistic3, GuiDropDown(self.classname, "change-logistic-fluid"):items(fluids, default_logistic_fluid):tooltip(tooltip_fluid))
+		local selector_logistic_fluid = GuiElement.add(logistic3, GuiDropDown(self.classname, BlockToolbar.panelAction{action=BlockToolbar.action.fluid}):items(fluids, default_logistic_fluid):tooltip(tooltip_fluid))
 		selector_logistic_fluid.style.font = "helmod_font_default"
 		selector_logistic_fluid.style.height = 32
 		selector_logistic_fluid.style.width = 64
@@ -603,9 +601,9 @@ function ProductionPanel:updateSubMenuRightPanel(model, block)
 	local group_pref = GuiElement.add(right_panel, GuiFlowH("group_pref"))
 	group_pref.style.horizontal_spacing = button_spacing
 	if display_logistic_row == true then
-		GuiElement.add(group_pref, GuiButton(self.classname, "change-logistic"):sprite("menu", defines.sprites.transport.white, defines.sprites.transport.black):style("helmod_button_menu_selected"):tooltip({"tooltip.display-logistic-row" }))
+		GuiElement.add(group_pref, GuiButton(self.classname, BlockToolbar.panelAction{action=BlockToolbar.action.logistics}):sprite(defines.sprite_type.menu, defines.sprites.transport.white, defines.sprites.transport.black):style(defines.styles.button.menu_selected):tooltip({ BlockToolbar.tooltip.logistics }))
 	else
-		GuiElement.add(group_pref, GuiButton(self.classname, "change-logistic"):sprite("menu", defines.sprites.transport.black, defines.sprites.transport.black):style("helmod_button_menu"):tooltip({ "tooltip.display-logistic-row" }))
+		GuiElement.add(group_pref, GuiButton(self.classname, BlockToolbar.panelAction{action=BlockToolbar.action.logistics}):sprite(defines.sprite_type.menu, defines.sprites.transport.black, defines.sprites.transport.black):style(defines.styles.button.menu):tooltip({ BlockToolbar.tooltip.logistics }))
 	end
 	GuiElement.add(group_pref, GuiButton("HMPreferenceEdition", "OPEN", model.id, block_id):sprite("menu", defines.sprites.process.black, defines.sprites.process.black):style("helmod_button_menu"):tooltip({ "helmod_button.preferences" }))
 
@@ -1830,6 +1828,59 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 	return cell_recipe
 end
 
+---@alias PanelToolbarHandler fun(event:LuaEvent, model:ModelData)
+---@class PanelToolbarHandlers
+---@field location PanelToolbarHandler
+---@field logistics PanelToolbarHandler
+---@field item PanelToolbarHandler
+---@field fluid PanelToolbarHandler
+
+---@type PanelToolbarHandlers
+local panelHandlers = {
+	location = function(event, model)
+		model.location = Player.getHMLocations()[event.element.selected_index]
+	end,
+	logistics = function()
+		local setting = BlockToolbar.setting.logistics
+		User.setParameter(setting, not User.getParameter(setting))
+	end,
+	item = function(event)
+		User.setParameter(BlockToolbar.setting.item, defines.constant.logistic_list_for_item[event.element.selected_index])
+	end,
+	fluid = function(event)
+		User.setParameter(BlockToolbar.setting.fluid, defines.constant.logistic_list_for_fluid[event.element.selected_index])
+	end,
+}
+local panelToolbar = BlockToolbar.bind(panelHandlers)
+
+---@alias ScopedToolbarHandler fun(model:ModelData, block:BlockData, event:LuaEvent, classname:string)
+---@class ScopedToolbarHandlers
+---@field deep ScopedToolbarHandler
+---@field limit ScopedToolbarHandler
+---@field reset ScopedToolbarHandler
+
+---@type ScopedToolbarHandlers
+local blockHandlers = {
+	deep = function(_, _, event, classname)
+		local setting = BlockToolbar.setting.deep
+		User.setParameter(setting, not User.getParameter(setting))
+		Controller:send(defines.mod.events.on_gui_update, event, classname)
+	end,
+	limit = function(model, block, event)
+		if not User.isWriter(model) then return end
+		ProductionBlockMode.setLimit(block, not block.by_limit)
+		ModelCompute.update(model)
+		Controller:send(defines.mod.events.on_gui_update, event)
+	end,
+	reset = function(model, block, event, classname)
+		if not User.isWriter(model) then return end
+		ModelBuilder.updateBlockChildrenProduction(block, 1)
+		ModelCompute.update(model)
+		Controller:send(defines.mod.events.on_gui_update, event, classname)
+	end,
+}
+local blockToolbar = BlockToolbar.bind(blockHandlers)
+
 -------------------------------------------------------------------------------
 ---On event
 ---@param event LuaEvent
@@ -1838,6 +1889,19 @@ function ProductionPanel:onEvent(event)
 
 	if block == nil then
 		block = model.blocks[event.item2]
+	end
+	local panelEdit = BlockToolbar.decodePanel(event)
+	if panelEdit then
+		panelToolbar[panelEdit.action](event, model)
+		Controller:send(defines.mod.events.on_gui_update, event)
+		return
+	end
+	local blockEdit = BlockToolbar.decodeBlock(event)
+	if blockEdit then
+		if block and blockEdit.model_id == model.id and blockEdit.block_id == block.id then
+			blockToolbar[blockEdit.action](model, block, event, self.classname)
+		end
+		return
 	end
 	local header = BlockHeader.decode(event)
 	if header ~= nil then
@@ -1984,33 +2048,6 @@ function ProductionPanel:onEventAccessAll(event, model, block)
 		Controller:send("on_gui_open", event, self.classname)
 	end
 
-	if event.action == "change-location" then
-		local index = event.element.selected_index
-		local hm_locations = Player.getHMLocations()
-		model.location = hm_locations[index]
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "change-logistic" then
-		local display_logistic_row = User.getParameter("display_logistic_row")
-		User.setParameter("display_logistic_row", not (display_logistic_row))
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "change-logistic-item" then
-		local index = event.element.selected_index
-		local type = defines.constant.logistic_list_for_item[index]
-		User.setParameter("logistic_row_item", type)
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "change-logistic-fluid" then
-		local index = event.element.selected_index
-		local type = defines.constant.logistic_list_for_fluid[index]
-		User.setParameter("logistic_row_fluid", type)
-		Controller:send("on_gui_update", event)
-	end
-
 	if event.action == "block-combinator-solids" then
 		local items = ProductionPanel.get_elements(block, event.item3, "item")
 		if #items > 0 then
@@ -2062,11 +2099,6 @@ function ProductionPanel:onEventAccessAll(event, model, block)
 		Controller:send("on_gui_update", event, self.classname)
 	end
 
-	if event.action == "display-count-deep" then
-		local display_count_deep = User.getParameter("display_count_deep")
-		User.setParameter("display_count_deep", not (display_count_deep))
-		Controller:send("on_gui_update", event, self.classname)
-	end
 end
 
 -------------------------------------------------------------------------------
@@ -2204,11 +2236,6 @@ end
 function ProductionPanel:onEventAccessWrite(event, model, block)
 	local selector_name = "HMRecipeSelector"
 	
-	if event.action == "reset-production" then
-		ModelBuilder.updateBlockChildrenProduction(block, 1)
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event, self.classname)
-	end
 
 	if event.action == "solver_switch" then
 		local index = event.element.selected_index
@@ -2472,16 +2499,11 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 
 	if event.action == "block-switch-limit" then
 		local switch_state = event.element.switch_state == "left"
-		ModelBuilder.updateProductionBlockOption(block, "by_limit", switch_state)
+		ProductionBlockMode.setLimit(block, switch_state)
 		ModelCompute.update(model)
 		Controller:send("on_gui_update", event)
 	end
 	
-	if event.action == "block-limit" then
-		ModelBuilder.updateProductionBlockOption(block, "by_limit", not (block.by_limit))
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
-	end
 
 	if event.action == "recipe-copy" then
 		local child = block.children[event.item3]

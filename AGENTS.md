@@ -22,6 +22,8 @@ Characterize the current behavior before changing representations. Keep the refa
 - Follow `ChildRemoval` for panel actions. Give each variant a literal `action` and required named fields, and share that discriminated union between button construction and handling.
 - Encode the payload at the button and decode it at the dispatcher boundary. Keep the existing button names and argument order so saved GUI controls still work.
 - Narrow the union in the handler and type the remaining case explicitly. Include live call sites in the LuaLS gate and verify that a misspelled tag, a missing payload field, and an unhandled variant fail CI.
+- Use shared named actions in buttons and handlers. When using a handler table, type its required entries and make CI reject a missing handler.
+- For edits that keep the production panel open, choose the panes to retain in `ProductionScroll.forUpdate`. Cover the affected controls in a scrolled Factorio block.
 
 ## PR titles are public release notes
 

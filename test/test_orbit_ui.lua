@@ -23,6 +23,7 @@ script.on_nth_tick(60, function(event)
   ModelCompute.update(model)
   block.products["orbit/automation-science-pack#normal"].input=60
   ModelCompute.update(model)
+  settings.global.helmod_incremental_percentages = {value=true}
   User.setParameterObjects("HMProductionPanel",model.id,block.id,recipe.id)
   Controller:send("on_gui_open",{name="OPEN",item1=model.id,item2=block.id},"HMProductionPanel")
   game.tick_paused=false
@@ -42,6 +43,11 @@ script.on_nth_tick(60, function(event)
   game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="orbit-selector.png"}
   assert(player.gui.screen.HMOrbitSelector, "orbit selector exists")
   assert(not Player.getLastError(), "Helmod GUI error")
+  local panel = Controller:getView("HMProductionPanel")
+  local _, _, scroll = panel:getDataPanel()
+  local list = assert(scroll["list-data"])
+  local status = panel:getInfoPanel2().parent["block-heading"]["solver-status"]
+  assert(status.visible and status.sprite == "utility/status_working")
   click(find_element(player.gui.screen.HMOrbitSelector, function(element)
    return element.name:find("element-select",1,true) and element.tags.name == "firearm-magazine"
   end), player)
@@ -51,10 +57,15 @@ script.on_nth_tick(60, function(event)
    if recipe.name=="firearm-magazine" and recipe.type=="orbit" then found=true end
   end
   assert(found, "selector added orbital recipe")
+  assert(list.valid and #list.children > list.column_count, "existing rows disappeared during selector refresh")
+  assert(status.valid and status.sprite == "utility/status_yellow")
   Controller:getView("HMOrbitSelector"):close()
   storage.orbit_ui_step=4
  elseif storage.orbit_ui_step==4 then
   game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="orbit-selected.png"}
+  local panel = Controller:getView("HMProductionPanel")
+  assert(panel:getInfoPanel2().parent["block-heading"]["solver-status"].sprite == "utility/status_working")
+  settings.global.helmod_incremental_percentages = {value=false}
   for _, element in pairs(player.gui.screen.children) do
    local control=find_element(element, function(child)
     return child.name:find("HMRecipeEdition",1,true) and child.name:find("OPEN",1,true)

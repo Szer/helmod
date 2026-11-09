@@ -229,16 +229,39 @@ local function check(player)
     compareJob(model)
     checkIndependentWork()
     checkWideBlock(player)
+    local production = Controller:getView("HMProductionPanel")
+    Controller:send("on_gui_open", {name="OPEN", item1=model.id, item2=frames.id, item3=frame.id}, production.classname)
+    local _, _, scroll = production:getDataPanel()
+    local list = scroll["list-data"]
+    local oldRow = assert(list[GuiTable("action", frame.id):getName()])
+    local navigator = production:getNavigatorPanel()
+    local info = production:getInfoPanel2()
+    info.parent["block-heading"].destroy()
+    local savedLabel = GuiElement.add(info.parent, GuiLabel("label-info"))
+    info.parent.swap_children(1, savedLabel.get_index_in_parent())
+    production:updatePending(model)
+    assert(info.valid and not savedLabel.valid, "existing open panel should keep its scroll pane")
+    local heading = info.parent["block-heading"]
+    local indicator = heading["solver-status"]
+    local caption = heading["label-info"].caption
+    assert(indicator.visible and indicator.sprite == "utility/status_working")
     local selector = Controller:getView("HMRecipeSelector")
     User.setParameterObjects(selector.classname, model.id, frames.id)
     selector:onEvent{action="element-select", item1="recipe", item2="iron-gear-wheel"}
     assert(Planner.pending(model.id), "adding a recipe must use the sheet worker")
+    assert(oldRow.valid and navigator.valid and list.valid, "selector refresh cleared the visible block while calculating")
+    assert(not list.enabled, "structural edits must disable outdated row actions")
+    assert(indicator.visible and indicator.sprite == "utility/status_yellow")
+    equal(caption, heading["label-info"].caption, "title changed during calculation")
     compareJob(model)
     local inserted
     for _, entry in pairs(frames.children) do
         if entry.name == "iron-gear-wheel" then inserted = entry end
     end
     assert(inserted)
+    while #storage.percentage_planner.notifications > 0 do Planner.tick() end
+    assert(list.valid and list.enabled and list[GuiTable("action", inserted.id):getName()], "new row missing after publication")
+    assert(indicator.valid and indicator.sprite == "utility/status_working")
     Controller:send("on_gui_open", {name="OPEN", item1=model.id, item2=frames.id, item3=inserted.id}, "HMRecipeEdition")
     local editor = Controller:getView("HMRecipeEdition")
     local factoryButton = player.gui.screen.HMRecipeEdition

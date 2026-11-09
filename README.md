@@ -54,7 +54,7 @@ end
 
 ## Experimental background solver
 
-Enable **Experimental background sheet solver** under **Settings → Mod settings → Map** to try it for everyone in the save. Adding or moving recipes, changing machines and modules, editing quantities, and switching block modes all use the same solver. Editors can continue working while the sheet shows “calculating…”. The new totals appear together.
+Enable **Experimental background sheet solver** under **Settings → Mod settings → Map** to try it for everyone in the save. Adding or moving recipes, changing machines and modules, editing quantities, and switching block modes all use the same solver. A small dot beside the block title turns yellow during calculation and green when the new totals appear.
 
 Shared sheets take turns across simulation ticks. Another edit replaces the pending calculation and retains all accepted changes. Synthetic recipes such as orbital cargo and electricity use fresh block calculations. Paused games, exports, and remote reads finish pending work immediately. A single matrix solve can still take an entire tick.
 

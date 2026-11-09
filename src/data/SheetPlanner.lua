@@ -82,14 +82,19 @@ function Planner.deferView(form, frame, content)
         if name == form.classname then
             local model, block, recipe = form:getParameterObjects()
             if not model then return false end
-            local selection = {model=model.id, block=block and block.id, recipe=recipe and recipe.id}
+            local blockId = block and block.id
+            local recipeId = name == recipeView and recipe and recipe.id or nil
             local tags = frame.tags
             if Planner.pending(model.id) or Planner.failure(model.id) then
-                if tags.solver_view and not Unit.equal(tags.solver_view, selection) then content.clear() end
+                local previous = tags.solver_view
+                if previous and (previous.model ~= model.id or previous.block ~= blockId
+                    or (name == recipeView and previous.recipe ~= recipeId)) then
+                    content.clear()
+                end
                 if name == productionView then form:updatePending(model) end
                 return true
             end
-            tags.solver_view = selection
+            tags.solver_view = {model=model.id, block=blockId, recipe=recipeId}
             frame.tags = tags
             break
         end

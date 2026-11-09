@@ -142,6 +142,32 @@ function ProductionPanel:getDataPanel()
 	return menu_panel, header_panel, scroll_panel
 end
 
+local statusSprites = {
+    ready = "utility/status_working",
+    pending = "utility/status_yellow",
+    failed = "utility/status_not_working",
+}
+
+---@param info LuaGuiElement
+---@return LuaGuiElement label, LuaGuiElement indicator
+local function infoHeading(info)
+    local heading = info["block-heading"]
+    if not heading then
+        heading = GuiElement.add(info, GuiFlowH("block-heading"))
+        heading.style.vertical_align = "center"
+        local label = GuiElement.add(heading, GuiLabel("label-info"):style(defines.styles.label.frame_title))
+        local indicator = GuiElement.add(heading, GuiSprite("solver-status"):sprite(statusSprites.ready))
+        indicator.style.size = 16
+        local previous = info["label-info"]
+        if previous then
+            label.tooltip = previous.tooltip
+            info.swap_children(previous.get_index_in_parent(), heading.get_index_in_parent())
+            previous.destroy()
+        end
+    end
+    return heading["label-info"], heading["solver-status"]
+end
+
 -------------------------------------------------------------------------------
 ---Get or create info panel
 ---@return LuaGuiElement, LuaGuiElement, LuaGuiElement
@@ -158,7 +184,7 @@ function ProductionPanel:getInfoPanel2()
 	self:setStyle(header_panel, "block_info", "height")
 
 	local info_panel = GuiElement.add(header_panel, GuiFlowV(info_name))
-	GuiElement.add(info_panel, GuiLabel("label-info"):style(defines.styles.label.frame_title))
+	infoHeading(info_panel)
 	local info_scroll = GuiElement.add(info_panel, GuiScroll(info_scroll_name):style("helmod_scroll_pane"))
 	info_scroll.style.width = 300
 
@@ -639,20 +665,26 @@ function ProductionPanel:updatePending(model)
 	local _, _, scroll = self:getDataPanel()
 	local list = scroll[resultTableName]
 	if list then list.enabled = not SheetPlanner.pendingStructure(model.id) and not SheetPlanner.failure(model.id) end
-	local caption = {"", self:getButtonCaption(), " [img=info]"}
+	local label, indicator = infoHeading(info.parent)
+	label.caption = {"", self:getButtonCaption(), " [img=info]"}
+	indicator.visible = User.getModGlobalSetting(SheetPlanner.setting)
 	if SheetPlanner.pending(model.id) then
-		table.insert(caption, {"helmod_common.calculating"})
+		indicator.sprite = statusSprites.pending
+		indicator.tooltip = {"helmod_common.solver-calculating"}
 	elseif SheetPlanner.failure(model.id) then
-		table.insert(caption, {"helmod_common.solver-failed"})
+		indicator.sprite = statusSprites.failed
+		indicator.tooltip = {"helmod_common.solver-failed"}
+	else
+		indicator.sprite = statusSprites.ready
+		indicator.tooltip = {"helmod_common.solver-ready"}
 	end
-	info.parent["label-info"].caption = caption
 end
 
 ---@param model ModelData
 ---@param block BlockData
 function ProductionPanel:updateInfoBlock(model, block)
 	local info_scroll, output_scroll, input_scroll = self:getInfoPanel2()
-	local label = info_scroll.parent["label-info"]
+	local label = infoHeading(info_scroll.parent)
 	self:updatePending(model)
 	label.tooltip = GuiTooltipModel("tooltip.info-model"):element(model):create()
 	info_scroll.clear()

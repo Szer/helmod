@@ -19,7 +19,7 @@ function ProductionScroll.forUpdate(event, model, removal)
     local constraint = ConstraintView.edit(event)
     if constraint then return constraint end
     if BlockHeader.decode(event) then return ProductionScroll.pane.header end
-    if removal or BlockToolbar.decode(event) or event.action == BlockMode.action.consumer then
+    if removal or BlockToolbar.decodePanel(event) or BlockToolbar.decodeBlock(event) or event.action == BlockMode.action.consumer then
         return ProductionScroll.pane.rows
     end
     if event.action == BlockMode.action.icon and event.button == defines.mouse_button_type.left

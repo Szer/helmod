@@ -52,7 +52,6 @@ BlockToolbar.setting = {
 
 ---@alias ScopedToolbarEdit ToolbarDeep|ToolbarLimit|ToolbarReset
 ---@alias PanelToolbarEdit ToolbarLogistics|ToolbarItem|ToolbarFluid|ToolbarLocation
----@alias ToolbarEdit ScopedToolbarEdit|PanelToolbarEdit
 
 ---@param edit PanelToolbarEdit
 ---@return BlockToolbarAction
@@ -66,18 +65,35 @@ function BlockToolbar.buttonArgs(edit)
     return edit.action, edit.model_id, edit.block_id
 end
 
----@param event {action?:string,item1?:string,item2?:string}
----@return ToolbarEdit?
-function BlockToolbar.decode(event)
+---@param event {action?:string}
+---@return PanelToolbarEdit?
+function BlockToolbar.decodePanel(event)
     local action = event.action
     if action == BlockToolbar.action.logistics or action == BlockToolbar.action.item
         or action == BlockToolbar.action.fluid or action == BlockToolbar.action.location then
         return {action=action}
     end
+end
+
+---@param event {action?:string,item1?:string,item2?:string}
+---@return ScopedToolbarEdit?
+function BlockToolbar.decodeBlock(event)
+    local action = event.action
     if event.item1 and event.item2 and (action == BlockToolbar.action.deep
         or action == BlockToolbar.action.limit or action == BlockToolbar.action.reset) then
         return {action=action, model_id=event.item1, block_id=event.item2}
     end
+end
+
+---@generic Handler
+---@param named table<string, Handler>
+---@return table<BlockToolbarAction, Handler>
+function BlockToolbar.bind(named)
+    local byAction = {}
+    for name, handler in pairs(named) do
+        byAction[BlockToolbar.action[name]] = handler
+    end
+    return byAction
 end
 
 return BlockToolbar

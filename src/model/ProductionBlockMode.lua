@@ -18,4 +18,10 @@ function ProductionBlockMode.toggle(block, option)
     ModelBuilder.updateProductionBlockOption(block, option, enabled)
 end
 
+---@param block BlockData
+---@param enabled boolean
+function ProductionBlockMode.setLimit(block, enabled)
+    ModelBuilder.updateProductionBlockOption(block, "by_limit", enabled)
+end
+
 return ProductionBlockMode

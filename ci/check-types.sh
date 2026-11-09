@@ -97,6 +97,7 @@ reject_panel_edit 's/action=BlockHeader.action.clear, model_id=model.id, block_i
 reject_panel_edit 's/edit.action == "block-all-product-visible" then/edit.action == "block-all-ingredient-visible" then/' assign-type-mismatch ClearBlockInputs
 reject_panel_edit 's/action=BlockToolbar.action.deep, model_id=model.id/action="display-count-dep", model_id=model.id/' assign-type-mismatch display-count-dep
 reject_panel_edit 's/action=BlockToolbar.action.reset, model_id=model.id, block_id=block_id/action=BlockToolbar.action.reset, model_id=model.id/' missing-fields block_id
-reject_panel_edit 's/edit.action == "block-limit" then/edit.action == "reset-production" then/' assign-type-mismatch ToolbarReset
+reject_panel_edit 's/limit = function(model, block, event)/limti = function(model, block, event)/' missing-fields limit
+reject_panel_edit 's/location = function(event, model)/loaction = function(event, model)/' missing-fields location
 reject_panel_edit 's/panelAction{action=BlockToolbar.action.location}/panelAction{action=BlockToolbar.action.deep}/' assign-type-mismatch display-count-deep
 echo 'Verified removal contracts, display modes, constraint pane sides and viewport refresh scope.'

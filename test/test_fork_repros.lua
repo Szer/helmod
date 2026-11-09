@@ -1,6 +1,7 @@
 -- Exercise the fixed paths with the planner data and player from the original repro save.
 local checkConsumerControls = require "test_consumer_controls"
 local Blueprint = require "core.Blueprint"
+local BlockToolbar = require "gui.controls.BlockToolbar"
 local function find(element, name, kind)
     if element.name:find(name, 1, true) and (kind == nil or element.type == kind) then return element end
     for _, child in pairs(element.children) do
@@ -192,6 +193,7 @@ local function checkToolbarScroll(player)
     ModelCompute.update(model)
     local panel = openBlock(model, block)
     local target = "=" .. model.id .. "=" .. block.id
+    local exercised = {}
     local function press(action, index)
         local _, _, pane = panel:getDataPanel()
         pane.scroll_to_element(assert(find(pane, "block-child-remove" .. target .. "=" .. last.id)))
@@ -206,6 +208,7 @@ local function checkToolbarScroll(player)
             EventController.onGuiClickButton{player_index=player.index, element=el, button=defines.mouse_button_type.left}
         end
         assert(pane.valid, action .. " replaced the scrolled viewport")
+        exercised[action:match("^[^=]+")] = true
     end
     for _, enabled in ipairs({true, false}) do
         press("display-count-deep" .. target)
@@ -228,6 +231,9 @@ local function checkToolbarScroll(player)
     end
     press("reset-production" .. target)
     assert(last.production == 1)
+    for _, action in pairs(BlockToolbar.action) do
+        assert(exercised[action], "missing toolbar regression for " .. action)
+    end
 end
 
 ---@param player LuaPlayer

@@ -1828,6 +1828,59 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 	return cell_recipe
 end
 
+---@alias PanelToolbarHandler fun(event:LuaEvent, model:ModelData)
+---@class PanelToolbarHandlers
+---@field location PanelToolbarHandler
+---@field logistics PanelToolbarHandler
+---@field item PanelToolbarHandler
+---@field fluid PanelToolbarHandler
+
+---@type PanelToolbarHandlers
+local panelHandlers = {
+	location = function(event, model)
+		model.location = Player.getHMLocations()[event.element.selected_index]
+	end,
+	logistics = function()
+		local setting = BlockToolbar.setting.logistics
+		User.setParameter(setting, not User.getParameter(setting))
+	end,
+	item = function(event)
+		User.setParameter(BlockToolbar.setting.item, defines.constant.logistic_list_for_item[event.element.selected_index])
+	end,
+	fluid = function(event)
+		User.setParameter(BlockToolbar.setting.fluid, defines.constant.logistic_list_for_fluid[event.element.selected_index])
+	end,
+}
+local panelToolbar = BlockToolbar.bind(panelHandlers)
+
+---@alias ScopedToolbarHandler fun(model:ModelData, block:BlockData, event:LuaEvent, classname:string)
+---@class ScopedToolbarHandlers
+---@field deep ScopedToolbarHandler
+---@field limit ScopedToolbarHandler
+---@field reset ScopedToolbarHandler
+
+---@type ScopedToolbarHandlers
+local blockHandlers = {
+	deep = function(_, _, event, classname)
+		local setting = BlockToolbar.setting.deep
+		User.setParameter(setting, not User.getParameter(setting))
+		Controller:send(defines.mod.events.on_gui_update, event, classname)
+	end,
+	limit = function(model, block, event)
+		if not User.isWriter(model) then return end
+		ProductionBlockMode.setLimit(block, not block.by_limit)
+		ModelCompute.update(model)
+		Controller:send(defines.mod.events.on_gui_update, event)
+	end,
+	reset = function(model, block, event, classname)
+		if not User.isWriter(model) then return end
+		ModelBuilder.updateBlockChildrenProduction(block, 1)
+		ModelCompute.update(model)
+		Controller:send(defines.mod.events.on_gui_update, event, classname)
+	end,
+}
+local blockToolbar = BlockToolbar.bind(blockHandlers)
+
 -------------------------------------------------------------------------------
 ---On event
 ---@param event LuaEvent
@@ -1837,9 +1890,17 @@ function ProductionPanel:onEvent(event)
 	if block == nil then
 		block = model.blocks[event.item2]
 	end
-	local toolbar = BlockToolbar.decode(event)
-	if toolbar ~= nil then
-		self:onToolbarEdit(toolbar, event, model, block)
+	local panelEdit = BlockToolbar.decodePanel(event)
+	if panelEdit then
+		panelToolbar[panelEdit.action](event, model)
+		Controller:send(defines.mod.events.on_gui_update, event)
+		return
+	end
+	local blockEdit = BlockToolbar.decodeBlock(event)
+	if blockEdit then
+		if block and blockEdit.model_id == model.id and blockEdit.block_id == block.id then
+			blockToolbar[blockEdit.action](model, block, event, self.classname)
+		end
 		return
 	end
 	local header = BlockHeader.decode(event)
@@ -1890,43 +1951,6 @@ function ProductionPanel:onEvent(event)
 	if User.isAdmin() then
 		self:onEventAccessAdmin(event, model, block)
 	end
-end
-
----@param edit ToolbarEdit
----@param event LuaEvent
----@param model ModelData
----@param block BlockData?
-function ProductionPanel:onToolbarEdit(edit, event, model, block)
-	local setting = BlockToolbar.setting
-	if edit.action == "change-location" then
-		model.location = Player.getHMLocations()[event.element.selected_index]
-	elseif edit.action == "change-logistic" then
-		User.setParameter(setting.logistics, not User.getParameter(setting.logistics))
-	elseif edit.action == "change-logistic-item" then
-		User.setParameter(setting.item, defines.constant.logistic_list_for_item[event.element.selected_index])
-	elseif edit.action == "change-logistic-fluid" then
-		User.setParameter(setting.fluid, defines.constant.logistic_list_for_fluid[event.element.selected_index])
-	else
-		if block == nil or edit.model_id ~= model.id or edit.block_id ~= block.id then return end
-		if edit.action == "display-count-deep" then
-			User.setParameter(setting.deep, not User.getParameter(setting.deep))
-			Controller:send(defines.mod.events.on_gui_update, event, self.classname)
-			return
-		end
-		if not User.isWriter(model) then return end
-		if edit.action == "block-limit" then
-			ModelBuilder.updateProductionBlockOption(block, "by_limit", not block.by_limit)
-		else
-			---@type ToolbarReset
-			local reset = edit
-			ModelBuilder.updateBlockChildrenProduction(model.blocks[reset.block_id] or model.block_root, 1)
-			ModelCompute.update(model)
-			Controller:send(defines.mod.events.on_gui_update, event, self.classname)
-			return
-		end
-		ModelCompute.update(model)
-	end
-	Controller:send(defines.mod.events.on_gui_update, event)
 end
 
 ---@param edit BlockHeaderEdit
@@ -2475,7 +2499,7 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 
 	if event.action == "block-switch-limit" then
 		local switch_state = event.element.switch_state == "left"
-		ModelBuilder.updateProductionBlockOption(block, "by_limit", switch_state)
+		ProductionBlockMode.setLimit(block, switch_state)
 		ModelCompute.update(model)
 		Controller:send("on_gui_update", event)
 	end

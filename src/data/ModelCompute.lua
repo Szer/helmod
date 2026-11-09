@@ -91,15 +91,24 @@ function ModelCompute.try_update(model)
     end
 end
 
--------------------------------------------------------------------------------
----Update model
+-- Only consecutive percentage edits share results; a normal update or reload starts cold.
+---@type table<BlockData, PercentageSolveEntry>?
+local previousPercentageSolves
+
 ---@param model ModelData
-function ModelCompute.update(model)
+---@param edited? BlockData Block containing the edited recipe percentage.
+function ModelCompute.update(model, edited)
     if model ~= nil and model.blocks ~= nil then
         -- Add parameters
         Model.appendParameters(model)
-        ModelCompute.updateBlock(model, model.block_root)
+        ---@type PercentageSolvePass?
+        local pass
+        if edited then
+            pass = {edited=edited, previous=previousPercentageSolves or {}, current={}}
+        end
+        ModelCompute.updateBlock(model, model.block_root, pass)
         ModelCompute.finalizeBlock(model.block_root, 1)
+        previousPercentageSolves = pass and pass.current
         model.version = Model.version
     end
 end
@@ -108,9 +117,11 @@ end
 ---Update model
 ---@param model ModelData
 ---@param block BlockData
-function ModelCompute.updateBlock(model, block)
+---@param pass? PercentageSolvePass
+function ModelCompute.updateBlock(model, block, pass)
     block.time = model.time
     local children = block.children
+    local leaf = true
 
     -- check if block has child
     local _, child
@@ -126,7 +137,8 @@ function ModelCompute.updateBlock(model, block)
         for _, child in spairs(children, defines.sorters.block.sort) do
             local is_block = Model.isBlock(child)
             if is_block then
-                ModelCompute.updateBlock(model, child)
+                leaf = false
+                ModelCompute.updateBlock(model, child, pass)
             elseif RecipePrototype(child):native() ~= nil then
                 ModelCompute.prepareRecipeFactory(child, block.time, model.parameters)
             end
@@ -136,7 +148,7 @@ function ModelCompute.updateBlock(model, block)
 
         ModelCompute.prepareBlockObjectives(block)
 
-        ModelCompute.computeBlock(block, model.parameters, true)
+        ModelCompute.computeBlock(block, model.parameters, true, leaf and pass or nil)
         
         -- TODO
         --ModelCompute.computeResources(model)
@@ -804,7 +816,8 @@ end
 ---Compute production block
 ---@param block table
 ---@param factories_prepared boolean?
-function ModelCompute.computeBlock(block, parameters, factories_prepared)
+---@param pass? PercentageSolvePass
+function ModelCompute.computeBlock(block, parameters, factories_prepared, pass)
     local children = block.children
     block.power = 0
     block.count = 1
@@ -828,7 +841,7 @@ function ModelCompute.computeBlock(block, parameters, factories_prepared)
         end
 
         local debug = User.getModGlobalSetting("debug_solver")
-        my_solver:solve(block, parameters, debug, factories_prepared)
+        my_solver:solve(block, parameters, debug, factories_prepared, pass)
         
     end
 end

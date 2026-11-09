@@ -11,6 +11,8 @@ check src/math/balance
 mkdir "$tmp/linked"
 cp src/math/linked/*.lua "$tmp/linked/"
 ln -s "$PWD/doc" "$tmp/doc"
+mkdir "$tmp/library"
+cp src/math/Matrix.lua src/core/tableExtends.lua "$tmp/library/"
 check_profile() {
   "${LUA_LANGUAGE_SERVER:-lua-language-server}" --check="$tmp/linked" --checklevel=Warning \
     --logpath="$tmp/log" --configpath="$PWD/ci/linked-profile.luarc.json"
@@ -23,6 +25,16 @@ if check_profile > "$tmp/profile.log" 2>&1; then
 fi
 grep -q 'param-type-mismatch' "$tmp/profile.log" && grep -q 'BlockData' "$tmp/profile.log" || {
   cat "$tmp/profile.log" >&2
+  exit 1
+}
+cp src/math/linked/Profile.lua "$tmp/linked/"
+sed -i 's/return old.solved/return block/' "$tmp/linked/PercentageSolve.lua"
+if check_profile > "$tmp/percentage.log" 2>&1; then
+  echo 'A cached solver result must be a matrix.' >&2
+  exit 1
+fi
+grep -q 'return-type-mismatch' "$tmp/percentage.log" && grep -q 'Matrix' "$tmp/percentage.log" || {
+  cat "$tmp/percentage.log" >&2
   exit 1
 }
 check src/gui/controls

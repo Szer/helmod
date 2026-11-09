@@ -176,6 +176,61 @@ local function checkTreeControls(player)
 end
 
 ---@param player LuaPlayer
+local function checkToolbarScroll(player)
+    local model = Model.newModel()
+    local block = model.block_root
+    local last
+    for _ = 1, 24 do
+        local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, block, "iron-gear-wheel", "recipe")
+        last = recipe
+    end
+    last.production = 0.5
+    User.setParameter("logistic_row_item", defines.constant.logistic_list_for_item[1])
+    User.setParameter("logistic_row_fluid", defines.constant.logistic_list_for_fluid[1])
+    User.setParameter("display_logistic_row", false)
+    User.setParameter("display_count_deep", false)
+    ModelCompute.update(model)
+    local panel = openBlock(model, block)
+    local target = "=" .. model.id .. "=" .. block.id
+    local function press(action, index)
+        local _, _, pane = panel:getDataPanel()
+        pane.scroll_to_element(assert(find(pane, "block-child-remove" .. target .. "=" .. last.id)))
+        local kind = index and "drop-down" or "sprite-button"
+        local name = "HMProductionPanel=" .. action
+        local el = assert(find(player.gui.screen, name, kind), name)
+        assert(el.name == name)
+        if index then
+            el.selected_index = index
+            EventController.onGuiClick{player_index=player.index, element=el}
+        else
+            EventController.onGuiClickButton{player_index=player.index, element=el, button=defines.mouse_button_type.left}
+        end
+        assert(pane.valid, action .. " replaced the scrolled viewport")
+    end
+    for _, enabled in ipairs({true, false}) do
+        press("display-count-deep" .. target)
+        assert(User.getParameter("display_count_deep") == enabled)
+        press("change-logistic")
+        assert(User.getParameter("display_logistic_row") == enabled)
+        if enabled then
+            press("change-logistic-item", 2)
+            assert(User.getParameter("logistic_row_item") == defines.constant.logistic_list_for_item[2])
+            press("change-logistic-fluid", 2)
+            assert(User.getParameter("logistic_row_fluid") == defines.constant.logistic_list_for_fluid[2])
+            press("change-location", 2)
+            assert(model.location.key == Player.getHMLocations()[2].key)
+        end
+        local limit, consumer = block.by_limit == true, block.consumer == true
+        press("block-limit" .. target)
+        assert((block.by_limit == true) ~= limit)
+        press("block-consumer" .. target)
+        assert((block.consumer == true) ~= consumer)
+    end
+    press("reset-production" .. target)
+    assert(last.production == 1)
+end
+
+---@param player LuaPlayer
 local function checkHeaderScroll(player)
     local model = Model.newModel()
     local block = model.block_root
@@ -302,6 +357,8 @@ return function(case)
             end
         elseif case == "header-block-removal" then
             checkHeaderRemoval(player)
+        elseif case == "toolbar-scroll" then
+            checkToolbarScroll(player)
         elseif case == "header-scroll" then
             checkHeaderScroll(player)
         elseif case == "tree-controls" then

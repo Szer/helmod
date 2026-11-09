@@ -1,4 +1,5 @@
 -- Exercise the fixed paths with the planner data and player from the original repro save.
+local percentageJobs = require "test_percentage_jobs"
 local checkConsumerControls = require "test_consumer_controls"
 local Blueprint = require "core.Blueprint"
 local BlockToolbar = require "gui.controls.BlockToolbar"
@@ -465,6 +466,8 @@ return function(case)
             checkHeaderRemoval(player)
         elseif case == "toolbar-scroll" then
             checkToolbarScroll(player)
+        elseif case == "percentage-jobs" then
+            percentageJobs.check(player)
         elseif case == "refresh-scroll" then
             checkRefreshScroll(player)
         elseif case == "quantity-scroll" then
@@ -476,6 +479,7 @@ return function(case)
         elseif case == "row-removal-scroll" then
             checkRowRemoval(player)
         elseif case == "quantity-confirm" then
+            percentageJobs.afterLoad()
             local input = assert(find(player.gui.screen.HMProductEdition, "product-update", "textfield"))
             input.text = "10"
             EventController.onGuiClick{player_index=player.index, element=input}
@@ -542,6 +546,7 @@ return function(case)
             elseif case == "quantity-after-reload" then
                 local block = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, "iron-gear-wheel", "recipe")
                 ModelCompute.update(model)
+                percentageJobs.queueForSave(player)
                 storage.fork_test_block = block.id
                 User.setParameterObjects("HMProductionPanel", model.id, block.id)
                 Controller:send("on_gui_update", {item1=model.id,item2=block.id}, "HMProductionPanel")

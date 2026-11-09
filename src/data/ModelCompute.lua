@@ -1,3 +1,4 @@
+local PercentagePlanner = require "data.PercentagePlanner"
 local Orbit = require "model.Orbit"
 require "math.Matrix"
 require "math.SolverMatrix"
@@ -96,6 +97,7 @@ end
 ---@param model ModelData
 function ModelCompute.update(model)
     if model ~= nil and model.blocks ~= nil then
+        PercentagePlanner.invalidate(model.id)
         -- Add parameters
         Model.appendParameters(model)
         ModelCompute.updateBlock(model, model.block_root)
@@ -104,44 +106,60 @@ function ModelCompute.update(model)
     end
 end
 
--------------------------------------------------------------------------------
----Update model
+---@param model ModelData
+---@param block BlockData
+local function solvePreparedBlock(model, block)
+    if not block.children or not next(block.children) then
+        block.ingredients, block.products = {}, {}
+        return
+    end
+    ModelCompute.prepareBlockElements(block)
+    ModelCompute.prepareBlockObjectives(block)
+    ModelCompute.computeBlock(block, model.parameters, true)
+end
+
 ---@param model ModelData
 ---@param block BlockData
 function ModelCompute.updateBlock(model, block)
     block.time = model.time
-    local children = block.children
-
-    -- check if block has child
-    local _, child
-    if children ~= nil then
-        _, child = next(children)
-    end
-    if child == nil then
-        -- empty block
-        block.ingredients = {}
-        block.products = {}
-    else
-        -- compute block children
-        for _, child in spairs(children, defines.sorters.block.sort) do
-            local is_block = Model.isBlock(child)
-            if is_block then
-                ModelCompute.updateBlock(model, child)
-            elseif RecipePrototype(child):native() ~= nil then
-                ModelCompute.prepareRecipeFactory(child, block.time, model.parameters)
-            end
+    for _, child in spairs(block.children or {}, defines.sorters.block.sort) do
+        if Model.isBlock(child) then
+            ModelCompute.updateBlock(model, child)
+        elseif RecipePrototype(child):native() then
+            ModelCompute.prepareRecipeFactory(child, block.time, model.parameters)
         end
-        ---prepare block
-        ModelCompute.prepareBlockElements(block)
+    end
+    solvePreparedBlock(model, block)
+end
 
-        ModelCompute.prepareBlockObjectives(block)
-
-        ModelCompute.computeBlock(block, model.parameters, true)
-        
-        -- TODO
-        --ModelCompute.computeResources(model)
+---Prepare up to eight recipes before yielding the block to the next tick.
+---@param model ModelData
+---@param block BlockData
+---@param progress? UnitPreparation
+---@return UnitPreparation? remaining
+function ModelCompute.prepareUnit(model, block, progress)
+    block.time = model.time
+    if not progress then
+        progress = {recipes={}, next=1}
+        for _, child in spairs(block.children or {}, defines.sorters.block.sort) do
+            if not Model.isBlock(child) then table.insert(progress.recipes, child.id) end
+        end
+    end
+    local last = math.min(progress.next + 7, #progress.recipes)
+    for i = progress.next, last do
+        local recipe = block.children[progress.recipes[i]]
+        if RecipePrototype(recipe):native() then
+            ModelCompute.prepareRecipeFactory(recipe, block.time, model.parameters)
+        end
+    end
+    if last < #progress.recipes then
+        progress.next = last + 1
+        return progress
     end
 end
+
+---Solve a prepared block after its children's per-unit results are available.
+ModelCompute.solveUnit = solvePreparedBlock
 
 -------------------------------------------------------------------------------
 ---Create factories summary

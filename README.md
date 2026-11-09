@@ -52,6 +52,12 @@ function UnitTestPanel:loopDataRemoteAPI(data)
 end
 ```
 
+## Experimental background solver
+
+Enable **Experimental background recipe percentage solver** under **Settings → Mod settings → Map** to try it on a shared sheet. Percentage edits take effect immediately. The sheet shows “Calculating…” until the new totals are ready for everyone viewing it.
+
+Work from different sheets takes turns across simulation ticks. Editing the same sheet again replaces its pending calculation and keeps all accepted edits. Paused games, solver debugging, and sheets with unsupported synthetic recipes use the full calculation. Other editing actions use their usual calculation path.
+
 ## Sending items to orbit
 
 The rocket button appears when a platform-capable silo is available, such as with Space Age enabled. Without one, existing satellite launch recipes remain available through the recipe selector.

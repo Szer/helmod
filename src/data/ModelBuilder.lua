@@ -1,3 +1,4 @@
+local PercentagePlanner = require "data.PercentagePlanner"
 ------------------------------------------------------------------------------
 ---Description of the module.
 ---@class ModelBuilder
@@ -242,6 +243,7 @@ end
 ---Remove a model
 ---@param model_id string
 function ModelBuilder.removeModel(model_id)
+    PercentagePlanner.invalidate(model_id)
     storage.models[model_id] = nil
 end
 

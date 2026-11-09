@@ -1,3 +1,4 @@
+local PercentagePlanner = require "data.PercentagePlanner"
 local ProductionScroll = require "gui.ProductionScroll"
 local BlockToolbar = require "gui.controls.BlockToolbar"
 local BlockHeader = require "gui.controls.BlockHeader"
@@ -292,7 +293,7 @@ function ProductionPanel:onUpdate(event)
 	else
 		content.clear()
 	end
-	self:onEventAutoCancel(event, removal)
+	if not event.percentage_rows then self:onEventAutoCancel(event, removal) end
 
 	self:updateIndexPanel(model)
 	local width, _, scale = User.getMainSizes()
@@ -300,7 +301,7 @@ function ProductionPanel:onUpdate(event)
 
 	self:updateSubMenuPanel(model, block)
 
-	self:updateData(not sameBlock)
+	self:updateData(not sameBlock, sameBlock and event and event.percentage_rows or nil)
 end
 
 -------------------------------------------------------------------------------
@@ -630,13 +631,24 @@ function ProductionPanel:updateSubMenuRightPanel(model, block)
 end
 
 -------------------------------------------------------------------------------
----Update info
----@param model table
----@param block table
+---@param model ModelData
+function ProductionPanel:updatePending(model)
+	local selected = self:getParameterObjects()
+	if selected.id ~= model.id then return end
+	local info = self:getInfoPanel2()
+	local caption = {"", self:getButtonCaption(), " [img=info]"}
+	if PercentagePlanner.pending(model.id) then
+		table.insert(caption, {"helmod_common.calculating"})
+	end
+	info.parent["label-info"].caption = caption
+end
+
+---@param model ModelData
+---@param block BlockData
 function ProductionPanel:updateInfoBlock(model, block)
 	local info_scroll, output_scroll, input_scroll = self:getInfoPanel2()
 	local label = info_scroll.parent["label-info"]
-	label.caption = { "", self:getButtonCaption(), " [img=info]" }
+	self:updatePending(model)
 	label.tooltip = GuiTooltipModel("tooltip.info-model"):element(model):create()
 	info_scroll.clear()
 	---info panel
@@ -996,7 +1008,8 @@ end
 -------------------------------------------------------------------------------
 ---Update data
 ---@param focusBlock boolean
-function ProductionPanel:updateData(focusBlock)
+---@param changedRows? table<string,boolean>
+function ProductionPanel:updateData(focusBlock, changedRows)
 	local model, block = self:getParameterObjects()
 
 	if model.block_root == nil then
@@ -1020,9 +1033,9 @@ function ProductionPanel:updateData(focusBlock)
 
 	---col recipe
 	if block == nil then
-		self:updateDataBlock(model, model.block_root)
+		self:updateDataBlock(model, model.block_root, changedRows)
 	else
-		self:updateDataBlock(model, block)
+		self:updateDataBlock(model, block, changedRows)
 	end
 	
 	-- reset show hidden products
@@ -1038,7 +1051,8 @@ end
 ---Update data
 ---@param model table
 ---@param block table
-function ProductionPanel:updateDataBlock(model, block)
+---@param changedRows? table<string,boolean>
+function ProductionPanel:updateDataBlock(model, block, changedRows)
 	if block == nil then return end
 
 	self:updateInfoBlock(model, block)
@@ -1066,7 +1080,11 @@ function ProductionPanel:updateDataBlock(model, block)
 
 		local columns = 7 + extra_cols
 		local result_table = scroll_panel[resultTableName]
-		if result_table and result_table.column_count == columns then
+		if changedRows and result_table and result_table.column_count == columns
+            and self:refreshChangedRows(result_table, model, block, changedRows) then
+            return
+        end
+        if result_table and result_table.column_count == columns then
 			ProductionScroll.clearRowCells(result_table, block)
 		else
 			scroll_panel.clear()
@@ -1096,6 +1114,33 @@ function ProductionPanel:updateDataBlock(model, block)
 		scroll_panel.clear()
 	end
 	User.setParameter("scroll_element", nil)
+end
+
+---@param list LuaGuiElement
+---@param model ModelData
+---@param block BlockData
+---@param rows table<string,boolean>
+---@return boolean
+function ProductionPanel:refreshChangedRows(list, model, block, rows)
+    local columns = list.column_count
+    if #list.children ~= columns * (1 + table_size(block.children)) then return false end
+    local sort = block.by_product == false and defines.sorters.block.reverse or defines.sorters.block.sort
+    local first = columns + 1
+    for _, child in spairs(block.children, sort) do
+        local action = list[GuiTable("action", child.id):getName()]
+        if not action or action.get_index_in_parent() ~= first then return false end
+        if rows[child.id] then
+            ProductionScroll.replaceRow(list, first, function()
+                if Model.isBlock(child) then
+                    self:addTableRowBlock(list, model, block, child)
+                else
+                    self:addTableRowRecipe(list, model, block, child)
+                end
+            end)
+        end
+        first = first + columns
+    end
+    return true
 end
 
 -------------------------------------------------------------------------------
@@ -2608,6 +2653,7 @@ end
 function ProductionPanel:onEventAccessAdmin(event, model, block)
 	if event.action == "game-pause" then
 		if not (game.is_multiplayer()) then
+			PercentagePlanner.finishPending()
 			User.setParameter("auto-pause", true)
 			game.tick_paused = true
 			Controller:send("on_gui_pause", event)

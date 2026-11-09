@@ -1,3 +1,5 @@
+local RecipePercentage = require "gui.controls.RecipePercentage"
+local PercentagePlanner = require "data.PercentagePlanner"
 -------------------------------------------------------------------------------
 ---Class to build recipe edition dialog
 ---@class RecipeEdition : FormModel
@@ -249,6 +251,7 @@ end
 function RecipeEdition:onEvent(event)
     local display_width, display_height, scale = Player.getDisplaySizes()
 
+    ---@type ModelData?, BlockData?, RecipeData?
     local model, block, recipe = self:getParameterObjects()
     if model == nil or block == nil or recipe == nil then return end
 
@@ -272,12 +275,18 @@ function RecipeEdition:onEvent(event)
             Controller:send("on_gui_recipe_update", event)
         end
 
-        if event.action == "recipe-update-production" then
+        local edit = RecipePercentage.decode(event)
+        if edit and edit.model_id == model.id and edit.block_id == block.id and edit.recipe_id == recipe.id then
             local text = event.element.text
             local production = (formula(text) or 100) / 100
             ModelBuilder.updateRecipeProduction(recipe, production)
+            if User.getModGlobalSetting(PercentagePlanner.setting) and not game.tick_paused then
+                event.element.tags = {applied_text=event.element.text}
+                PercentagePlanner.enqueue(model, block, Player.native().index)
+                return
+            end
             ModelCompute.update(model)
-            self:updateObjectInfo(event)
+            self:updateObjectInfo()
             Controller:send("on_gui_recipe_update", event)
         end
 
@@ -286,7 +295,7 @@ function RecipeEdition:onEvent(event)
             local spoilage_factor = (formula(text) or 100) / 100
             ModelBuilder.updateRecipeSpoilage(recipe, spoilage_factor)
             ModelCompute.update(model)
-            self:updateObjectInfo(event)
+            self:updateObjectInfo()
             Controller:send("on_gui_recipe_update", event)
         end
 
@@ -550,7 +559,7 @@ function RecipeEdition:onEvent(event)
         if event.action == "recipe-quality-select" then
             recipe.quality = event.item4
             ModelCompute.update(model)
-            self:updateObjectInfo(event)
+            self:updateObjectInfo()
             Controller:send("on_gui_recipe_update", event)
         end
 
@@ -1405,13 +1414,23 @@ end
 ---Update header
 ---@param event LuaEvent
 function RecipeEdition:updateHeader(event)
-    self:updateObjectInfo(event)
+    self:updateObjectInfo()
+end
+
+---Leave unconfirmed text in place when another editor publishes a shared sheet.
+function RecipeEdition:refreshPercentage()
+    local inputs = self:getObjectInfoPanel()["table-input"]
+    if inputs then
+        for _, field in pairs(inputs.children) do
+            if field.type == "textfield" and field.tags.applied_text ~= field.text then return end
+        end
+    end
+    self:updateObjectInfo()
 end
 
 -------------------------------------------------------------------------------
 ---Update information
----@param event LuaEvent
-function RecipeEdition:updateObjectInfo(event)
+function RecipeEdition:updateObjectInfo()
     local info_panel = self:getObjectInfoPanel()
     local model, block, recipe = self:getParameterObjects()
     if block ~= nil and recipe ~= nil then
@@ -1510,12 +1529,14 @@ function RecipeEdition:updateObjectInfo(event)
 
         GuiElement.add(tablePanel, GuiLabel("label-production"):caption({ "helmod_recipe-edition-panel.production" }))
         local production_value = (recipe.production or 1) * 100
-        GuiElement.add(tablePanel, GuiTextField(self.classname, "recipe-update-production", model.id, block.id, recipe.id):text(production_value):style("helmod_textfield"))
+        local field = GuiElement.add(tablePanel, GuiTextField(self.classname, RecipePercentage.buttonArgs{action=RecipePercentage.action, model_id=model.id, block_id=block.id, recipe_id=recipe.id}):text(production_value):style("helmod_textfield"))
+        field.tags = {applied_text=field.text}
 
         if recipe.spoilage ~= nil and recipe.spoilage.has_spoil == true and User.getPreferenceSetting("display_spoilage") then
             GuiElement.add(tablePanel, GuiLabel("label-spoilage"):caption({ "helmod_recipe-edition-panel.spoilage-factor" }))
             local spoilage_value = (recipe.spoilage_factor or 1) * 100
-            GuiElement.add(tablePanel, GuiTextField(self.classname, "recipe-update-spoilage", model.id, block.id, recipe.id):text(spoilage_value):style("helmod_textfield"))
+            local field = GuiElement.add(tablePanel, GuiTextField(self.classname, "recipe-update-spoilage", model.id, block.id, recipe.id):text(spoilage_value):style("helmod_textfield"))
+            field.tags = {applied_text=field.text}
         end
     end
 end

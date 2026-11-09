@@ -9,12 +9,13 @@ local mod = work .. "/mods/helmod-fork"
 Runner.write(work .. "/mods/mod-list.json", [[{"mods":[{"name":"base","enabled":true},{"name":"space-age","enabled":true},{"name":"quality","enabled":true},{"name":"elevated-rails","enabled":true},{"name":"recycler","enabled":true},{"name":"helmod-fork","enabled":true}]}]])
 Runner.copy(root .. "/test/test_fork_repros.lua", mod .. "/test_fork_repros.lua")
 Runner.copy(root .. "/test/test_consumer_controls.lua", mod .. "/test_consumer_controls.lua")
+Runner.copy(root .. "/test/test_percentage_jobs.lua", mod .. "/test_percentage_jobs.lua")
 local control = Runner.read(mod .. "/control.lua")
-for _, case in ipairs({"refresh-scroll", "quantity-scroll", "toolbar-scroll", "header-scroll", "tree-controls", "excluded-output", "electricity-inputs", "header-block-removal", "row-removal-scroll", "consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
+for _, case in ipairs({"percentage-jobs", "refresh-scroll", "quantity-scroll", "toolbar-scroll", "header-scroll", "tree-controls", "excluded-output", "electricity-inputs", "header-block-removal", "row-removal-scroll", "consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
                        "blank-selector-rule", "truncated-import", "empty-blueprint-book", "quantity-after-reload", "quantity-confirm"}) do
     Runner.write(mod .. "/control.lua", control .. '\nrequire "test_fork_repros"("' .. case .. '")\n')
     local save = saves .. "/" .. case .. "/repro.zip"
-    if case == "refresh-scroll" or case == "quantity-scroll" or case == "toolbar-scroll" or case == "header-scroll" or case == "tree-controls" or case == "excluded-output" or case == "electricity-inputs" or case == "header-block-removal" or case == "consumer-controls" or case == "row-removal-scroll" then save = saves .. "/empty-explorer/repro.zip" end
+    if case == "percentage-jobs" or case == "refresh-scroll" or case == "quantity-scroll" or case == "toolbar-scroll" or case == "header-scroll" or case == "tree-controls" or case == "excluded-output" or case == "electricity-inputs" or case == "header-block-removal" or case == "consumer-controls" or case == "row-removal-scroll" then save = saves .. "/empty-explorer/repro.zip" end
     local log
     if case == "quantity-after-reload" then
         if headless then

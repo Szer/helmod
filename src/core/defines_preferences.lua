@@ -375,6 +375,14 @@ defines.constant.settings_mod = {
     maximum_value = 10,
     order = "c0"
   },
+  incremental_percentages = {
+    type = "bool-setting",
+    setting_type = "runtime-global",
+    localised_name = {"helmod_common.incremental-percentages"},
+    localised_description = {"helmod_common.incremental-percentages-desc"},
+    default_value = false,
+    order = "a2"
+  },
   -- debug_solver
   debug_solver = {
     type = "bool-setting",

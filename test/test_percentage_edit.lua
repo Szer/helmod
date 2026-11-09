@@ -49,19 +49,22 @@ return function()
     ModelBuilder.addRecipeIntoProductionBlock(model, frames, "electronic-circuit", "recipe")
     science.products_linked = {["electronic-circuit"]=true}
     frames.products_linked = {["electronic-circuit"]=true}
-    local sibling, wire = subBlock(model, root, "copper-cable")
+    local sibling, gear = subBlock(model, root, "balance-test-gear")
+    ModelBuilder.addRecipeIntoProductionBlock(model, sibling, "balance-test-plate", "recipe")
     local consumer = subBlock(model, root, "iron-gear-wheel")
     consumer.consumer, consumer.by_product = true, false
     sibling.solver = true
     ModelCompute.update(model)
+    sibling.products["iron-gear-wheel"].input = 10
     root.products["utility-science-pack"].input = 60
     root.products["electronic-circuit"].input = 5
     ModelCompute.update(model)
+    assert(math.abs(sibling.products["iron-gear-wheel"].amount - 10) < 1e-8)
     local reference = table.deepcopy(model)
     local percentages = {0.85, 0.95, 1, 0.75}
     local function edit(sheet, value)
         if value == 1 then
-            sheet.blocks[sibling.id].children[wire.id].factory.quality = "uncommon"
+            sheet.blocks[sibling.id].children[gear.id].factory.quality = "uncommon"
             sheet.blocks[consumer.id].by_factory = true
         end
         ModelBuilder.updateRecipeProduction(sheet.blocks[frames.id].children[frame.id], value)

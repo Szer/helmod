@@ -19,11 +19,12 @@ export PATH="$work/bin:$PATH"
 cat > bin/curl <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
-auth=false has_file=false has_description=false
+auth=false has_file=false has_description=false has_summary=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -o) out=$2; shift 2 ;;
     -F) case "$2" in file=@*) has_file=true;; description=*) has_description=true;; esac; shift 2 ;;
+    --form-string) [[ $2 == "summary=$(jq -r .description src/info.json)" ]]; has_summary=true; shift 2 ;;
     -H) if [[ $2 == 'Authorization: Bearer test-only' ]]; then auth=true; fi; shift 2 ;;
     --retry|-w) shift 2 ;;
     https://*) url=$1; shift ;;
@@ -42,6 +43,10 @@ case "$url" in
       if [[ $CASE == conflict || $CASE == bad-hash ]]; then hash=different; fi
       jq -n --arg v "$VERSION" --arg h "$hash" '{releases:[{version:$v,sha1:$h}]}' > "$out"
     fi ;;
+  https://mods.factorio.com/api/v2/mods/edit_details)
+    [[ $auth == true && $has_description == true && $has_summary == true && $has_file == false ]]
+    touch "$STATE/edited"
+    echo '{"success":true}' > "$out" ;;
   https://mods.factorio.com/api/v2/mods/*)
     [[ $auth == true ]]
     printf '%s' "$url" > "$STATE/init"
@@ -67,12 +72,14 @@ for CASE in new next retry conflict bad-hash foreign-url; do
   case "$CASE" in
     new|next)
       "$root/ci/publish.sh" package
+      test -e "$STATE/edited"
       test -e "$STATE/uploaded"
       endpoint=init_publish
       if [[ $CASE == next ]]; then endpoint=releases/init_upload; fi
       grep -Fxq "https://mods.factorio.com/api/v2/mods/$endpoint" "$STATE/init" ;;
     retry)
       "$root/ci/publish.sh" package
+      test -e "$STATE/edited"
       test ! -e "$STATE/init" ;;
     *)
       if "$root/ci/publish.sh" package; then echo "Unexpected success: $CASE"; exit 1; fi

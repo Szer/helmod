@@ -17,6 +17,18 @@ lookup() {
 release_hash() {
   jq -r --arg version "$version" '.releases[] | select(.version == $version) | .sha1' "$work/details"
 }
+sync_description() {
+  local summary
+  summary=$(jq -er .description src/info.json)
+  if jq -e --arg summary "$summary" --rawfile body portal-description.md \
+      '.summary == $summary and ((.description // "") | rtrimstr("\n")) == ($body | rtrimstr("\n"))' "$work/details" >/dev/null; then
+    return
+  fi
+  curl -fsS --retry 2 -H "Authorization: Bearer $FACTORIO_APIKEY" -F "mod=$name" \
+    --form-string "summary=$summary" -F 'description=<portal-description.md' \
+    "$api/v2/mods/edit_details" -o "$work/edit"
+  jq -e '.success == true' "$work/edit" >/dev/null
+}
 status=$(lookup)
 case "$status" in
   404) endpoint=init_publish ;;
@@ -25,12 +37,12 @@ case "$status" in
     if [[ -n $existing ]]; then
       [[ $existing == "$digest" ]] || { echo "Version exists with a different hash; refusing to replace it"; exit 1; }
       echo "Identical release is already published."
+      sync_description
       exit 0
     fi
     endpoint=releases/init_upload ;;
   *) echo "Portal lookup failed: HTTP $status"; exit 1 ;;
 esac
-# Only the portal initialization endpoint receives the credential.
 curl -fsS --retry 2 -H "Authorization: Bearer $FACTORIO_APIKEY" -F "mod=$name" "$api/v2/mods/$endpoint" -o "$work/init"
 url=$(jq -er '.upload_url' "$work/init")
 [[ $url =~ ^https://([a-zA-Z0-9-]+\.)*factorio\.com/ ]] || { echo "Unexpected upload destination"; exit 1; }
@@ -43,6 +55,7 @@ curl -fsS -F "file=@$archive;type=application/zip" "${fields[@]}" "$url" -o "$wo
 jq -e '.success == true' "$work/result" >/dev/null
 for delay in 1 2 4 8 16; do
   if [[ $(lookup) == 200 && $(release_hash) == "$digest" ]]; then
+    sync_description
     echo "Verified https://mods.factorio.com/mod/$name version $version ($digest)"
     exit 0
   fi

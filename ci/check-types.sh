@@ -82,4 +82,5 @@ reject_panel_edit 's/model_id=model.id, block_id=block_id/block_id=block_id/' mi
 reject_panel_edit 's/removal.action == "block-remove-canceled" then/removal.action == "block-remvoe-canceled" then/' assign-type-mismatch ConfirmBlockRemoval
 reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event))/self:clearForUpdate(BlockRemoval.decode(event), nil)/' param-type-mismatch RequestChildRemoval
 reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event))/self:clearForUpdate(nil, BlockRemoval.decode(event))/' param-type-mismatch RowConstraintEdit
-echo 'Verified removal contracts and constraint edit viewport refresh scope.'
+reject_panel_edit 's/addRowScroll(gui_table, ConstraintView.side.products, recipe.id)/addRowScroll(gui_table, "produtcs", recipe.id)/' param-type-mismatch produtcs
+echo 'Verified removal contracts, constraint pane sides and viewport refresh scope.'

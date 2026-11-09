@@ -19,7 +19,7 @@ function GuiButton:sprite(element_type, element_name, hovered)
     self.options.type = "sprite-button"
     self.options.tags = { type = element_type, name = element_name}
     self.is_caption = false
-    if element_type == "menu" then
+    if element_type == defines.sprite_type.menu then
         self.options.sprite = GuiElement.getSprite(element_name)
         if hovered then
             self.options.hovered_sprite = GuiElement.getSprite(hovered)

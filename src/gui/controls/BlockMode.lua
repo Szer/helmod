@@ -7,6 +7,14 @@ BlockMode.action = {
     input = "block-by-product",
 }
 
+BlockMode.label = {
+    consumer = "helmod_label.block-consumer",
+    producer = "helmod_label.block-no-consumer",
+    product = "helmod_label.input-product",
+    ingredient = "helmod_label.input-ingredient",
+    edit = "tooltip.edit-sub-block",
+}
+
 ---@class BlockModeTarget
 ---@field model_id string
 ---@field block_id string

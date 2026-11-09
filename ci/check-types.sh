@@ -54,7 +54,8 @@ grep -q 'param-type-mismatch' "$tmp/bad-action.log" || { cat "$tmp/bad-action.lo
 
 # Check action contracts at the production panel's real call sites.
 panel="$tmp/panel"
-mkdir -p "$panel/gui/controls"
+mkdir -p "$panel/gui/controls" "$panel/model"
+cp src/model/ProductionBlockMode.lua "$panel/model/"
 cp src/gui/controls/*.lua "$panel/gui/controls/"
 cp doc/runtime-api-model.lua src/dialog/ProductionPanel.lua "$panel/"
 check_panel() {
@@ -89,4 +90,5 @@ reject_panel_edit 's/action=TreeAction.name.blockToChild, model_id=model.id, blo
 reject_panel_edit 's/action=BlockMode.action.icon, model_id=model.id/action="row-bock-mode", model_id=model.id/' assign-type-mismatch row-bock-mode
 reject_panel_edit 's/action=BlockMode.action.icon, model_id=model.id, block_id=block.id/action=BlockMode.action.icon, model_id=model.id/' missing-fields block_id
 reject_panel_edit 's/click.action == "block-consumer" then/click.action == "block-by-product" then/' assign-type-mismatch ToggleInput
+reject_panel_edit 's/ProductionBlockMode.toggle(block, option)/ProductionBlockMode.toggle(block, "by_factory")/' param-type-mismatch by_factory
 echo 'Verified removal contracts, display modes, constraint pane sides and viewport refresh scope.'

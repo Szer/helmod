@@ -1,3 +1,4 @@
+local BlockMode = require "gui.controls.BlockMode"
 -------------------------------------------------------------------------------
 ---Class to help to build GuiSlider
 ---@class GuiCell
@@ -805,8 +806,8 @@ function GuiCellBlock:create(parent)
     row1.style.top_padding = 2
     row1.style.bottom_padding = 3
 
-    local mode = element.consumer and "helmod_label.block-consumer" or "helmod_label.block-no-consumer"
-    local input = element.by_product == false and "helmod_label.input-ingredient" or "helmod_label.input-product"
+    local mode = element.consumer and BlockMode.label.consumer or BlockMode.label.producer
+    local input = element.by_product == false and BlockMode.label.ingredient or BlockMode.label.product
     local tooltip = GuiTooltipElement(self.options.tooltip, {mode}, {input}):element(element)
     local button = nil
     if block_infos.primary_icon ~= nil then
@@ -829,7 +830,7 @@ function GuiCellBlock:create(parent)
             end
         else
             button = GuiElement.add(row1,
-                GuiButtonSprite(unpack(self.name)):sprite("menu", defines.sprites.status_help.white,
+                GuiButtonSprite(unpack(self.name)):sprite(defines.sprite_type.menu, defines.sprites.status_help.white,
                     defines.sprites.status_help.black):tooltip(tooltip))
             button.style.width = 36
         end

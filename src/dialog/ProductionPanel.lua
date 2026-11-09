@@ -1,3 +1,4 @@
+local ProductionBlockMode = require "model.ProductionBlockMode"
 local BlockMode = require "gui.controls.BlockMode"
 local TreeAction = require "gui.controls.TreeAction"
 local DisplayMode = require "gui.controls.DisplayMode"
@@ -479,17 +480,17 @@ function ProductionPanel:updateSubMenuLeftPanel(model, block)
 		---by product
 		local inputButton = GuiButton(self.classname, BlockMode.buttonArgs{action=BlockMode.action.input, model_id=model.id, block_id=block_id})
 		if block.by_product == false then
-			GuiElement.add(group_tool, inputButton:sprite("menu", defines.sprites.graph_bottom_to_top.white, defines.sprites.graph_bottom_to_top.black):style("helmod_button_menu_selected"):tooltip({ "helmod_label.input-product" }))
+			GuiElement.add(group_tool, inputButton:sprite(defines.sprite_type.menu, defines.sprites.graph_bottom_to_top.white, defines.sprites.graph_bottom_to_top.black):style(defines.styles.button.menu_selected):tooltip({ BlockMode.label.product }))
 		else
-			GuiElement.add(group_tool, inputButton:sprite("menu", defines.sprites.graph_top_to_bottom.black, defines.sprites.graph_top_to_bottom.black):style("helmod_button_menu"):tooltip({ "helmod_label.input-ingredient" }))
+			GuiElement.add(group_tool, inputButton:sprite(defines.sprite_type.menu, defines.sprites.graph_top_to_bottom.black, defines.sprites.graph_top_to_bottom.black):style(defines.styles.button.menu):tooltip({ BlockMode.label.ingredient }))
 		end
 
 		---consumer
 		local consumerButton = GuiButton(self.classname, BlockMode.buttonArgs{action=BlockMode.action.consumer, model_id=model.id, block_id=block_id})
 		if block.consumer == true then
-			GuiElement.add(group_tool, consumerButton:sprite("menu", defines.sprites.cookie_cutter.white, defines.sprites.cookie_cutter.black):style("helmod_button_menu_selected"):tooltip({ "helmod_label.block-no-consumer" }))
+			GuiElement.add(group_tool, consumerButton:sprite(defines.sprite_type.menu, defines.sprites.cookie_cutter.white, defines.sprites.cookie_cutter.black):style(defines.styles.button.menu_selected):tooltip({ BlockMode.label.producer }))
 		else
-			GuiElement.add(group_tool, consumerButton:sprite("menu", defines.sprites.cookie_cutter.black, defines.sprites.cookie_cutter.black):style("helmod_button_menu"):tooltip({ "helmod_label.block-consumer" }))
+			GuiElement.add(group_tool, consumerButton:sprite(defines.sprite_type.menu, defines.sprites.cookie_cutter.black, defines.sprites.cookie_cutter.black):style(defines.styles.button.menu):tooltip({ BlockMode.label.consumer }))
 		end
 
 		-- reset production %
@@ -1611,7 +1612,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 
 	local block_color = User.getThumbnailColor(defines.thumbnail_color.names.block_default)
 	if not (block_by_product) then block_color = User.getThumbnailColor(defines.thumbnail_color.names.block_reverted) end
-	GuiElement.add(cell_recipe, GuiCellBlock(self.classname, BlockMode.buttonArgs{action=BlockMode.action.icon, model_id=model.id, block_id=block.id}):element(block):infoIcon(block.type):tooltip("tooltip.edit-sub-block"):color(block_color):byLimit(by_limit))
+	GuiElement.add(cell_recipe, GuiCellBlock(self.classname, BlockMode.buttonArgs{action=BlockMode.action.icon, model_id=model.id, block_id=block.id}):element(block):infoIcon(block.type):tooltip(BlockMode.label.edit):color(block_color):byLimit(by_limit))
 
 	---col energy
 	local cell_energy = GuiElement.add(gui_table, GuiTable(block.id, "energy"):column(1):style("helmod_table_list"))
@@ -1884,16 +1885,16 @@ end
 function ProductionPanel:onBlockModeClick(event, click, model, selected)
 	if click.model_id ~= model.id then return end
 	local block = selected
-	---@type "consumer"|"by_product"
+	---@type ProductionBlockModeOption
 	local option
 	if click.action == "row-block-mode" then
 		block = model.blocks[click.block_id]
 		if block == nil or selected.children[click.block_id] ~= block then return end
 		local left = event.button == defines.mouse_button_type.left
 		if left and event.control and not event.shift then
-			option = "consumer"
+			option = ProductionBlockMode.option.consumer
 		elseif left and event.shift and not event.control then
-			option = "by_product"
+			option = ProductionBlockMode.option.input
 		else
 			Controller:closeEditionOrSelector()
 			Controller:send("on_gui_open", event, self.classname)
@@ -1901,21 +1902,15 @@ function ProductionPanel:onBlockModeClick(event, click, model, selected)
 		end
 	elseif click.action == "block-consumer" then
 		if click.block_id ~= selected.id then return end
-		option = "consumer"
+		option = ProductionBlockMode.option.consumer
 	else
 		---@type ToggleInput
 		local input = click
 		if input.block_id ~= selected.id then return end
-		option = "by_product"
+		option = ProductionBlockMode.option.input
 	end
 	if not User.isWriter(model) then return end
-	local enabled
-	if option == "consumer" then
-		enabled = not block.consumer
-	else
-		enabled = block.by_product == false
-	end
-	ModelBuilder.updateProductionBlockOption(block, option, enabled)
+	ProductionBlockMode.toggle(block, option)
 	ModelCompute.update(model)
 	Controller:send(defines.mod.events.on_gui_update, event)
 end

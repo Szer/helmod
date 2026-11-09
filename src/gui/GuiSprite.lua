@@ -13,7 +13,7 @@ end)
 ---@param name string
 ---@return GuiSprite
 function GuiSprite:sprite(type, name)
-  if type == "menu" then
+  if type == defines.sprite_type.menu then
     self.options.sprite = GuiElement.getSprite(name)
   elseif name == nil then
     self.options.sprite = type

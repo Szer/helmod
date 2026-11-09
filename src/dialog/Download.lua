@@ -1,3 +1,4 @@
+local SheetPlanner = require "data.SheetPlanner"
 -------------------------------------------------------------------------------
 ---Class to build Download panel
 ---@class Download
@@ -58,6 +59,10 @@ function Download:updateDownload(event)
   if event.item2 == "upload" then
     local download_panel = self:getFramePanel("upload")
     download_panel.clear()
+    if not SheetPlanner.finishModel(model.id) then
+      Player.print({"helmod_common.solver-failed"})
+      return
+    end
     data_string = Converter.write(model)
     local text_box = GuiElement.add(download_panel, GuiTextBox("data-text"):text(data_string))
   end

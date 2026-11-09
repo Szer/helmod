@@ -2155,6 +2155,10 @@ end
 function ProductionPanel:onEventAccessRead(event, model, block)
 	if event.action == "copy-block" then
 		if block ~= nil then
+			if not SheetPlanner.finishModel(model.id) then
+				Player.print({"helmod_common.solver-failed"})
+				return
+			end
 			local data = Converter.write(block)
 			User.setParameter("copy_past", data)
 		end

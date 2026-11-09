@@ -393,6 +393,68 @@ local function editorFor(job, model)
     for _, player in pairs(game.players) do return player end
 end
 
+---@param s SheetState
+---@param model ModelData
+---@param job SheetJob
+local function finish(s, model, job)
+    local work = job.work
+    if work and (not Unit.equal(work.source, model.block_root)
+        or not Unit.equal(work.context, Dependencies.capture(model, model.block_root))) then
+        job.work = nil
+    end
+    while not advance(s, model, job, true) do end
+    return true
+end
+
+-- The caller removes the sheet from the queue before advancing it.
+local function runJob(s, id, immediate)
+    local job = s.jobs[id]
+    local model = storage.models and storage.models[id]
+    if not model then Planner.invalidate(id); return end
+    local editor = editorFor(job, model)
+    if not editor and not immediate then
+        table.insert(s.order, id)
+        return
+    end
+    local previous = Player.native()
+    local complete
+    if editor then
+        Player.set(editor)
+        local ok, result = pcall(immediate and finish or advance, s, model, job)
+        if ok then complete = result else
+            fail(s, id, result)
+            complete = true
+        end
+        Player.set(previous)
+    else
+        fail(s, id, "No player context for sheet " .. id)
+        complete = true
+    end
+    if complete then
+        s.jobs[id] = nil
+        notify(id, job.player, job.changed)
+    else
+        table.insert(s.order, id)
+    end
+end
+
+---Finish an export using the same pending work as the tick scheduler.
+---@param id string
+---@return boolean ready
+function Planner.finishModel(id)
+    local s = storage.percentage_planner
+    if s and s.jobs[id] then
+        for i, queued in ipairs(s.order) do
+            if queued == id then
+                table.remove(s.order, i)
+                runJob(s, id, true)
+                break
+            end
+        end
+    end
+    return not Planner.failure(id)
+end
+
 function Planner.tick()
     local s = storage.percentage_planner
     if not s or (#s.order == 0 and #s.notifications == 0) then return end
@@ -411,28 +473,7 @@ function Planner.tick()
     else
         local id = table.remove(s.order, 1)
         if not id then return end
-        local job, model = s.jobs[id], storage.models and storage.models[id]
-        if not model then
-            Planner.invalidate(id)
-        else
-            local editor = editorFor(job, model)
-            if editor then
-                Player.set(editor)
-                local ok, complete = pcall(advance, s, model, job)
-                if not ok then
-                    fail(s, id, complete)
-                    complete = true
-                end
-                if complete then
-                    s.jobs[id] = nil
-                    notify(id, editor.index, job.changed)
-                else
-                    table.insert(s.order, id)
-                end
-            else
-                table.insert(s.order, id)
-            end
-        end
+        runJob(s, id, false)
     end
     Player.set(previous)
 end
@@ -441,21 +482,10 @@ end
 function Planner.finishPending()
     local s = storage.percentage_planner
     if not s then return end
-    local previous = Player.native()
     while #s.order > 0 do
-        local id = s.order[1]
-        local job = s.jobs[id]
-        local model = storage.models and storage.models[id]
-        local player = model and editorFor(job, model)
-        Planner.invalidate(id)
-        if player then
-            Player.set(player)
-            local ok, message = pcall(Planner.solveNow, model)
-            if not ok then fail(s, id, message) end
-        end
+        runJob(s, table.remove(s.order, 1), true)
     end
     while #s.notifications > 0 do Planner.tick() end
-    Player.set(previous)
 end
 
 return Planner

@@ -1,3 +1,4 @@
+local SheetPlanner = require "data.SheetPlanner"
 ---
 ---Description of the module.
 ---@class RemoteAPI
@@ -10,7 +11,12 @@ local RemoteAPI = {
 ---Expose
 function RemoteAPI.expose()
     remote.add_interface("helmod_interface", {
-        get_models = function() return storage.models end,
+        get_models = function()
+            for id in pairs(storage.models or {}) do
+                assert(SheetPlanner.finishModel(id), SheetPlanner.failure(id))
+            end
+            return storage.models
+        end,
         get_recipe = function(recipe)
             recipe.products = {}
             recipe.ingredients = {}

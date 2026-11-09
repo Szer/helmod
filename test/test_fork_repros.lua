@@ -92,6 +92,55 @@ local function checkHeaderRemoval(player)
 end
 
 ---@param player LuaPlayer
+local function checkTreeControls(player)
+    local model = Model.newModel()
+    local root = model.block_root
+    local parent = Model.newBlock(model, {name="iron-gear-wheel", type="recipe"})
+    parent.parent_id, parent.index = root.id, 0
+    root.children[parent.id], model.blocks[parent.id] = parent, parent
+    for i = 1, 16 do
+        ModelBuilder.addRecipeIntoProductionBlock(model, parent, "iron-gear-wheel", "recipe")
+    end
+    local child = Model.newBlock(model, {name="copper-cable", type="recipe"})
+    child.parent_id, child.index = parent.id, 16
+    parent.children[child.id], model.blocks[child.id] = child, child
+    ModelBuilder.addRecipeIntoProductionBlock(model, child, "copper-cable", "recipe")
+    local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, parent, "copper-cable", "recipe")
+    ModelCompute.update(model)
+    local panel = openBlock(model, parent)
+    local _, _, pane = panel:getDataPanel()
+    local function press(action, target)
+        local name = "HMProductionPanel=" .. action .. "=" .. model.id .. "=" .. target
+        pane.scroll_to_element(assert(find(pane, name)))
+        click(player, name, true)
+        assert(pane.valid, action .. " replaced the scrolled viewport")
+    end
+    local before = child.unlinked == true
+    press("block-unlink", child.id)
+    assert(child.unlinked ~= before)
+    press("block-unlink", child.id)
+    assert(child.unlinked == before)
+    for _, row in ipairs({child, recipe}) do
+        local prefix = row == child and "tree-block-" or "tree-recipe-"
+        local target = parent.id .. "=" .. row.id
+        local left = assert(find(pane, prefix .. "down=" .. model.id .. "=" .. target))
+        local right = assert(find(pane, prefix .. "up=" .. model.id .. "=" .. target))
+        assert(left.tooltip[1] == "tooltip.down-element-in-tree" and right.tooltip[1] == "tooltip.up-element-in-tree")
+        press(prefix .. "up", target)
+        local wrapper = parent.children[row.parent_id]
+        assert(wrapper and wrapper.children[row.id] == row)
+        ModelBuilder.addRecipeIntoProductionBlock(model, wrapper, "iron-gear-wheel", "recipe")
+        ModelCompute.update(model)
+        panel = openBlock(model, wrapper)
+        _, _, pane = panel:getDataPanel()
+        press(prefix .. "down", wrapper.id .. "=" .. row.id)
+        assert(parent.children[row.id] == row)
+        panel = openBlock(model, parent)
+        _, _, pane = panel:getDataPanel()
+    end
+end
+
+---@param player LuaPlayer
 local function checkRowRemoval(player)
     local model = Model.newModel()
     local block = model.block_root
@@ -174,6 +223,8 @@ return function(case)
             end
         elseif case == "header-block-removal" then
             checkHeaderRemoval(player)
+        elseif case == "tree-controls" then
+            checkTreeControls(player)
         elseif case == "row-removal-scroll" then
             checkRowRemoval(player)
         elseif case == "quantity-confirm" then

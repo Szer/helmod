@@ -54,21 +54,34 @@ function ConstraintView.icon(constraints, key)
     return nil
 end
 
--- State 3 is an external block flow, even when the sheet scales its amount to zero.
+-- Active constraints need a clickable cell even when they stop the flow.
+---@param constraint ConstraintKind?
 ---@param state integer?
 ---@param amount number?
 ---@return boolean
-function ConstraintView.zeroFlow(state, amount)
-    return state == 3 and amount == 0
+local function keepVisible(constraint, state, amount)
+    return constraint ~= nil or (state == 3 and amount == 0)
 end
 
 ---@param state integer?
 ---@param amount number?
 ---@param drivingSide boolean
 ---@param threshold number
+---@param constraint ConstraintKind?
 ---@return boolean
-function ConstraintView.showFlow(state, amount, drivingSide, threshold)
-    return (state == 1 and drivingSide) or (amount or 0) > threshold or ConstraintView.zeroFlow(state, amount)
+function ConstraintView.showFlow(state, amount, drivingSide, threshold, constraint)
+    return (state == 1 and drivingSide) or (amount or 0) > threshold or keepVisible(constraint, state, amount)
+end
+
+---@param cell {count:number, state:integer?, contraint_type:ConstraintKind?}
+---@param maxCount number
+---@param threshold number
+---@param mode "absolute"|"relative"
+---@return boolean
+function ConstraintView.showCell(cell, maxCount, threshold, mode)
+    if threshold == 0 or keepVisible(cell.contraint_type, cell.state, cell.count) then return true end
+    if mode == "relative" then threshold = threshold * maxCount end
+    return cell.count > threshold
 end
 
 return ConstraintView

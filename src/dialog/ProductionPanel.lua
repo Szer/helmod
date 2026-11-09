@@ -1431,11 +1431,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			end
 
 			for index, product in pairs(all_products) do
-				local is_visible = product.count > display_hidden_products
-				if display_hidden_products_mode == "relative" then
-					is_visible = product.count > max_count*display_hidden_products
-				end
-				if (recipe.count or 0) == 0 or skip_hidden_products == true or display_hidden_products == 0 or is_visible then
+				if (recipe.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(product, max_count, display_hidden_products, display_hidden_products_mode) then
 					GuiElement.add(cell_products, GuiCellElement(self.classname, ConstraintView.action.product, model.id, block.id, recipe.id):element(product):tooltip("tooltip.add-recipe")
 					:color(product_color):index(index):byLimit(block.by_limit):contraintIcon(product.contraint_type):isPivot(product.is_pivot):controlInfo(product.control_info))
 				else
@@ -1504,11 +1500,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			end
 			
 			for index, ingredient in pairs(all_ingredients) do
-				local is_visible = ingredient.count > display_hidden_products
-				if display_hidden_products_mode == "relative" then
-					is_visible = ingredient.count > max_count*display_hidden_products
-				end
-				if (recipe.count or 0) == 0 or skip_hidden_products == true or display_hidden_products == 0 or is_visible then
+				if (recipe.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(ingredient, max_count, display_hidden_products, display_hidden_products_mode) then
 					GuiElement.add(cell_ingredients, GuiCellElement(self.classname, ConstraintView.action.ingredient, model.id, block.id, recipe.id):element(ingredient):tooltip("tooltip.add-recipe")
 					:color(ingredient_color):index(index):byLimit(block.by_limit):contraintIcon(ingredient.contraint_type):isPivot(ingredient.is_pivot):controlInfo(ingredient.control_info))
 				else
@@ -1631,7 +1623,8 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 
 				local max_count = 0
 				for index, lua_product in spairs(block.products, product_sorter) do
-					if ConstraintView.showFlow(lua_product.state, lua_product.amount, block_by_product, ModelCompute.waste_value) then
+					local constraint = ConstraintView.icon(block.contraints, index)
+					if ConstraintView.showFlow(lua_product.state, lua_product.amount, block_by_product, ModelCompute.waste_value, constraint) then
 						local product_prototype = Product(lua_product)
 						local product = product_prototype:clone()
 						product.parent_id = parent.id
@@ -1651,7 +1644,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 							product.parent_id = block.id
 						end
 
-						product.contraint_type = ConstraintView.icon(block.contraints, product_prototype:getTableKey())
+						product.contraint_type = constraint
 						---color
 						product.product_color = User.getThumbnailColor(defines.thumbnail_color.names.product_default)
 						if product.state == 1 then
@@ -1683,11 +1676,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 				end
 
 				for index, product in pairs(all_products) do
-					local is_visible = product.count > display_hidden_products
-					if display_hidden_products_mode == "relative" then
-						is_visible = product.count > max_count*display_hidden_products
-					end
-					if (block.count or 0) == 0 or skip_hidden_products == true or display_hidden_products == 0 or is_visible or ConstraintView.zeroFlow(product.state, product.count) then
+					if (block.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(product, max_count, display_hidden_products, display_hidden_products_mode) then
 						GuiElement.add(cell_products, GuiCellElement(self.classname, product.button_action, model.id, product.parent_id, block.id):element(product):byLimit(by_limit)
 						:tooltip(product.button_tooltip):color(product.product_color):index(index):contraintIcon(product.contraint_type):isPivot(product.is_pivot):controlInfo(product.control_info))
 					else
@@ -1723,7 +1712,8 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 
 				local max_count = 0
 				for index, lua_ingredient in spairs(visible, product_sorter) do
-					if ConstraintView.showFlow(lua_ingredient.state, lua_ingredient.amount, not (block_by_product), ModelCompute.waste_value) then
+					local constraint = ConstraintView.icon(block.contraints, index)
+					if ConstraintView.showFlow(lua_ingredient.state, lua_ingredient.amount, not (block_by_product), ModelCompute.waste_value, constraint) then
 						local ingredient_prototype = Product(lua_ingredient)
 						local ingredient = ingredient_prototype:clone()
 						ingredient.time = model.time
@@ -1764,7 +1754,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 							end
 						end
 
-						ingredient.contraint_type = ConstraintView.icon(block.contraints, ingredient_prototype:getTableKey())
+						ingredient.contraint_type = constraint
 						ingredient.control_info = ConstraintView.hint(parent.solver, ingredient.button_action)
 
 						table.insert(all_ingredients, ingredient)
@@ -1773,11 +1763,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 				end
 
 				for index, ingredient in pairs(all_ingredients) do
-					local is_visible = ingredient.count > display_hidden_products
-					if display_hidden_products_mode == "relative" then
-						is_visible = ingredient.count > max_count*display_hidden_products
-					end
-					if (block.count or 0) == 0 or skip_hidden_products == true or display_hidden_products == 0 or is_visible or ConstraintView.zeroFlow(ingredient.state, ingredient.count) then
+					if (block.count or 0) == 0 or skip_hidden_products or ConstraintView.showCell(ingredient, max_count, display_hidden_products, display_hidden_products_mode) then
 							GuiElement.add(cell_ingredients, GuiCellElement(self.classname, ingredient.button_action, model.id, ingredient.parent_id, block.id, ingredient.name):element(ingredient):byLimit(by_limit)
 							:tooltip(ingredient.button_tooltip):color(ingredient.ingredient_color):index(index):contraintIcon(ingredient.contraint_type):isPivot(ingredient.is_pivot):controlInfo(ingredient.control_info))
 					else

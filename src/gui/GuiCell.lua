@@ -805,17 +805,17 @@ function GuiCellBlock:create(parent)
     row1.style.top_padding = 2
     row1.style.bottom_padding = 3
 
+    local mode = element.consumer and "helmod_label.block-consumer" or "helmod_label.block-no-consumer"
+    local input = element.by_product == false and "helmod_label.input-ingredient" or "helmod_label.input-product"
+    local tooltip = GuiTooltipElement(self.options.tooltip, {mode}, {input}):element(element)
     local button = nil
     if block_infos.primary_icon ~= nil then
-        local tooltip = GuiTooltipElement(self.options.tooltip):element(element)
         button = GuiElement.add(row1,
             GuiButtonSprite(unpack(self.name)):sprite(block_infos.primary_icon.type, block_infos.primary_icon.name.name)
             :tooltip(tooltip))
     else
         local first_recipe = Model.firstChild(element.children)
         if first_recipe ~= nil then
-            local tooltip = GuiTooltipElement(self.options.tooltip):element(element)
-
             local recipe_prototype = RecipePrototype(first_recipe)
             local icon_type, icon_name = recipe_prototype:getIcon()
             button = GuiElement.add(row1,
@@ -828,9 +828,9 @@ function GuiCellBlock:create(parent)
                 row1.style = "helmod_frame_element_w30_red_1"
             end
         else
-            local button = GuiElement.add(row1,
+            button = GuiElement.add(row1,
                 GuiButtonSprite(unpack(self.name)):sprite("menu", defines.sprites.status_help.white,
-                    defines.sprites.status_help.black))
+                    defines.sprites.status_help.black):tooltip(tooltip))
             button.style.width = 36
         end
     end

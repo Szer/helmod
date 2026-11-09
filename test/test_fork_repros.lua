@@ -115,6 +115,41 @@ local function checkTreeControls(player)
         click(player, name, true)
         assert(pane.valid, action .. " replaced the scrolled viewport")
     end
+    local iconName = "HMProductionPanel=row-block-mode=" .. model.id .. "=" .. child.id
+    local function useIcon(control, shift)
+        local icon = assert(find(pane, iconName), "expected a sub-block icon with mode shortcuts")
+        pane.scroll_to_element(icon)
+        EventController.onGuiClickButton{player_index=player.index, element=icon,
+            button=defines.mouse_button_type.left, control=control, shift=shift}
+    end
+    local consumer, ingredients = child.consumer == true, child.by_product == false
+    local function verifyModes()
+        assert((child.consumer == true) == consumer and (child.by_product == false) == ingredients)
+        local tooltip = helpers.table_to_json(assert(find(pane, iconName)).tooltip)
+        assert(tooltip:find("tooltip.edit-sub-block", 1, true))
+        assert(tooltip:find(consumer and "helmod_label.block-consumer" or "helmod_label.block-no-consumer", 1, true))
+        assert(tooltip:find(ingredients and "helmod_label.input-ingredient" or "helmod_label.input-product", 1, true))
+        assert(pane.valid and select(2, panel:getParameterObjects()) == parent)
+    end
+    for _ = 1, 2 do
+        useIcon(true, false)
+        consumer = not consumer
+        verifyModes()
+        useIcon(false, true)
+        ingredients = not ingredients
+        verifyModes()
+    end
+    useIcon(false, false)
+    assert(select(2, panel:getParameterObjects()) == child, "plain click opens the sub-block")
+    local target = "=" .. model.id .. "=" .. child.id
+    click(player, "HMProductionPanel=block-consumer" .. target, true)
+    assert((child.consumer == true) ~= consumer and (child.by_product == false) == ingredients)
+    click(player, "HMProductionPanel=block-by-product" .. target, true)
+    assert((child.consumer == true) ~= consumer and (child.by_product == false) ~= ingredients)
+    click(player, "HMProductionPanel=block-consumer" .. target, true)
+    click(player, "HMProductionPanel=block-by-product" .. target, true)
+    panel = openBlock(model, parent)
+    _, _, pane = panel:getDataPanel()
     local before = child.unlinked == true
     press("block-unlink", child.id)
     assert(child.unlinked ~= before)

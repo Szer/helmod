@@ -54,7 +54,11 @@ grep -q 'param-type-mismatch' "$tmp/bad-action.log" || { cat "$tmp/bad-action.lo
 
 # Check action contracts at the production panel's real call sites.
 panel="$tmp/panel"
-mkdir -p "$panel/gui/controls" "$panel/model"
+mkdir -p "$panel/gui/controls" "$panel/model" "$panel/data" "$panel/math/incremental"
+cp src/data/{SheetPlanner,SheetDependencies,ModelCompute}.lua "$panel/data/"
+echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
+cp src/math/incremental/Unit.lua "$panel/math/incremental/"
+cp src/edition/RecipeEdition.lua "$panel/"
 cp src/model/ProductionBlockMode.lua "$panel/model/"
 cp src/gui/controls/*.lua "$panel/gui/controls/"
 cp src/gui/ProductionScroll.lua "$panel/gui/"
@@ -99,4 +103,14 @@ reject_panel_edit 's/action=BlockToolbar.action.reset, model_id=model.id, block_
 reject_panel_edit 's/limit = function(model, block, event)/limti = function(model, block, event)/' missing-fields limit
 reject_panel_edit 's/location = function(event, model)/loaction = function(event, model)/' missing-fields location
 reject_panel_edit 's/panelAction{action=BlockToolbar.action.location}/panelAction{action=BlockToolbar.action.deep}/' assign-type-mismatch display-count-deep
+cp src/dialog/ProductionPanel.lua "$panel/"
+sed 's/ModelCompute.update(model, block)/ModelCompute.update(model, recipe)/' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"
+if check_panel > "$tmp/percentage.log" 2>&1; then
+  echo 'Queueing a recipe in place of its production block must fail the type check.' >&2
+  exit 1
+fi
+grep -q 'param-type-mismatch' "$tmp/percentage.log" && grep -q 'BlockData' "$tmp/percentage.log" || {
+  cat "$tmp/percentage.log" >&2
+  exit 1
+}
 echo 'Verified removal contracts, display modes, constraint pane sides and viewport refresh scope.'

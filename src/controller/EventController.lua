@@ -1,3 +1,4 @@
+local SheetPlanner = require "data.SheetPlanner"
 ---
 ---Description of the module.
 ---@class EventController
@@ -172,6 +173,7 @@ function EventController.onConfigurationChanged(data)
       end
     end
     
+    SheetPlanner.reset()
     Cache.reset()
   
     for _,player in pairs(game.players) do
@@ -201,6 +203,7 @@ end
 ---On tick
 ---@param event LuaEvent
 function EventController.onTick(event)
+  SheetPlanner.tick()
   Controller:onTick(event)
 end
 
@@ -261,6 +264,10 @@ end
 ---On runtime mod settings
 ---@param event LuaEvent
 function EventController.onRuntimeModSettingChanged(event)
+  if event and event.setting == "helmod_" .. SheetPlanner.setting and not User.getModGlobalSetting(SheetPlanner.setting) then
+    SheetPlanner.finishPending()
+    storage.percentage_planner = nil
+  end
   if event ~= nil and event.player_index ~= nil then
     Player.load(event)
     Dispatcher:send("on_gui_setting", event, Controller.classname)
@@ -274,6 +281,7 @@ function EventController.onPlayerCreated(event)
   if event ~= nil and event.player_index ~= nil then
     local player = Player.load(event).native()
     Controller:bindController(player)
+    SheetPlanner.onJoin(player)
     User.setParameter("next_event", nil)
   end
 end
@@ -285,6 +293,7 @@ function EventController.onPlayerJoinedGame(event)
   if event ~= nil and event.player_index ~= nil then
     local player = Player.load(event).native()
     Controller:bindController(player)
+    SheetPlanner.onJoin(player)
     User.setParameter("next_event", nil)
   end
 end

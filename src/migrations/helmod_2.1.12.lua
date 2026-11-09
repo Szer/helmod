@@ -3,7 +3,7 @@ if storage.models then
         for _, model in pairs(storage.models) do
             local player = Player.try_load_by_name(model.owner)
             if player ~= nil then
-                ModelCompute.update(model)
+                ModelCompute.updateNow(model)
             end
         end
     end)

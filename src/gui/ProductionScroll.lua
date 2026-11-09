@@ -27,4 +27,26 @@ function ProductionScroll.clearRowCells(list, block)
 	end
 end
 
+---Rebuild a single visible row in place, retaining the two ingredient/product panes.
+---@param list LuaGuiElement
+---@param first integer
+---@param render fun()
+function ProductionScroll.replaceRow(list, first, render)
+    local cells = list.children
+    local slots = {}
+    for i = first, first + list.column_count - 1 do
+        local cell = cells[i]
+        local slot = GuiElement.add(list, GuiEmptyWidget())
+        list.swap_children(i, slot.get_index_in_parent())
+        table.insert(slots, slot)
+        if cell.type == "scroll-pane" then cell.clear() else cell.destroy() end
+    end
+    render()
+    local last = #list.children
+    for i, slot in ipairs(slots) do
+        list.swap_children(slot.get_index_in_parent(), last - #slots + i)
+    end
+    for _, slot in ipairs(slots) do slot.destroy() end
+end
+
 return ProductionScroll

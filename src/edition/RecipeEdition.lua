@@ -1,3 +1,5 @@
+local RecipePercentage = require "gui.controls.RecipePercentage"
+local SheetPlanner = require "data.SheetPlanner"
 -------------------------------------------------------------------------------
 ---Class to build recipe edition dialog
 ---@class RecipeEdition : FormModel
@@ -249,6 +251,7 @@ end
 function RecipeEdition:onEvent(event)
     local display_width, display_height, scale = Player.getDisplaySizes()
 
+    ---@type ModelData?, BlockData?, RecipeData?
     local model, block, recipe = self:getParameterObjects()
     if model == nil or block == nil or recipe == nil then return end
 
@@ -267,17 +270,21 @@ function RecipeEdition:onEvent(event)
             local index = event.element.selected_index
             local items = { 1, 2, 4, 8, "∞" }
             ModelBuilder.updateRecipeNeighbourBonus(recipe, items[index])
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
 
-        if event.action == "recipe-update-production" then
+        local edit = RecipePercentage.decode(event)
+        if edit and edit.model_id == model.id and edit.block_id == block.id and edit.recipe_id == recipe.id then
             local text = event.element.text
             local production = (formula(text) or 100) / 100
             ModelBuilder.updateRecipeProduction(recipe, production)
-            ModelCompute.update(model)
-            self:updateObjectInfo(event)
+            if ModelCompute.update(model, block) then
+                event.element.tags = {applied_text=event.element.text}
+                return
+            end
+            self:updateObjectInfo()
             Controller:send("on_gui_recipe_update", event)
         end
 
@@ -285,8 +292,8 @@ function RecipeEdition:onEvent(event)
             local text = event.element.text
             local spoilage_factor = (formula(text) or 100) / 100
             ModelBuilder.updateRecipeSpoilage(recipe, spoilage_factor)
-            ModelCompute.update(model)
-            self:updateObjectInfo(event)
+            ModelCompute.update(model, block)
+            self:updateObjectInfo()
             Controller:send("on_gui_recipe_update", event)
         end
 
@@ -294,7 +301,7 @@ function RecipeEdition:onEvent(event)
             local element_quality = GuiElement.getElementQuality(event.element)
             Model.setFactory(recipe, event.item4, element_quality)
             ModelBuilder.applyFactoryModulePriority(recipe)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -323,7 +330,7 @@ function RecipeEdition:onEvent(event)
                 index = index - 1
             end
             ModelBuilder.updateFuelFactory(recipe, fuel)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             if recipe.type ~= "energy" then
                 self:updateFactoryInfoTool(event)
             end
@@ -337,7 +344,7 @@ function RecipeEdition:onEvent(event)
                 User.setDefaultFactory(recipe)
             elseif event.item4 == "block" then
                 ModelBuilder.setFactoryBlock(block, recipe)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
             elseif event.item4 == "line" then
                 ModelBuilder.setFactoryLine(model, recipe)
                 ModelCompute.update(model)
@@ -356,13 +363,13 @@ function RecipeEdition:onEvent(event)
         if event.action == "factory-module-tool" then
             if event.item4 == "block" then
                 ModelBuilder.setFactoryModuleBlock(block, recipe)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
             elseif event.item4 == "line" then
                 ModelBuilder.setFactoryModuleLine(model, recipe)
                 ModelCompute.update(model)
             elseif event.item4 == "erase" then
                 ModelBuilder.setFactoryModulePriority(recipe, nil)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
             end
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
@@ -381,7 +388,7 @@ function RecipeEdition:onEvent(event)
                 local module_priorities = table.deepcopy(priority_modules[factory_module_priority])
                 ModelBuilder.setQualityModulePriority(module_priorities, module_quality)
                 ModelBuilder.setFactoryModulePriority(recipe, module_priorities)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
                 self:update(event)
                 Controller:send("on_gui_recipe_update", event)
             end
@@ -390,7 +397,7 @@ function RecipeEdition:onEvent(event)
         if event.action == "factory-module-select" then
             local element_quality = GuiElement.getElementQuality(event.element)
             ModelBuilder.addFactoryModule(recipe, event.item4, element_quality, event.control)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -398,14 +405,14 @@ function RecipeEdition:onEvent(event)
         if event.action == "factory-module-remove" then
             local element_quality = GuiElement.getElementQuality(event.element)
             ModelBuilder.removeFactoryModule(recipe, event.item4, element_quality, event.control)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
 
         if event.action == "beacon-select" then
             User.setParameter("current_beacon_selection", tonumber(event.item4))
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -415,7 +422,7 @@ function RecipeEdition:onEvent(event)
             local new_beacon = Model.newBeacon()
             table.insert(recipe.beacons, new_beacon)
             User.setParameter("current_beacon_selection", #recipe.beacons)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -426,7 +433,7 @@ function RecipeEdition:onEvent(event)
                 table.remove(recipe.beacons, current_beacon_selection)
             end
             User.setParameter("current_beacon_selection", #recipe.beacons)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -436,7 +443,7 @@ function RecipeEdition:onEvent(event)
                 User.setDefaultBeacons(recipe)
             elseif event.item4 == "block" then
                 ModelBuilder.setBeaconBlock(block, recipe)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
             elseif event.item4 == "line" then
                 ModelBuilder.setBeaconLine(model, recipe)
                 ModelCompute.update(model)
@@ -455,14 +462,14 @@ function RecipeEdition:onEvent(event)
         if event.action == "beacon-module-tool" then
             if event.item4 == "block" then
                 ModelBuilder.setBeaconModuleBlock(block, recipe)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
             elseif event.item4 == "line" then
                 ModelBuilder.setBeaconModuleLine(model, recipe)
                 ModelCompute.update(model)
             elseif event.item4 == "erase" then
                 local beacon = ModelBuilder.getCurrentBeacon(recipe)
                 ModelBuilder.setBeaconModulePriority(beacon, recipe, nil)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
             end
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
@@ -482,7 +489,7 @@ function RecipeEdition:onEvent(event)
                 local module_priorities = table.deepcopy(priority_modules[beacon_module_priority])
                 ModelBuilder.setQualityModulePriority(module_priorities, module_quality)
                 ModelBuilder.setBeaconModulePriority(beacon, recipe, module_priorities)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
                 self:update(event)
                 Controller:send("on_gui_recipe_update", event)
             end
@@ -492,7 +499,7 @@ function RecipeEdition:onEvent(event)
             local beacon = ModelBuilder.getCurrentBeacon(recipe)
             local element_quality = GuiElement.getElementQuality(event.element)
             ModelBuilder.addBeaconModule(beacon, recipe, event.item4, element_quality, event.control)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -501,7 +508,7 @@ function RecipeEdition:onEvent(event)
             local beacon = ModelBuilder.getCurrentBeacon(recipe)
             local element_quality = GuiElement.getElementQuality(event.element)
             ModelBuilder.removeBeaconModule(beacon, recipe, event.item4, element_quality, event.control)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -510,7 +517,7 @@ function RecipeEdition:onEvent(event)
             local current_beacon_selection = User.getParameter("current_beacon_selection") or 1
             Model.setBeacon(recipe, current_beacon_selection, event.item4)
             ModelBuilder.applyBeaconModulePriority(recipe)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update",event)
         end
@@ -523,7 +530,7 @@ function RecipeEdition:onEvent(event)
                 options[event.item4] = formula(text) or 0
                 local beacon = ModelBuilder.getCurrentBeacon(recipe)
                 ModelBuilder.updateBeacon(beacon, recipe, options)
-                ModelCompute.update(model)
+                ModelCompute.update(model, block)
                 self:updateBeaconInfo(event)
                 if display_height / scale >= limit_display_height or User.getParameter("factory_tab") then
                     self:updateFactoryInfo(event)
@@ -549,21 +556,21 @@ function RecipeEdition:onEvent(event)
 
         if event.action == "recipe-quality-select" then
             recipe.quality = event.item4
-            ModelCompute.update(model)
-            self:updateObjectInfo(event)
+            ModelCompute.update(model, block)
+            self:updateObjectInfo()
             Controller:send("on_gui_recipe_update", event)
         end
 
         if event.action == "recipe-fuel-quality-select" then
             recipe.factory.fuel_quality = event.item4
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
 
         if event.action == "factory-quality-select" then
             recipe.factory.quality = event.item4
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -571,7 +578,7 @@ function RecipeEdition:onEvent(event)
         if event.action == "beacon-quality-select" then
             local beacon = ModelBuilder.getCurrentBeacon(recipe)
             beacon.quality = event.item4
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
         end
@@ -613,6 +620,13 @@ function RecipeEdition:onOpen(event)
 end
 
 -------------------------------------------------------------------------------
+local function eachTextField(panel, visit)
+    for _, element in ipairs(panel.children) do
+        if element.type == "textfield" then visit(element)
+        else eachTextField(element, visit) end
+    end
+end
+
 ---On update
 ---@param event LuaEvent
 function RecipeEdition:onUpdate(event)
@@ -634,6 +648,10 @@ function RecipeEdition:onUpdate(event)
             self:updateBeaconModulesActive(event)
             self:updateBeaconModules(event)
         end
+    end
+    if User.getModGlobalSetting(SheetPlanner.setting) then
+        local _, content = self:getPanel()
+        eachTextField(content, function(field) field.tags = {applied_text=field.text} end)
     end
 end
 
@@ -1405,13 +1423,32 @@ end
 ---Update header
 ---@param event LuaEvent
 function RecipeEdition:updateHeader(event)
-    self:updateObjectInfo(event)
+    self:updateObjectInfo()
+end
+
+---Leave unconfirmed text in place when another editor publishes a shared sheet.
+function RecipeEdition:refreshSolved()
+    local _, content = self:getPanel()
+    local drafts = {}
+    eachTextField(content, function(field)
+        if field.tags.applied_text and field.tags.applied_text ~= field.text then drafts[field.name] = field.text end
+    end)
+    local _, _, recipe = self:getParameterObjects()
+    if not recipe then
+        self:close()
+        return
+    end
+    self:update({})
+    eachTextField(content, function(field)
+        if drafts[field.name] then field.text = drafts[field.name] end
+    end)
 end
 
 -------------------------------------------------------------------------------
 ---Update information
----@param event LuaEvent
-function RecipeEdition:updateObjectInfo(event)
+function RecipeEdition:updateObjectInfo()
+    local selected = self:getParameterObjects()
+    if selected and SheetPlanner.pending(selected.id) then return end
     local info_panel = self:getObjectInfoPanel()
     local model, block, recipe = self:getParameterObjects()
     if block ~= nil and recipe ~= nil then
@@ -1510,12 +1547,14 @@ function RecipeEdition:updateObjectInfo(event)
 
         GuiElement.add(tablePanel, GuiLabel("label-production"):caption({ "helmod_recipe-edition-panel.production" }))
         local production_value = (recipe.production or 1) * 100
-        GuiElement.add(tablePanel, GuiTextField(self.classname, "recipe-update-production", model.id, block.id, recipe.id):text(production_value):style("helmod_textfield"))
+        local field = GuiElement.add(tablePanel, GuiTextField(self.classname, RecipePercentage.buttonArgs{action=RecipePercentage.action, model_id=model.id, block_id=block.id, recipe_id=recipe.id}):text(production_value):style("helmod_textfield"))
+        field.tags = {applied_text=field.text}
 
         if recipe.spoilage ~= nil and recipe.spoilage.has_spoil == true and User.getPreferenceSetting("display_spoilage") then
             GuiElement.add(tablePanel, GuiLabel("label-spoilage"):caption({ "helmod_recipe-edition-panel.spoilage-factor" }))
             local spoilage_value = (recipe.spoilage_factor or 1) * 100
-            GuiElement.add(tablePanel, GuiTextField(self.classname, "recipe-update-spoilage", model.id, block.id, recipe.id):text(spoilage_value):style("helmod_textfield"))
+            local field = GuiElement.add(tablePanel, GuiTextField(self.classname, "recipe-update-spoilage", model.id, block.id, recipe.id):text(spoilage_value):style("helmod_textfield"))
+            field.tags = {applied_text=field.text}
         end
     end
 end

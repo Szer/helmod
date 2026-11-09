@@ -1,3 +1,4 @@
+local SheetPlanner = require "data.SheetPlanner"
 -------------------------------------------------------------------------------
 ---Class to help to build form
 ---@class Form : Object
@@ -471,6 +472,7 @@ end
 function Form:update(event)
   if not(self:isOpened()) then return end
   local flow_panel, content_panel, menu_panel = self:getPanel()
+  if SheetPlanner.deferView(self, flow_panel, content_panel) then return end
   if self.auto_clear then content_panel.clear() end
   self:updateTopMenu(event)
   self:onUpdate(event)

@@ -1,3 +1,4 @@
+local SheetPlanner = require "data.SheetPlanner"
 local ProductionScroll = require "gui.ProductionScroll"
 local BlockToolbar = require "gui.controls.BlockToolbar"
 local BlockHeader = require "gui.controls.BlockHeader"
@@ -141,6 +142,32 @@ function ProductionPanel:getDataPanel()
 	return menu_panel, header_panel, scroll_panel
 end
 
+local statusSprites = {
+    ready = "utility/status_working",
+    pending = "utility/status_yellow",
+    failed = "utility/status_not_working",
+}
+
+---@param info LuaGuiElement
+---@return LuaGuiElement label, LuaGuiElement indicator
+local function infoHeading(info)
+    local heading = info["block-heading"]
+    if not heading then
+        heading = GuiElement.add(info, GuiFlowH("block-heading"))
+        heading.style.vertical_align = "center"
+        local label = GuiElement.add(heading, GuiLabel("label-info"):style(defines.styles.label.frame_title))
+        local indicator = GuiElement.add(heading, GuiSprite("solver-status"):sprite(statusSprites.ready))
+        indicator.style.size = 16
+        local previous = info["label-info"]
+        if previous then
+            label.tooltip = previous.tooltip
+            info.swap_children(previous.get_index_in_parent(), heading.get_index_in_parent())
+            previous.destroy()
+        end
+    end
+    return heading["label-info"], heading["solver-status"]
+end
+
 -------------------------------------------------------------------------------
 ---Get or create info panel
 ---@return LuaGuiElement, LuaGuiElement, LuaGuiElement
@@ -157,7 +184,7 @@ function ProductionPanel:getInfoPanel2()
 	self:setStyle(header_panel, "block_info", "height")
 
 	local info_panel = GuiElement.add(header_panel, GuiFlowV(info_name))
-	GuiElement.add(info_panel, GuiLabel("label-info"):style(defines.styles.label.frame_title))
+	infoHeading(info_panel)
 	local info_scroll = GuiElement.add(info_panel, GuiScroll(info_scroll_name):style("helmod_scroll_pane"))
 	info_scroll.style.width = 300
 
@@ -292,7 +319,7 @@ function ProductionPanel:onUpdate(event)
 	else
 		content.clear()
 	end
-	self:onEventAutoCancel(event, removal)
+	if not event.changed_rows then self:onEventAutoCancel(event, removal) end
 
 	self:updateIndexPanel(model)
 	local width, _, scale = User.getMainSizes()
@@ -300,7 +327,7 @@ function ProductionPanel:onUpdate(event)
 
 	self:updateSubMenuPanel(model, block)
 
-	self:updateData(not sameBlock)
+	self:updateData(not sameBlock, sameBlock and event and event.changed_rows or nil)
 end
 
 -------------------------------------------------------------------------------
@@ -630,13 +657,35 @@ function ProductionPanel:updateSubMenuRightPanel(model, block)
 end
 
 -------------------------------------------------------------------------------
----Update info
----@param model table
----@param block table
+---@param model ModelData
+function ProductionPanel:updatePending(model)
+	local selected = self:getParameterObjects()
+	if selected.id ~= model.id then return end
+	local info = self:getInfoPanel2()
+	local _, _, scroll = self:getDataPanel()
+	local list = scroll[resultTableName]
+	if list then list.enabled = not SheetPlanner.pendingStructure(model.id) and not SheetPlanner.failure(model.id) end
+	local label, indicator = infoHeading(info.parent)
+	label.caption = {"", self:getButtonCaption(), " [img=info]"}
+	indicator.visible = User.getModGlobalSetting(SheetPlanner.setting)
+	if SheetPlanner.pending(model.id) then
+		indicator.sprite = statusSprites.pending
+		indicator.tooltip = {"helmod_common.solver-calculating"}
+	elseif SheetPlanner.failure(model.id) then
+		indicator.sprite = statusSprites.failed
+		indicator.tooltip = {"helmod_common.solver-failed"}
+	else
+		indicator.sprite = statusSprites.ready
+		indicator.tooltip = {"helmod_common.solver-ready"}
+	end
+end
+
+---@param model ModelData
+---@param block BlockData
 function ProductionPanel:updateInfoBlock(model, block)
 	local info_scroll, output_scroll, input_scroll = self:getInfoPanel2()
-	local label = info_scroll.parent["label-info"]
-	label.caption = { "", self:getButtonCaption(), " [img=info]" }
+	local label = infoHeading(info_scroll.parent)
+	self:updatePending(model)
 	label.tooltip = GuiTooltipModel("tooltip.info-model"):element(model):create()
 	info_scroll.clear()
 	---info panel
@@ -996,7 +1045,8 @@ end
 -------------------------------------------------------------------------------
 ---Update data
 ---@param focusBlock boolean
-function ProductionPanel:updateData(focusBlock)
+---@param changedRows? table<string,boolean>
+function ProductionPanel:updateData(focusBlock, changedRows)
 	local model, block = self:getParameterObjects()
 
 	if model.block_root == nil then
@@ -1020,9 +1070,9 @@ function ProductionPanel:updateData(focusBlock)
 
 	---col recipe
 	if block == nil then
-		self:updateDataBlock(model, model.block_root)
+		self:updateDataBlock(model, model.block_root, changedRows)
 	else
-		self:updateDataBlock(model, block)
+		self:updateDataBlock(model, block, changedRows)
 	end
 	
 	-- reset show hidden products
@@ -1038,7 +1088,8 @@ end
 ---Update data
 ---@param model table
 ---@param block table
-function ProductionPanel:updateDataBlock(model, block)
+---@param changedRows? table<string,boolean>
+function ProductionPanel:updateDataBlock(model, block, changedRows)
 	if block == nil then return end
 
 	self:updateInfoBlock(model, block)
@@ -1066,7 +1117,11 @@ function ProductionPanel:updateDataBlock(model, block)
 
 		local columns = 7 + extra_cols
 		local result_table = scroll_panel[resultTableName]
-		if result_table and result_table.column_count == columns then
+		if changedRows and result_table and result_table.column_count == columns
+            and self:refreshChangedRows(result_table, model, block, changedRows) then
+            return
+        end
+        if result_table and result_table.column_count == columns then
 			ProductionScroll.clearRowCells(result_table, block)
 		else
 			scroll_panel.clear()
@@ -1096,6 +1151,33 @@ function ProductionPanel:updateDataBlock(model, block)
 		scroll_panel.clear()
 	end
 	User.setParameter("scroll_element", nil)
+end
+
+---@param list LuaGuiElement
+---@param model ModelData
+---@param block BlockData
+---@param rows table<string,boolean>
+---@return boolean
+function ProductionPanel:refreshChangedRows(list, model, block, rows)
+    local columns = list.column_count
+    if #list.children ~= columns * (1 + table_size(block.children)) then return false end
+    local sort = block.by_product == false and defines.sorters.block.reverse or defines.sorters.block.sort
+    local first = columns + 1
+    for _, child in spairs(block.children, sort) do
+        local action = list[GuiTable("action", child.id):getName()]
+        if not action or action.get_index_in_parent() ~= first then return false end
+        if rows[child.id] then
+            ProductionScroll.replaceRow(list, first, function()
+                if Model.isBlock(child) then
+                    self:addTableRowBlock(list, model, block, child)
+                else
+                    self:addTableRowRecipe(list, model, block, child)
+                end
+            end)
+        end
+        first = first + columns
+    end
+    return true
 end
 
 -------------------------------------------------------------------------------
@@ -2105,6 +2187,10 @@ end
 function ProductionPanel:onEventAccessRead(event, model, block)
 	if event.action == "copy-block" then
 		if block ~= nil then
+			if not SheetPlanner.finishModel(model.id) then
+				Player.print({"helmod_common.solver-failed"})
+				return
+			end
 			local data = Converter.write(block)
 			User.setParameter("copy_past", data)
 		end
@@ -2608,6 +2694,7 @@ end
 function ProductionPanel:onEventAccessAdmin(event, model, block)
 	if event.action == "game-pause" then
 		if not (game.is_multiplayer()) then
+			SheetPlanner.finishPending()
 			User.setParameter("auto-pause", true)
 			game.tick_paused = true
 			Controller:send("on_gui_pause", event)

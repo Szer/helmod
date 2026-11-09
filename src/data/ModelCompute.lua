@@ -1,4 +1,4 @@
-local PercentagePlanner = require "data.PercentagePlanner"
+local SheetPlanner = require "data.SheetPlanner"
 local Orbit = require "model.Orbit"
 require "math.Matrix"
 require "math.SolverMatrix"
@@ -85,7 +85,7 @@ end
 ---@param model table
 function ModelCompute.try_update(model)
     local ok , err = pcall(function()
-        ModelCompute.update(model)
+        ModelCompute.updateNow(model)
     end)
     if not(ok) then
         log(err)
@@ -95,9 +95,46 @@ end
 -------------------------------------------------------------------------------
 ---Update model
 ---@param model ModelData
-function ModelCompute.update(model)
+---@param block? BlockData
+---@return boolean pending
+function ModelCompute.update(model, block)
+    if not model or not model.blocks then return false end
+    if User.getModGlobalSetting(SheetPlanner.setting) then
+        local player = Player.native()
+        if player and not game.tick_paused and storage.models and storage.models[model.id] == model
+            and game.get_player(player.index) then
+            SheetPlanner.enqueue(model, block, player.index)
+            return true
+        end
+    end
+    ModelCompute.updateNow(model)
+    return false
+end
+
+---Compute immediately for migrations, detached sheets and paused games.
+---@param model ModelData
+function ModelCompute.updateNow(model)
+    if storage.models and storage.models[model.id] == model then SheetPlanner.invalidate(model.id) end
+    if User.getModGlobalSetting(SheetPlanner.setting) then
+        SheetPlanner.solveNow(model)
+    else
+        ModelCompute.updateFull(model)
+    end
+end
+
+---@param recipe RecipeData
+---@return string
+function ModelCompute.productivityRecipe(recipe)
+    if recipe.type == "orbit" and recipe.factory then
+        local silo = EntityPrototype(recipe.factory):native()
+        if silo and silo.fixed_recipe then return silo.fixed_recipe.name end
+    end
+    return recipe.name
+end
+
+---@param model ModelData
+function ModelCompute.updateFull(model)
     if model ~= nil and model.blocks ~= nil then
-        PercentagePlanner.invalidate(model.id)
         -- Add parameters
         Model.appendParameters(model)
         ModelCompute.updateBlock(model, model.block_root)
@@ -136,8 +173,9 @@ end
 ---@param model ModelData
 ---@param block BlockData
 ---@param progress? UnitPreparation
+---@param prepare fun(recipe: RecipeData): RecipeData
 ---@return UnitPreparation? remaining
-function ModelCompute.prepareUnit(model, block, progress)
+function ModelCompute.prepareUnit(model, block, progress, prepare)
     block.time = model.time
     if not progress then
         progress = {recipes={}, next=1}
@@ -148,8 +186,8 @@ function ModelCompute.prepareUnit(model, block, progress)
     local last = math.min(progress.next + 7, #progress.recipes)
     for i = progress.next, last do
         local recipe = block.children[progress.recipes[i]]
-        if RecipePrototype(recipe):native() then
-            ModelCompute.prepareRecipeFactory(recipe, block.time, model.parameters)
+        if recipe.class ~= "Block" and RecipePrototype(recipe):native() then
+            block.children[recipe.id] = prepare(recipe)
         end
     end
     if last < #progress.recipes then
@@ -867,7 +905,7 @@ end
 -------------------------------------------------------------------------------
 ---Compute module effects of factory
 ---@param recipe RecipeData
----@param parameters ParametersData
+---@param parameters ParametersData?
 ---@return RecipeData
 function ModelCompute.computeModuleEffects(recipe, parameters)
     if recipe.factory == nil then return end
@@ -884,11 +922,7 @@ function ModelCompute.computeModuleEffects(recipe, parameters)
         quality = effect_receiver.base_effect["quality"] or 0
     }
 
-    local productivity_recipe = recipe.name
-    if recipe.type == "orbit" and factory_prototype:native() ~= nil and factory_prototype:native().fixed_recipe ~= nil then
-        productivity_recipe = factory_prototype:native().fixed_recipe.name
-    end
-    local recipe_productivity = Player.getRecipeProductivityBonus(productivity_recipe)
+    local recipe_productivity = Player.getRecipeProductivityBonus(ModelCompute.productivityRecipe(recipe))
     factory.effects.productivity = factory.effects.productivity + recipe_productivity
 
     if parameters ~= nil then

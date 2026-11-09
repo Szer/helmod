@@ -17,6 +17,11 @@ Characterize the current behavior before changing representations. Keep the refa
 - Split bindings that change meaning. Use tagged alternatives for real alternatives; keep `nil`, `false`, and zero distinct. If the contract is ambiguous, stop and discuss it rather than adding `any`, casts, or suppressions to silence the checker.
 - Run the same characterization tests after refactoring, plus a regression for the intended fix. Verify observable quantities or controls in Factorio, not just helper return values.
 
+## Sheet calculations
+
+Use `ModelCompute.update(model)` after editing a sheet. Supply a block hint only when the edit is confined to that block. Use `updateNow` for migrations that need completed totals before returning.
+Record external calculation inputs in `SheetDependencies`. Test changed and independent branches against a fresh full solve, including edits submitted before publication.
+
 ## Typed GUI actions
 
 - Follow `ChildRemoval` for panel actions. Give each variant a literal `action` and required named fields, and share that discriminated union between button construction and handling.

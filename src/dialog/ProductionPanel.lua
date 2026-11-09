@@ -1,4 +1,4 @@
-local PercentagePlanner = require "data.PercentagePlanner"
+local SheetPlanner = require "data.SheetPlanner"
 local ProductionScroll = require "gui.ProductionScroll"
 local BlockToolbar = require "gui.controls.BlockToolbar"
 local BlockHeader = require "gui.controls.BlockHeader"
@@ -293,7 +293,7 @@ function ProductionPanel:onUpdate(event)
 	else
 		content.clear()
 	end
-	if not event.percentage_rows then self:onEventAutoCancel(event, removal) end
+	if not event.changed_rows then self:onEventAutoCancel(event, removal) end
 
 	self:updateIndexPanel(model)
 	local width, _, scale = User.getMainSizes()
@@ -301,7 +301,7 @@ function ProductionPanel:onUpdate(event)
 
 	self:updateSubMenuPanel(model, block)
 
-	self:updateData(not sameBlock, sameBlock and event and event.percentage_rows or nil)
+	self:updateData(not sameBlock, sameBlock and event and event.changed_rows or nil)
 end
 
 -------------------------------------------------------------------------------
@@ -636,9 +636,14 @@ function ProductionPanel:updatePending(model)
 	local selected = self:getParameterObjects()
 	if selected.id ~= model.id then return end
 	local info = self:getInfoPanel2()
+	local _, _, scroll = self:getDataPanel()
+	local list = scroll[resultTableName]
+	if list then list.enabled = not SheetPlanner.pendingStructure(model.id) and not SheetPlanner.failure(model.id) end
 	local caption = {"", self:getButtonCaption(), " [img=info]"}
-	if PercentagePlanner.pending(model.id) then
+	if SheetPlanner.pending(model.id) then
 		table.insert(caption, {"helmod_common.calculating"})
+	elseif SheetPlanner.failure(model.id) then
+		table.insert(caption, {"helmod_common.solver-failed"})
 	end
 	info.parent["label-info"].caption = caption
 end
@@ -2653,7 +2658,7 @@ end
 function ProductionPanel:onEventAccessAdmin(event, model, block)
 	if event.action == "game-pause" then
 		if not (game.is_multiplayer()) then
-			PercentagePlanner.finishPending()
+			SheetPlanner.finishPending()
 			User.setParameter("auto-pause", true)
 			game.tick_paused = true
 			Controller:send("on_gui_pause", event)

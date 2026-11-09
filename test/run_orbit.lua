@@ -98,6 +98,12 @@ local success, message = xpcall(function()
     elseif mode == "compatibility" then
         assert(log:find("ORBIT COMPATIBILITY PASSED", 1, true) ~= nil, "Compatibility checks did not finish")
     end
+    if mode == "integration" then
+        local control = work .. "/mods/helmod-fork/control.lua"
+        Runner.write(control, Runner.read(control) .. '\nlocal check = require("test_orbit")\nscript.on_init(function() check(true) end)\n')
+        log = Runner.factorio(executable, work, {"--create", work .. "/background.zip"})
+        assert(log:find("ORBIT TESTS PASSED", 1, true), "Background integration checks did not finish")
+    end
     if mode == "timing" then
         log = Runner.factorio(executable, work, {"--benchmark", work .. "/test.zip", "--benchmark-ticks", "40000"})
         local _, count = log:gsub("TIMING PASS ", "")

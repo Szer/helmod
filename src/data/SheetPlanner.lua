@@ -1,55 +1,51 @@
+local Dependencies = require "data.SheetDependencies"
 local Unit = require "math.incremental.Unit"
 local Planner = {}
 
 Planner.setting = "incremental_percentages"
 
----@class PercentageUnit
+---@class SheetUnit
 ---@field input BlockData
 ---@field result BlockData
 
----@class PercentageContext
----@field time number
----@field parameters ParametersData
----@field force uint
----@field solver string?
----@field one boolean?
----@field mining number
----@field lab number
----@field lab_productivity number
----@field day number[]
----@field bonuses table<string,number>
----@field technologies table<string,number[]>
+---@class RecipeUnit
+---@field input RecipeData
+---@field result RecipeData
 
----@class PercentageWork
----@field context PercentageContext
+---@class SheetWork
+---@field context SheetContext
 ---@field source BlockData
 ---@field root BlockData
 ---@field order BlockData[]
 ---@field inputs table<string,BlockData>
----@field units table<string,PercentageUnit>
+---@field units table<string,SheetUnit>
 ---@field wanted table<string,boolean>
+---@field previousRecipes? table<string,RecipeUnit>
+---@field previousContext? SheetContext
+---@field recipes table<string,RecipeUnit>
 ---@field cursor integer
 ---@field finalized boolean
 ---@field preparation? UnitPreparation
 
----@class PercentageJob
+---@class SheetJob
 ---@field player uint
----@field edited string
+---@field edited string?
+---@field fullView boolean?
 ---@field revision integer
 ---@field editedBlocks table<string,boolean>
 ---@field changed? table<string,boolean>
----@field retries integer
----@field work? PercentageWork
+---@field work? SheetWork
 
----@class PercentageState
----@field jobs table<string, PercentageJob>
+---@class SheetState
+---@field jobs table<string, SheetJob>
 ---@field order string[]
----@field units table<string, {context:PercentageContext, units:table<string,PercentageUnit>}>
+---@field units table<string, {context:SheetContext, units:table<string,SheetUnit>, recipes:table<string,RecipeUnit>}>
 ---@field notifications {model:string, player:uint, form:string, rows:table<string,boolean>?}[]
 ---@field revision integer
+---@field errors? table<string,string>
 ---@field servedNotice boolean?
 
----@return PercentageState
+---@return SheetState
 local function state()
     if not storage.percentage_planner then
         storage.percentage_planner = {jobs={}, order={}, units={}, notifications={}, revision=0}
@@ -71,7 +67,35 @@ local function eachViewer(editor, callback)
     Player.set(previous)
 end
 
-local viewNames = {"HMProductionPanel", "HMRecipeEdition", "HMPinPanel"}
+local productionView = "HMProductionPanel"
+local recipeView = "HMRecipeEdition"
+local viewNames = {productionView, recipeView, "HMPinPanel", "HMSummaryPanel", "HMModelDebug"}
+
+---Keep calculated views on their last rendered revision while the next one is incomplete.
+---@param form Form
+---@param frame LuaGuiElement
+---@param content LuaGuiElement
+---@return boolean
+function Planner.deferView(form, frame, content)
+    if not User.getModGlobalSetting(Planner.setting) then return false end
+    for _, name in ipairs(viewNames) do
+        if name == form.classname then
+            local model, block, recipe = form:getParameterObjects()
+            if not model then return false end
+            local selection = {model=model.id, block=block and block.id, recipe=recipe and recipe.id}
+            local tags = frame.tags
+            if Planner.pending(model.id) or Planner.failure(model.id) then
+                if tags.solver_view and not Unit.equal(tags.solver_view, selection) then content.clear() end
+                if name == productionView then form:updatePending(model) end
+                return true
+            end
+            tags.solver_view = selection
+            frame.tags = tags
+            break
+        end
+    end
+    return false
+end
 
 local function queueViews(player, id, rows)
     local queue = state().notifications
@@ -109,10 +133,18 @@ function Planner.invalidate(id)
     if s then
         if s.jobs[id] then notify(id, s.jobs[id].player) end
         s.units[id], s.jobs[id] = nil, nil
+        if s.errors then s.errors[id] = nil end
         for i = #s.order, 1, -1 do
             if s.order[i] == id then table.remove(s.order, i) end
         end
     end
+end
+
+---@param id string
+---@return string?
+function Planner.failure(id)
+    local s = storage.percentage_planner
+    return s and s.errors and s.errors[id]
 end
 
 function Planner.reset()
@@ -131,73 +163,56 @@ function Planner.pending(id)
     return s ~= nil and s.jobs[id] ~= nil
 end
 
+---@param id string
+---@return boolean?
+function Planner.pendingStructure(id)
+    local s = storage.percentage_planner
+    local job = s and s.jobs[id]
+    return job and job.fullView
+end
+
 ---@param model ModelData
----@param block BlockData
+---@param block BlockData?
 ---@param player uint
 function Planner.enqueue(model, block, player)
     local s = state()
     if not s.jobs[model.id] then table.insert(s.order, model.id) end
     -- A replacement starts from all accepted inputs, including other writers' edits.
     s.revision = s.revision + 1
-    local editedBlocks = s.jobs[model.id] and s.jobs[model.id].editedBlocks or {}
-    editedBlocks[block.id] = true
-    s.jobs[model.id] = {player=player, edited=block.id, editedBlocks=editedBlocks, revision=s.revision, retries=0}
+    local prior = s.jobs[model.id]
+    local editedBlocks = prior and prior.editedBlocks or {}
+    if block then editedBlocks[block.id] = true end
+    s.jobs[model.id] = {
+        player=player, edited=block and block.id, editedBlocks=editedBlocks, revision=s.revision,
+        fullView=block == nil or (prior and prior.fullView),
+    }
+    if s.errors then s.errors[model.id] = nil end
     eachViewer(player, function()
-        local panel = Controller:getView("HMProductionPanel")
+        local panel = Controller:getView(productionView)
         if panel:isOpened() then panel:updatePending(model) end
     end)
 end
 
--- Synthetic recipes outside this set use the synchronous solver.
+---@param s SheetState
+---@param job SheetJob
 ---@param model ModelData
----@return PercentageContext?
-local function context(model)
-    local force = Player.getForce()
-    ---@type PercentageContext
-    local ctx = {
-        time=model.time, parameters=model.parameters, force=force.index,
-        solver=User.getParameter("solver_selected"), one=User.getPreferenceSetting("one_block_factor_enable"),
-        mining=force.mining_drill_productivity_bonus, lab=force.laboratory_speed_modifier,
-        lab_productivity=force.laboratory_productivity_bonus, day={Player.getGameDay()}, bonuses={}, technologies={},
-    }
-    local function visit(block)
-        for _, child in pairs(block.children) do
-            if Model.isBlock(child) then
-                if not visit(child) then return false end
-            else
-                if child.type == "technology" then
-                    local tech = force.technologies[child.name]
-                    if not tech then return false end
-                    ctx.technologies[child.name] = {tech.level, tech.research_unit_count}
-                elseif child.type == "recipe" then
-                    if not prototypes.recipe[child.name] or RecipePrototype.isCustomized(child) then return false end
-                elseif child.type ~= "fluid" and child.type ~= "boiler" then
-                    return false
-                end
-                ctx.bonuses[child.name] = Player.getRecipeProductivityBonus(child.name)
-            end
-        end
-        return true
-    end
-    if visit(model.block_root) then return ctx end
-end
-
----@param s PercentageState
----@param job PercentageJob
----@param model ModelData
----@return PercentageWork?
-local function start(s, job, model)
+---@param inline? boolean
+---@return SheetWork
+local function start(s, job, model, inline)
     Model.appendParameters(model)
-    local ctx = context(model)
-    if not ctx or User.getModGlobalSetting("debug_solver") then return nil end
+    local ctx = Dependencies.capture(model, model.block_root)
     local source = table.deepcopy(model.block_root)
-    ---@type PercentageWork
+    ---@type SheetWork
     local plan = {
         source=source, root=source, context=table.deepcopy(ctx), cursor=1, finalized=false,
-        order={}, inputs={}, units={}, wanted={},
+        order={}, inputs={}, units={}, wanted={}, recipes={},
     }
     local cache = s.units[model.id]
-    if cache and not Unit.equal(cache.context, ctx) then cache = nil end
+    if ctx.environment.debug then cache = nil end
+    if cache and not Unit.equal(cache.context.environment, ctx.environment) then cache = nil end
+
+    plan.previousRecipes = cache and cache.recipes
+    plan.previousContext = cache and cache.context
 
     -- Retain disjoint sibling subtrees along the edited path.
     local function mark(block)
@@ -212,11 +227,17 @@ local function start(s, job, model)
             return true
         end
     end
-    mark(source)
+    if not inline and not ctx.environment.debug then
+        if job.edited then mark(source) else
+            for id, child in pairs(source.children) do
+                if Model.isBlock(child) then plan.wanted[id] = true end
+            end
+        end
+    end
     local function visit(input)
         plan.inputs[input.id] = input
-        local old = cache and cache.units[input.id]
-        if old and Unit.equal(input, old.input) then
+        local old = cache and not ctx.freshBlocks[input.id] and cache.units[input.id]
+        if old and Unit.equal(cache.context.blocks[input.id], ctx.blocks[input.id]) and Unit.equal(input, old.input) then
             if plan.wanted[input.id] then plan.units[input.id] = old end
             return table.deepcopy(old.result)
         end
@@ -271,31 +292,48 @@ local function publish(model, root, edited)
 end
 
 -- One block solve, finalization, or publication per simulation tick.
----@param s PercentageState
+---@param s SheetState
 ---@param model ModelData
----@param job PercentageJob
+---@param job SheetJob
 ---@return boolean
-local function advance(s, model, job)
-    if not User.getModGlobalSetting(Planner.setting) or job.retries >= 2 then
-        ModelCompute.update(model)
-        return true
-    end
+---@param inline? boolean
+local function advance(s, model, job, inline)
     local work = job.work
     if not work then
-        job.work = start(s, job, model)
-        if not job.work then
-            ModelCompute.update(model)
-            return true
+        job.work = start(s, job, model, inline)
+        return false
+    end
+    if not inline then
+        local nextBlock = work.order[work.cursor]
+        local scope = nextBlock and work.inputs[nextBlock.id] or work.source
+        local current = Dependencies.capture(model, scope)
+        if not Unit.equal(work.context.environment, current.environment)
+            or not Unit.equal(work.context.blocks[scope.id], current.blocks[scope.id]) then
+            job.work = nil
+            return false
         end
-    elseif not Unit.equal(work.context, context(model)) or User.getModGlobalSetting("debug_solver") then
-        job.work = nil
-        job.retries = job.retries + 1
-    elseif work.cursor <= #work.order then
+    end
+    if work.cursor <= #work.order then
         local block = work.order[work.cursor]
-        work.preparation = ModelCompute.prepareUnit(model, block, work.preparation)
+        local function prepare(recipe)
+            local input = work.inputs[block.id].children[recipe.id]
+            local reusable = not inline and not work.context.environment.debug and not work.context.freshRecipes[recipe.id]
+            local old = reusable and work.previousRecipes and work.previousRecipes[recipe.id]
+            if old and Unit.equal(work.previousContext.dependencies[recipe.id], work.context.dependencies[recipe.id])
+                and Unit.equal(old.input, input) then
+                work.recipes[recipe.id] = old
+                return table.deepcopy(old.result)
+            end
+            ModelCompute.prepareRecipeFactory(recipe, model.time, model.parameters)
+            if reusable and not work.wanted[block.id] and input.class ~= "Block" then
+                work.recipes[recipe.id] = {input=input, result=table.deepcopy(recipe)}
+            end
+            return recipe
+        end
+        work.preparation = ModelCompute.prepareUnit(model, block, work.preparation, prepare)
         if work.preparation then return false end
         ModelCompute.solveUnit(model, block)
-        if work.wanted[block.id] then
+        if work.wanted[block.id] and not work.context.freshBlocks[block.id] then
             work.units[block.id] = {input=work.inputs[block.id], result=table.deepcopy(block)}
         end
         work.cursor = work.cursor + 1
@@ -303,17 +341,30 @@ local function advance(s, model, job)
         ModelCompute.finalizeBlock(work.root, 1)
         work.finalized = true
     else
-        if not Unit.equal(work.source, model.block_root) then
+        if not inline and not Unit.equal(work.source, model.block_root) then
             job.work = nil
-            job.retries = job.retries + 1
             return false
         end
         if not s.jobs[model.id] or s.jobs[model.id].revision ~= job.revision then return false end
         job.changed = publish(model, work.root, job.editedBlocks)
-        s.units[model.id] = {context=work.context, units=work.units}
+        if job.fullView then job.changed = nil end
+        if next(work.units) or next(work.recipes) then
+            s.units[model.id] = {context=work.context, units=work.units, recipes=work.recipes}
+        else
+            s.units[model.id] = nil
+        end
         return true
     end
     return false
+end
+
+---Run the same work units in a single event when simulation ticks are unavailable.
+---@param model ModelData
+function Planner.solveNow(model)
+    local s = {jobs={}, units={}, order={}, notifications={}, revision=0}
+    local job = {player=Player.native().index, revision=0, editedBlocks={}, fullView=true}
+    s.jobs[model.id] = job
+    while not advance(s, model, job, true) do end
 end
 
 local function refresh(notification)
@@ -321,12 +372,19 @@ local function refresh(notification)
     if not form:isOpened() then return end
     local model = form:getParameterObjects()
     if model and model.id == notification.model then
-        if notification.form == "HMRecipeEdition" then
-            form:refreshPercentage()
+        if notification.form == recipeView then
+            form:refreshSolved()
         else
-            form:update({percentage_rows=notification.rows})
+            form:update({changed_rows=notification.rows})
         end
     end
+end
+
+local function fail(s, id, message)
+    log("Background solver: " .. tostring(message))
+    s.errors = s.errors or {}
+    s.errors[id] = tostring(message)
+    s.units[id] = nil
 end
 
 local function editorFor(job, model)
@@ -353,7 +411,7 @@ function Planner.tick()
     else
         local id = table.remove(s.order, 1)
         if not id then return end
-        local job, model = s.jobs[id], storage.models[id]
+        local job, model = s.jobs[id], storage.models and storage.models[id]
         if not model then
             Planner.invalidate(id)
         else
@@ -362,8 +420,7 @@ function Planner.tick()
                 Player.set(editor)
                 local ok, complete = pcall(advance, s, model, job)
                 if not ok then
-                    log("Background solver: " .. tostring(complete))
-                    ModelCompute.update(model)
+                    fail(s, id, complete)
                     complete = true
                 end
                 if complete then
@@ -388,12 +445,13 @@ function Planner.finishPending()
     while #s.order > 0 do
         local id = s.order[1]
         local job = s.jobs[id]
-        local model = storage.models[id]
+        local model = storage.models and storage.models[id]
         local player = model and editorFor(job, model)
         Planner.invalidate(id)
         if player then
             Player.set(player)
-            ModelCompute.update(model)
+            local ok, message = pcall(Planner.solveNow, model)
+            if not ok then fail(s, id, message) end
         end
     end
     while #s.notifications > 0 do Planner.tick() end

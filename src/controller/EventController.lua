@@ -1,4 +1,4 @@
-local PercentagePlanner = require "data.PercentagePlanner"
+local SheetPlanner = require "data.SheetPlanner"
 ---
 ---Description of the module.
 ---@class EventController
@@ -173,7 +173,7 @@ function EventController.onConfigurationChanged(data)
       end
     end
     
-    PercentagePlanner.reset()
+    SheetPlanner.reset()
     Cache.reset()
   
     for _,player in pairs(game.players) do
@@ -203,7 +203,7 @@ end
 ---On tick
 ---@param event LuaEvent
 function EventController.onTick(event)
-  PercentagePlanner.tick()
+  SheetPlanner.tick()
   Controller:onTick(event)
 end
 
@@ -264,8 +264,8 @@ end
 ---On runtime mod settings
 ---@param event LuaEvent
 function EventController.onRuntimeModSettingChanged(event)
-  if event and event.setting == "helmod_" .. PercentagePlanner.setting and not User.getModGlobalSetting(PercentagePlanner.setting) then
-    PercentagePlanner.finishPending()
+  if event and event.setting == "helmod_" .. SheetPlanner.setting and not User.getModGlobalSetting(SheetPlanner.setting) then
+    SheetPlanner.finishPending()
     storage.percentage_planner = nil
   end
   if event ~= nil and event.player_index ~= nil then
@@ -281,7 +281,7 @@ function EventController.onPlayerCreated(event)
   if event ~= nil and event.player_index ~= nil then
     local player = Player.load(event).native()
     Controller:bindController(player)
-    PercentagePlanner.onJoin(player)
+    SheetPlanner.onJoin(player)
     User.setParameter("next_event", nil)
   end
 end
@@ -293,7 +293,7 @@ function EventController.onPlayerJoinedGame(event)
   if event ~= nil and event.player_index ~= nil then
     local player = Player.load(event).native()
     Controller:bindController(player)
-    PercentagePlanner.onJoin(player)
+    SheetPlanner.onJoin(player)
     User.setParameter("next_event", nil)
   end
 end

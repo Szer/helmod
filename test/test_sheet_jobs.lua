@@ -1,4 +1,4 @@
-local Planner = require "data.PercentagePlanner"
+local Planner = require "data.SheetPlanner"
 
 local function equal(a, b, path)
     if a == b then return end
@@ -18,17 +18,19 @@ end
 local function compareJob(model)
     local original = table.deepcopy(model.block_root)
     local oracle = table.deepcopy(model)
-    oracle.id = "percentage-oracle"
-    ModelCompute.update(oracle)
+    oracle.id = "sheet-oracle"
+    ModelCompute.updateFull(oracle)
+    assert(Planner.pending(model.id), "edit must be scheduled")
     for _ = 1, 100 do
         Planner.tick()
         if not Planner.pending(model.id) then
+            assert(not Planner.failure(model.id), Planner.failure(model.id))
             equal(oracle.block_root, model.block_root, "published")
             return
         end
         equal(original, model.block_root, "partially published")
     end
-    error("percentage job did not finish")
+    error("sheet job did not finish")
 end
 
 local function snapshot(element)
@@ -70,12 +72,12 @@ local function checkWideBlock(player)
     local model = Model.newModel()
     local block, recipe = child(model, model.block_root, "iron-gear-wheel")
     for _ = 1, 17 do ModelBuilder.addRecipeIntoProductionBlock(model, block, "iron-gear-wheel", "recipe") end
-    ModelCompute.update(model)
+    ModelCompute.updateFull(model)
     ModelBuilder.updateRecipeProduction(recipe, 0.85)
     Planner.enqueue(model, block, player.index)
     local oracle = table.deepcopy(model)
     oracle.id = "wide-oracle"
-    ModelCompute.update(oracle)
+    ModelCompute.updateFull(oracle)
     local original = ModelCompute.prepareRecipeFactory
     local prepared = 0
     ModelCompute.prepareRecipeFactory = function(...)
@@ -95,6 +97,50 @@ local function checkWideBlock(player)
     equal(oracle.block_root, model.block_root, "wide block")
 end
 
+local function checkIndependentWork()
+    local sheet = Model.newModel()
+    local edited, gear = child(sheet, sheet.block_root, "iron-gear-wheel")
+    local other = child(sheet, sheet.block_root, "copper-cable")
+    local _, circuit = ModelBuilder.addRecipeIntoProductionBlock(sheet, edited, "electronic-circuit", "recipe")
+    local _, engine = ModelBuilder.addRecipeIntoProductionBlock(sheet, sheet.block_root, "steam-engine", "energy")
+    ModelCompute.updateNow(sheet)
+    local solved, prepared = {}, {}
+    local solve, prepare = ModelCompute.solveUnit, ModelCompute.prepareRecipeFactory
+    ModelCompute.solveUnit = function(model, block)
+        solved[block.id] = true
+        return solve(model, block)
+    end
+    ModelCompute.prepareRecipeFactory = function(recipe, ...)
+        prepared[recipe.id] = true
+        return prepare(recipe, ...)
+    end
+    local function checkEdit()
+        local reference = table.deepcopy(sheet)
+        reference.id = "dependencies-oracle"
+        ModelCompute.updateFull(reference)
+        solved, prepared = {}, {}
+        for _ = 1, 100 do
+            Planner.tick()
+            if not Planner.pending(sheet.id) then break end
+        end
+        assert(not Planner.pending(sheet.id) and not Planner.failure(sheet.id))
+        equal(reference.block_root, sheet.block_root, "dependencies")
+    end
+    for _, value in ipairs({0.85, 0.95, 0.85, 0.95, 0.85}) do
+        ModelBuilder.updateRecipeProduction(gear, value)
+        ModelCompute.update(sheet, edited)
+        checkEdit()
+    end
+    assert(solved[edited.id] and solved[sheet.block_root.id] and not solved[other.id])
+    assert(prepared[engine.id] and prepared[gear.id] and not prepared[circuit.id],
+        "only dependent recipes need preparing, even on a sheet containing a generator")
+    ModelBuilder.addRecipeIntoProductionBlock(sheet, edited, "transport-belt", "recipe")
+    ModelCompute.update(sheet)
+    checkEdit()
+    assert(not solved[other.id], "a new dependency in one block invalidated an unrelated block")
+    ModelCompute.solveUnit, ModelCompute.prepareRecipeFactory = solve, prepare
+end
+
 local function check(player)
     settings.global.helmod_incremental_percentages = {value=true}
     local model = Model.newModel()
@@ -112,11 +158,11 @@ local function check(player)
     consumer.by_product, consumer.consumer = false, true
     ModelBuilder.addRecipeIntoProductionBlock(model, consumer, "cargo-landing-pad", "recipe")
     ModelBuilder.updateChildContraint(consumer, {type="master",item={name="concrete",type="item"}})
-    ModelCompute.update(model)
+    ModelCompute.updateFull(model)
     root.products["electronic-circuit"].input = 5
     root.products["utility-science-pack"].input = 60
     oil.products["petroleum-gas"].input = 100
-    ModelCompute.update(model)
+    ModelCompute.updateFull(model)
     local function edit(block, recipe, value)
         ModelBuilder.updateRecipeProduction(recipe, value)
         Planner.enqueue(model, block, player.index)
@@ -147,13 +193,13 @@ local function check(player)
     compareJob(model)
     edit(frames, frame, 0.9)
     Planner.tick()
-    ModelCompute.update(model)
-    assert(not Planner.pending(model.id), "full update must invalidate old work")
+    ModelCompute.updateNow(model)
+    assert(not Planner.pending(model.id), "immediate updates must invalidate old work")
     ModelCompute.solveUnit = original
     checkVisibleRows(player, model, frames, frame)
     local other = Model.newModel()
     local otherBlock, gear = child(other, other.block_root, "iron-gear-wheel")
-    ModelCompute.update(other)
+    ModelCompute.updateFull(other)
     edit(frames, frame, 0.25)
     ModelBuilder.updateRecipeProduction(gear, 0.3)
     Planner.enqueue(other, otherBlock, player.index)
@@ -166,20 +212,84 @@ local function check(player)
     assert(not Planner.pending(other.id), "deleted sheet left a job behind")
     local oracle = table.deepcopy(model)
     oracle.id = "pause-oracle"
-    ModelCompute.update(oracle)
+    ModelCompute.updateFull(oracle)
     Planner.finishPending()
     assert(not Planner.pending(model.id), "pausing left work behind")
     equal(oracle.block_root, model.block_root, "paused")
+    ModelBuilder.updateRecipeProduction(frame, 0.63)
+    ModelCompute.update(model, frames)
+    ModelCompute.solveUnit = function() error("injected sheet failure") end
+    for _ = 1, 100 do
+        Planner.tick()
+        if not Planner.pending(model.id) then break end
+    end
+    assert(Planner.failure(model.id):find("injected sheet failure", 1, true))
+    ModelCompute.solveUnit = original
+    ModelCompute.update(model, frames)
+    compareJob(model)
+    checkIndependentWork()
     checkWideBlock(player)
+    local selector = Controller:getView("HMRecipeSelector")
+    User.setParameterObjects(selector.classname, model.id, frames.id)
+    selector:onEvent{action="element-select", item1="recipe", item2="iron-gear-wheel"}
+    assert(Planner.pending(model.id), "adding a recipe must use the sheet worker")
+    compareJob(model)
+    local inserted
+    for _, entry in pairs(frames.children) do
+        if entry.name == "iron-gear-wheel" then inserted = entry end
+    end
+    assert(inserted)
+    Controller:send("on_gui_open", {name="OPEN", item1=model.id, item2=frames.id, item3=inserted.id}, "HMRecipeEdition")
+    local editor = Controller:getView("HMRecipeEdition")
+    local factoryButton = player.gui.screen.HMRecipeEdition
+    editor:onEvent{action="factory-select", item4="assembling-machine-3", element=factoryButton}
+    assert(inserted.factory.name == "assembling-machine-3")
+    compareJob(model)
+    editor:onEvent{action="factory-module-select", item4="speed-module", element=factoryButton}
+    compareJob(model)
+    assert(next(inserted.factory.modules))
+    local panel = Controller:getView("HMProductionPanel")
+    User.setParameterObjects(panel.classname, model.id, frames.id)
+    panel:onEvent{action="block-child-up", item3=inserted.id}
+    compareJob(model)
+    panel:onEvent{action="change-computing", element={selected_index=3}}
+    compareJob(model)
+    assert(frames.solver)
+    ModelBuilder.updateProduct(oil, "petroleum-gas", 80)
+    ModelCompute.update(model)
+    Planner.tick()
+    ModelBuilder.blockChildRemove(model, frames, inserted)
+    ModelCompute.update(model)
+    compareJob(model)
+    assert(oil.products["petroleum-gas"].input == 80 and not frames.children[inserted.id])
+    while #storage.percentage_planner.notifications > 0 do Planner.tick() end
+    assert(not editor:isOpened(), "removed recipe left its editor open")
     local mixed = Model.newModel()
     local mixedBlock, plate = child(mixed, mixed.block_root, "iron-plate")
     local _, orbit = ModelBuilder.addRecipeIntoProductionBlock(mixed, mixed.block_root, "automation-science-pack", "orbit")
     assert(orbit.type == "orbit")
-    ModelCompute.update(mixed)
+    local _, steam = ModelBuilder.addRecipeIntoProductionBlock(mixed, mixed.block_root, "steam-engine", "energy")
+    assert(steam.type == "energy")
+    ModelCompute.updateFull(mixed)
     ModelBuilder.updateRecipeProduction(plate, 0.8)
-    Planner.enqueue(mixed, mixedBlock, player.index)
+    ModelCompute.update(mixed, mixedBlock)
     compareJob(mixed)
-    assert(not storage.percentage_planner.units[mixed.id], "unsupported sheets need a full solve")
+    assert(not Planner.failure(mixed.id))
+    local cache = storage.percentage_planner.units[mixed.id]
+    assert(not cache or (not cache.recipes[steam.id] and not cache.recipes[orbit.id]), "synthetic recipes must be prepared afresh")
+    settings.global.helmod_debug_solver = {value=true}
+    ModelCompute.update(mixed)
+    compareJob(mixed)
+    assert(not storage.percentage_planner.units[mixed.id], "debug runs need fresh matrix traces")
+    settings.global.helmod_debug_solver = {value=false}
+    local empty = Model.newModel()
+    ModelCompute.update(empty)
+    compareJob(empty)
+    local clone = table.deepcopy(mixed)
+    local expected = table.deepcopy(clone)
+    ModelCompute.updateFull(expected)
+    assert(not ModelCompute.update(clone), "detached plan must finish before returning")
+    equal(expected.block_root, clone.block_root, "detached")
 end
 
 local function queueForSave(player)
@@ -187,19 +297,19 @@ local function queueForSave(player)
     local model = Model.newModel()
     local block, gear = child(model, model.block_root, "iron-gear-wheel")
     for _ = 1, 4 do child(model, model.block_root, "iron-plate") end
-    ModelCompute.update(model)
+    ModelCompute.updateFull(model)
     ModelBuilder.updateRecipeProduction(gear, 0.85)
     Planner.enqueue(model, block, player.index)
     Planner.tick()
     Planner.tick()
     local oracle = table.deepcopy(model)
     oracle.id = "reload-oracle"
-    ModelCompute.update(oracle)
-    storage.percentage_oracle = {id=model.id, root=oracle.block_root}
+    ModelCompute.updateFull(oracle)
+    storage.sheet_oracle = {id=model.id, root=oracle.block_root}
 end
 
 local function afterLoad()
-    local saved = assert(storage.percentage_oracle)
+    local saved = assert(storage.sheet_oracle)
     assert(Planner.pending(saved.id), "save must contain pending work")
     local model = storage.models[saved.id]
     for _ = 1, 50 do

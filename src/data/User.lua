@@ -1,4 +1,4 @@
-local PercentagePlanner = require "data.PercentagePlanner"
+local SheetPlanner = require "data.SheetPlanner"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class User
@@ -300,7 +300,7 @@ function User.createNextEvent(event, classname, method, index)
         User.setParameter("next_event", nil)
         local auto_pause = User.getParameter("auto-pause") or false
         if not (game.is_multiplayer()) then
-            if auto_pause then PercentagePlanner.finishPending() end
+            if auto_pause then SheetPlanner.finishPending() end
             game.tick_paused = auto_pause
         end
         return { wait = false, method = method }
@@ -534,7 +534,7 @@ function User.setActiveForm(classname)
     end
     if string.find(classname, "HMProductionPanel") then
         if not (game.is_multiplayer()) and User.getParameter("auto-pause") then
-            PercentagePlanner.finishPending()
+            SheetPlanner.finishPending()
             game.tick_paused = true
         else
             game.tick_paused = false

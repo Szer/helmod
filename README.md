@@ -54,9 +54,9 @@ end
 
 ## Experimental background solver
 
-Enable **Experimental background recipe percentage solver** under **Settings → Mod settings → Map** to try it on a shared sheet. Percentage edits take effect immediately. The sheet shows “Calculating…” until the new totals are ready for everyone viewing it.
+Enable **Experimental background sheet solver** under **Settings → Mod settings → Map** to try it for everyone in the save. Adding or moving recipes, changing machines and modules, editing quantities, and switching block modes all use the same solver. Editors can continue working while the sheet shows “calculating…”. The new totals appear together.
 
-Work from different sheets takes turns across simulation ticks. Editing the same sheet again replaces its pending calculation and keeps all accepted edits. Paused games, solver debugging, and sheets with unsupported synthetic recipes use the full calculation. Other editing actions use their usual calculation path.
+Shared sheets take turns across simulation ticks. Another edit replaces the pending calculation and retains all accepted changes. Synthetic recipes such as orbital cargo and electricity use fresh block calculations. Paused games finish the same work immediately. A single matrix solve can still take an entire tick.
 
 ## Sending items to orbit
 

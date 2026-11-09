@@ -7,7 +7,8 @@ local function near(actual, expected, label)
     assert(math.abs(actual - expected) < 1e-8, label .. ": expected " .. expected .. ", got " .. tostring(actual))
 end
 
-script.on_init(function()
+local function check(background)
+    settings.global.helmod_incremental_percentages = {value=background}
     assert(script.feature_flags.space_travel == true, "orbit feature flag")
     EventController.onInit()
     -- Map creation has no player, so supply the player context used by Helmod.
@@ -139,4 +140,7 @@ script.on_init(function()
     check_nested()
     check_balance_pivot()
     log("ORBIT TESTS PASSED")
-end)
+end
+
+script.on_init(function() check(false) end)
+return check

@@ -35,6 +35,8 @@ jobs:
             base=$(git describe --first-parent --abbrev=0 --tags --match 'helmod-fork-[0-9]*')
             [[ $(jq -r .version src/info.json) == "${base#helmod-fork-}" ]]
             git diff --exit-code "$base" -- src/changelog.txt
+            echo '### Pending release notes' >> "$GITHUB_STEP_SUMMARY"
+            ci/semver.sh notes >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Preview the version for this squash title
         if: github.event_name == 'pull_request'

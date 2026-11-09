@@ -28,19 +28,53 @@ echo 'Release-note: Preserve quantities in saved plans' > "release-notes/$fix.tx
 git add -- "release-notes/$fix.txt"
 git commit -qm 'docs: Clarify the pending quantity fix'
 git commit --allow-empty -qm 'feat(ui): Show the quality of orbital cargo' -m $'Release-note: See cargo quality in the\norbit planner\n\nImplementation details.'
+feature=$(git rev-parse HEAD)
 [[ $(plan) == helmod-fork-2.4.0 ]]
 change 'break: Replace the legacy import format'
+breaking=$(git rev-parse HEAD)
 change 'ci: Update build tools'
 [[ $(plan) == helmod-fork-3.0.0 ]]
 notes=$("$root/ci/semver.sh" notes)
 grep -Fxq -- '- Preserve quantities in saved plans' <<< "$notes"
 [[ $(wc -l <<< "$notes") == 3 ]]
+# Exercise curation on pending entries before preparing the release.
+fix_file="release-notes/$fix.txt"
+feature_file="release-notes/$feature.txt"
+breaking_file="release-notes/$breaking.txt"
+echo 'Release-note: A combined summary' > "$fix_file"
+echo 'Omit-release-note' > "$breaking_file"
+notes=$("$root/ci/semver.sh" notes)
+[[ $(plan) == helmod-fork-3.0.0 && $(wc -l <<< "$notes") == 2 ]]
+grep -Fxq -- '- A combined summary' <<< "$notes"
+grep -Fxq -- '- See cargo quality in the orbit planner' <<< "$notes"
+if grep -Fq 'legacy import' <<< "$notes"; then exit 1; fi
+echo 'Omit-release-note' > "$fix_file"
+echo 'Omit-release-note' > "$feature_file"
+[[ -z $("$root/ci/semver.sh" notes) ]]
+"$root/ci/semver.sh" prepare
+grep -Fxq 'Version: 3.0.0' src/changelog.txt
+if grep -Eq '^    - |^  (Bugfixes|Features|Changes):' src/changelog.txt; then exit 1; fi
+echo 'Release-note: conflicting instruction' >> "$fix_file"
+if "$root/ci/semver.sh" notes >/dev/null 2>&1; then exit 1; fi
+git restore -- "$fix_file"
+rm -- "$feature_file" "$breaking_file"
+bad_file="release-notes/$(git rev-parse HEAD).txt"
+echo 'Omit-release-note' > "$bad_file"
+git add -- "$bad_file"
+if "$root/ci/semver.sh" notes >/dev/null 2>&1; then exit 1; fi
+git restore --staged -- "$bad_file"
+rm -- "$bad_file"
 "$root/ci/semver.sh" prepare
 grep -Fxq '    - Preserve quantities in saved plans' src/changelog.txt
 grep -Fxq '  Features:' src/changelog.txt
 grep -Fxq '    - See cargo quality in the orbit planner' src/changelog.txt
 grep -Fxq '    - Replace the legacy import format' src/changelog.txt
 if grep -E 'Keep entered quantities|Show the quality|developer instructions|build tools|#42' src/changelog.txt; then exit 1; fi
+echo 'Omit-release-note' > "$breaking_file"
+git add -- "$breaking_file"
+git commit -qm 'docs: Withdraw the pending import note'
+"$root/ci/semver.sh" prepare
+if grep -Fq 'Replace the legacy import format' src/changelog.txt; then exit 1; fi
 git add -- src/info.json src/changelog.txt
 git commit -qm 'chore(release): Publish 3.0.0'
 git tag helmod-fork-3.0.0

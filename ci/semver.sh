@@ -13,6 +13,19 @@ args+=("$base..$start")
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 git-cliff "${args[@]}" --context > "$tmp/context"
+if [[ $mode != plan ]]; then
+  while IFS= read -r -d '' file; do
+    sha=${file#release-notes/}
+    sha=${sha%.txt}
+    if ! jq -e --arg sha "$sha" 'any(.[].commits[]; .id == $sha)' "$tmp/context" >/dev/null; then
+      echo "$file must name an eligible squash commit in the pending batch." >&2
+      exit 1
+    fi
+  done < <(
+    git diff --no-renames --diff-filter=ACMT --name-only -z "$base" -- 'release-notes/*.txt'
+    git ls-files --others --exclude-standard -z -- 'release-notes/*.txt'
+  )
+fi
 if ! jq -e 'any(.[]; .commits | length > 0)' "$tmp/context" >/dev/null; then
   if [[ $mode == plan || $mode == notes ]]; then exit 0; fi
   echo 'No release-bearing commits since the previous tag.' >&2
@@ -28,7 +41,16 @@ timestamp=$(jq '[.[].commits[].committer.timestamp] | max' "$tmp/context")
 while read -r sha; do
   file="release-notes/$sha.txt"
   if [[ -f $file ]]; then
-    cp "$file" "$tmp/body"
+    mapfile -t lines < <(sed 's/\r$//; /^[[:space:]]*$/d' "$file")
+    if [[ ${#lines[@]} != 1 ]]; then
+      echo "$file must contain one Release-note: line or Omit-release-note." >&2
+      exit 1
+    fi
+    if [[ ${lines[0]} == Omit-release-note ]]; then
+      jq -cn --arg sha "$sha" '{key:$sha,value:null}' >> "$tmp/notes"
+      continue
+    fi
+    printf '%s\n' "${lines[0]}" > "$tmp/body"
   else
     # GitHub can hard-wrap the PR description when creating a squash commit.
     git show -s --format=%b "$sha" | awk '
@@ -48,7 +70,8 @@ touch "$tmp/notes"
 jq --arg tag "$tag" --argjson stamp "$timestamp" --slurpfile overrides "$tmp/notes" '
   ($overrides | from_entries) as $notes |
   map(.version = $tag | .timestamp = $stamp |
-      .commits |= map(.extra.release_note = $notes[.id]))' "$tmp/context" > "$tmp/render"
+      .commits |= map(.id as $id | select(($notes | has($id) | not) or $notes[$id] != null)
+                      | .extra.release_note = $notes[$id]))' "$tmp/context" > "$tmp/render"
 git-cliff --config cliff.toml --no-exec --from-context "$tmp/render" | sed '/./,$!d' > "$tmp/entry"
 if [[ $mode == notes ]]; then
   sed -n 's/^    - /- /p' "$tmp/entry"

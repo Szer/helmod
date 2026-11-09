@@ -100,7 +100,7 @@ Rename the download to the filename shown on the prerelease page and put it in a
 
 ## Versioning and changelogs
 
-Squash PR titles become public release notes. Make each title understandable to a player reading the note without the PR. For example, `fix: Keep the entered quantity after loading a save` describes the outcome; function names and stack traces belong in the PR body.
+Squash PR titles determine the version bump and should read well on their own. For example, `fix: Keep the entered quantity after loading a save` describes the outcome. The PR’s `Release-note:` line supplies the initial changelog text.
 
 | Title prefix | Version change | From 2.3.9 |
 |---|---|---|
@@ -108,9 +108,24 @@ Squash PR titles become public release notes. Make each title understandable to 
 | `feat:` | Minor | 2.4.0 |
 | `break:` | Major | 3.0.0 |
 
-The largest change since the last fork tag wins. `docs:`, `ci:`, `chore:`, `test:`, `refactor:`, `style:` and `build:` do not bump the version or appear in the notes. Optional scopes such as `fix(ui):` are supported. Squash commits use the PR title and description. Describe the actual change in the title; put the specific reproduction in the body. Every release-worthy PR must include exactly one nonempty standalone line in its description for the public bullet, e.g. `Release-note: The matrix solver now tries to use up intermediate products before leaving a surplus.` The override changes wording only. To correct an already merged change **before** publication, put the same line in `release-notes/<full-squash-commit-SHA>.txt`; that correction takes precedence over the commit body.
+The largest change since the last fork tag wins. `docs:`, `ci:`, `chore:`, `test:`, `refactor:`, `style:` and `build:` do not bump the version or appear in the notes. Optional scopes such as `fix(ui):` are supported. Squash commits use the PR title and description. Describe the actual change in the title; put the specific reproduction in the body. Every release-worthy PR must include exactly one nonempty standalone line in its description for the public bullet, e.g. `Release-note: The matrix solver now tries to use up intermediate products before leaving a surplus.` The override changes wording only.
 
-Merges test and accumulate without publishing. To release a batch, manually run **Fork checks and release batch** on branch **fork**, or use `gh workflow run fork.yml --repo Szer/helmod --ref fork`. After all checks pass, [git-cliff](https://git-cliff.org/) calculates the version and writes one concise bullet per player-facing commit in Factorio’s changelog format. Actions commits the generated manifest and changelog, atomically pushes that commit and its version tag, then dispatches the tag workflow. Tag CI independently verifies the version and notes and runs Factorio again; only then does it publish the tested ZIP and check the portal hash. An empty or maintenance-only batch creates no release. Do not hand-edit versions or move published tags. To retry a failed tag publication, rerun the failed Actions job, or dispatch `fork.yml` on that tag.
+### Editing pending release notes
+
+Put one line in `release-notes/<full-squash-commit-SHA>.txt` for each entry you want to change. Use `git log --first-parent --format='%H %s'` to find the squash commit on `fork`.
+
+| Edit | File contents |
+| --- | --- |
+| Reword a note | `Release-note: <new player-facing sentence>` |
+| Withdraw a note | `Omit-release-note` |
+| Combine related notes | Write the combined sentence on one commit and omit the others. The chosen commit sets the changelog category. |
+| Restore the original note | Delete its override file. |
+
+Submit note edits with a `docs:` PR. Preview with `ci/semver.sh notes` or read **Pending release notes** in the Actions check summary. The release version still reflects every eligible commit, even when all of its notes are omitted. Published changelogs retain their original text.
+
+### Publishing a batch
+
+Merges test and accumulate without publishing. To release a batch, manually run **Fork checks and release batch** on branch **fork**, or use `gh workflow run fork.yml --repo Szer/helmod --ref fork`. After all checks pass, [git-cliff](https://git-cliff.org/) calculates the version and writes the curated player-facing notes in Factorio’s changelog format. Actions commits the generated manifest and changelog, atomically pushes that commit and its version tag, then dispatches the tag workflow. Tag CI independently verifies the version and notes and runs Factorio again; only then does it publish the tested ZIP and check the portal hash. An empty or maintenance-only batch creates no release. Do not hand-edit versions or move published tags. To retry a failed tag publication, rerun the failed Actions job, or dispatch `fork.yml` on that tag.
 
 The Actions secret `FACTORIO_APIKEY` needs the Publish Mods, Upload Mods and Edit Mods permissions. Only the tag publish step receives it. Test the versioning policy locally with git-cliff on PATH and `ci/test-semver.sh`.
 

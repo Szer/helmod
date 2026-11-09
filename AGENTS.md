@@ -29,4 +29,6 @@ Characterize the current behavior before changing representations. Keep the refa
 
 Squash PR titles must be user-friendly and readable as standalone changelog bullets. Describe what changes for a player in one short sentence: `fix: Keep the entered quantity after loading a save`, not `fix: Guard input_quantity`. Describe the scope of the actual change. If the fix applies to matrix planning generally, do not title it as a fix for the oil recipe that exposed it. Put the reproduction, implementation details, and test evidence in the PR body. Every release-worthy PR (fix, feat or break, including scoped titles) must include exactly one nonempty standalone `Release-note: <player-facing sentence>` line to the PR body; the title still sets the version bump. For a breaking change, name the incompatible behavior and explain the migration in the body.
 
+Curate a pending batch with the per-commit overrides in `release-notes/`. Use `Release-note: <text>` to amend one entry and `Omit-release-note` to withdraw it. Combine related fixes by keeping one summary.
+
 Use `fix:` for patch, `feat:` for minor, and `break:` for major. Keep maintenance under `chore:`, `docs:`, `test:`, `ci:`, `build:`, `refactor:`, or `style:`; these do not publish or appear in release notes. A maintainer reviews clarity; CI checks syntax. Let the release workflow update the version and changelog.

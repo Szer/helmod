@@ -276,7 +276,7 @@ function RecipeEdition:onEvent(event)
             local text = event.element.text
             local production = (formula(text) or 100) / 100
             ModelBuilder.updateRecipeProduction(recipe, production)
-            ModelCompute.update(model)
+            ModelCompute.update(model, block)
             self:updateObjectInfo(event)
             Controller:send("on_gui_recipe_update", event)
         end

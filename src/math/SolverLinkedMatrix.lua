@@ -1,3 +1,4 @@
+local PercentageSolve = require "math.linked.PercentageSolve"
 local Profile = require "math.linked.Profile"
 -------------------------------------------------------------------------------
 ---Description of the module.
@@ -128,8 +129,9 @@ end
 ---@param parameters ParametersData
 ---@param debug boolean
 ---@param factories_prepared boolean?
+---@param pass? PercentageSolvePass
 ---@return BlockData
-function SolverLinkedMatrix:solve(block, parameters, debug, factories_prepared)
+function SolverLinkedMatrix:solve(block, parameters, debug, factories_prepared, pass)
     block.blocks_linked = nil
     if block.products_linked ~= nil then
         local profiles = {}
@@ -149,7 +151,7 @@ function SolverLinkedMatrix:solve(block, parameters, debug, factories_prepared)
         end
         block.blocks_linked = profiles
     end
-    return self:solve_block(block, parameters, debug, factories_prepared)
+    return self:solve_block(block, parameters, debug, factories_prepared, pass)
 end
 ---@param block BlockData
 ---@param key string Product table key, including quality or temperature
@@ -184,14 +186,24 @@ end
 ---@param parameters ParametersData
 ---@param debug boolean
 ---@param factories_prepared boolean?
+---@param pass? PercentageSolvePass
 ---@return BlockData
-function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prepared)
+function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prepared, pass)
     local mC, runtimes
 
     local ok, err = pcall(function()
-        local mA = self:get_block_matrix(block, parameters, factories_prepared)
-        if mA ~= nil then
-            mC, runtimes = self:solve_matrix(mA, debug, block.by_factory, block.time)
+        if pass and pass.edited ~= block and not debug and not block.blocks_linked then
+            local raw = self:buildBlockMatrix(block, parameters, factories_prepared)
+            if raw then
+                mC = PercentageSolve.solve(pass, block, raw, self.solve_matrix, function()
+                    local matrix = self:linkTemperatureFluid(raw, block.by_product)
+                    matrix.objectives = block.objectives
+                    return self:solve_matrix(matrix, false, block.by_factory, block.time)
+                end)
+            end
+        else
+            local matrix = self:get_block_matrix(block, parameters, factories_prepared)
+            if matrix then mC, runtimes = self:solve_matrix(matrix, debug, block.by_factory, block.time) end
         end
     end)
     if not (ok) then
@@ -203,16 +215,6 @@ function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prep
     end
 
     if mC ~= nil then
-        -- remove temperature convert lines
-        -- necessary to retieve the right value
-        for i = #mC.headers, 1, -1 do
-            if mC.headers[i].name == "helmod-temperature-convert" then
-                table.remove(mC.rows, i)
-                table.remove(mC.headers, i)
-                table.remove(mC.parameters, i)
-            end
-        end
-
         local sorter = defines.sorters.block.sort
         if block.by_product == false then
             sorter = defines.sorters.block.reverse
@@ -222,7 +224,7 @@ function SolverLinkedMatrix:solve_block(block, parameters, debug, factories_prep
         local linked_rows = {}
         for index, header in ipairs(mC.headers) do
             local id = header.child_id
-            if id ~= nil then
+            if id ~= nil and header.name ~= "helmod-temperature-convert" then
                 if header.product_linked ~= nil then
                     local key = Product(header.product_linked):getTableKey()
                     linked_rows[id] = linked_rows[id] or {}
@@ -363,6 +365,18 @@ end
 ---@param factories_prepared boolean?
 ---@return table
 function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepared)
+    local raw = self:buildBlockMatrix(block, parameters, factories_prepared)
+    if raw == nil then return nil end
+    local matrix = self:linkTemperatureFluid(raw, block.by_product)
+    matrix.objectives = block.objectives
+    return matrix
+end
+
+---@param block BlockData
+---@param parameters ParametersData
+---@param factories_prepared boolean?
+---@return Matrix?
+function SolverLinkedMatrix:buildBlockMatrix(block, parameters, factories_prepared)
     local children = block.children
     if children ~= nil then
         local matrix = Matrix()
@@ -455,7 +469,6 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepar
 
         ---end loop recipes
 
-        matrix = self:linkTemperatureFluid(matrix, block.by_product)
         matrix.objectives = block.objectives
         return matrix
     end

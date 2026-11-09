@@ -25,9 +25,18 @@ return function(player)
             if found then return found end
         end
     end
+    local _, _, viewport = Controller:getView("HMProductionPanel"):getDataPanel()
+    local function clickConstraint(el, shift)
+        local inner = el.parent
+        while inner.type ~= "scroll-pane" do inner = inner.parent end
+        viewport.scroll_to_element(inner)
+        inner.scroll_to_element(el)
+        EventController.onGuiClickButton{player_index=player.index,element=el,button=defines.mouse_button_type.left,control=not shift,shift=shift,alt=false}
+        assert(viewport.valid and inner.valid, "constraint edit must preserve both scroll panes")
+    end
     local function clickSteel(shift)
         local steel = assert(button(player.gui.screen,"ingredient","steel-plate"), "missing steel input control")
-        EventController.onGuiClickButton{player_index=player.index,element=steel,button=defines.mouse_button_type.left,control=not shift,shift=shift,alt=false}
+        clickConstraint(steel, shift)
     end
     clickSteel(false)
     assert(child.ingredients["steel-plate"].amount == 0, "steel should stop consumption")
@@ -39,6 +48,14 @@ return function(player)
     assert(child.contraints["steel-plate"].type == "exclude")
     clickSteel(true)
     assert(child.contraints["steel-plate"] == nil)
+    for _, shift in ipairs({false, true}) do
+        for i = 1, 2 do
+            clickConstraint(assert(button(player.gui.screen, "product", "holmium-ore", scrap.id)), shift)
+            local constraint = scrap.contraints["holmium-ore"]
+            if i == 1 then assert(constraint.type == (shift and "exclude" or "master"))
+            else assert(constraint == nil) end
+        end
+    end
     for _, el in ipairs({
         assert(button(player.gui.screen,"ingredient","steel-plate")),
         assert(button(player.gui.screen,"ingredient","scrap",scrap.id)),

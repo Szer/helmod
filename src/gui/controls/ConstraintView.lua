@@ -3,6 +3,27 @@ local ConstraintView = {}
 ---@alias ConstraintAction "production-recipe-product-add" | "production-recipe-ingredient-add" | "product-edition"
 ---@alias ConstraintKind "master" | "exclude"
 
+---@class RowConstraintEdit
+---@field side "products"|"ingredients"
+---@field child_id string
+---@field kind ConstraintKind
+
+---@param event {action?:string, item3?:string, item4?:string, control?:boolean, shift?:boolean}
+---@return RowConstraintEdit?
+function ConstraintView.edit(event)
+    if event.item3 == nil or event.item3 == "none" then return nil end
+    local kind
+    if event.control then kind = "master"
+    elseif event.shift then kind = "exclude"
+    else return nil end
+    if event.action == "production-recipe-product-add" then
+        return {side="products", child_id=event.item3, kind=kind}
+    elseif event.action == "production-recipe-ingredient-add" and event.item4 ~= "none" then
+        return {side="ingredients", child_id=event.item3, kind=kind}
+    end
+    return nil
+end
+
 ---@param simplex boolean?
 ---@param action ConstraintAction
 ---@return "contraint"?

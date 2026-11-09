@@ -271,13 +271,23 @@ function ProductionPanel:getSubMenuPanel()
 end
 
 ---@param removal ChildRemovalAction?
-function ProductionPanel:clearForUpdate(removal)
-	if removal ~= nil then
+---@param edit RowConstraintEdit?
+function ProductionPanel:clearForUpdate(removal, edit)
+	if removal ~= nil or edit ~= nil then
 		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
 		local menu, header, rows = self:getDataPanel()
 		menu.clear()
 		header.clear()
-		rows.clear()
+		local list = rows["list-data"]
+		local pane = edit and list and list[edit.side .. "=" .. edit.child_id]
+		if pane then
+			for _, cell in pairs(list.children) do
+				if cell ~= pane then cell.destroy() end
+			end
+			pane.clear()
+		else
+			rows.clear()
+		end
 		self:getNavigatorPanel().clear()
 	else
 		local _, content = self:getPanel()
@@ -290,7 +300,7 @@ end
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
 	local removal = ChildRemoval.decode(event)
-	self:clearForUpdate(removal)
+	self:clearForUpdate(removal, ConstraintView.edit(event))
 	self:onEventAutoCancel(event, removal)
 
 	local model, block, _ = self:getParameterObjects()
@@ -1051,7 +1061,7 @@ function ProductionPanel:updateDataBlock(model, block)
 			extra_cols = extra_cols + 2
 		end
 
-		local result_table = GuiElement.add(scroll_panel, GuiTable("list-data"):column(7 + extra_cols):style("helmod_table_result"))
+		local result_table = scroll_panel["list-data"] or GuiElement.add(scroll_panel, GuiTable("list-data"):column(7 + extra_cols):style("helmod_table_result"))
 		result_table.vertical_centering = false
 		self:addTableHeader(result_table, block)
 
@@ -1233,6 +1243,20 @@ function ProductionPanel:addTableHeader(itable, block)
 	end
 end
 
+---@param list LuaGuiElement
+---@param side "products"|"ingredients"
+---@param child_id string
+---@return LuaGuiElement
+local function addRowScroll(list, side, child_id)
+	local existing = list[side .. "=" .. child_id]
+	if existing == nil then return GuiElement.add(list, GuiScroll(side, child_id)) end
+	-- Move the retained pane to its place in the rebuilt row without resetting its scroll position.
+	local slot = list.add{type="empty-widget"}
+	list.swap_children(existing.get_index_in_parent(), slot.get_index_in_parent())
+	slot.destroy()
+	return existing
+end
+
 local maximal_height = 93*3/1.25 + 4 -- for scale 125%
 
 -------------------------------------------------------------------------------
@@ -1360,7 +1384,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			local skip_hidden_products = show_hidden_recipe_products == recipe.id
 
 			local display_product_cols = User.getPreferenceSetting("display_product_cols")
-			local cell_scroll = GuiElement.add(gui_table, GuiScroll("products", recipe.id))
+			local cell_scroll = addRowScroll(gui_table, "products", recipe.id)
 			cell_scroll.style.maximal_height = maximal_height
 			cell_scroll.horizontal_scroll_policy = "never"
 			local cell_products = GuiElement.add(cell_scroll, GuiTable("products", recipe.id):column(display_product_cols):style("helmod_table_list"))
@@ -1429,7 +1453,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			local skip_hidden_products = show_hidden_recipe_ingredients == recipe.id
 
 			local display_ingredient_cols = User.getPreferenceSetting("display_ingredient_cols")
-			local cell_scroll = GuiElement.add(gui_table, GuiScroll("ingredients", recipe.id))
+			local cell_scroll = addRowScroll(gui_table, "ingredients", recipe.id)
 			cell_scroll.style.maximal_height = maximal_height
 			cell_scroll.horizontal_scroll_policy = "never"
 			local cell_ingredients = GuiElement.add(cell_scroll, GuiTable("ingredients", recipe.id):column(display_ingredient_cols):style("helmod_table_list"))
@@ -1588,7 +1612,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 		if order == "products" then
 			---products
 			local display_product_cols = User.getPreferenceSetting("display_product_cols")
-			local cell_scroll = GuiElement.add(gui_table, GuiScroll("products", block.id))
+			local cell_scroll = addRowScroll(gui_table, "products", block.id)
 			cell_scroll.style.maximal_height = maximal_height
 			cell_scroll.horizontal_scroll_policy = "never"
 			local cell_products = GuiElement.add(cell_scroll, GuiTable("products", block.id):column(display_product_cols):style("helmod_table_list"))
@@ -1681,7 +1705,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 			local hidden_ingredients = {}
 
 			local display_ingredient_cols = User.getPreferenceSetting("display_ingredient_cols")
-			local cell_scroll = GuiElement.add(gui_table, GuiScroll("ingredients", block.id))
+			local cell_scroll = addRowScroll(gui_table, "ingredients", block.id)
 			cell_scroll.style.maximal_height = maximal_height
 			cell_scroll.horizontal_scroll_policy = "never"
 			local cell_ingredients = GuiElement.add(cell_scroll, GuiTable("ingredients", block.id):column(display_ingredient_cols))
@@ -2266,6 +2290,14 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 		Controller:send("on_gui_update", event)
 	end
 
+	local edit = ConstraintView.edit(event)
+	if edit ~= nil and block ~= nil then
+		ModelBuilder.updateChildContraint(block.children[edit.child_id], {type=edit.kind, item=event.item})
+		ModelCompute.update(model)
+		Controller:send("on_gui_update", event)
+		return
+	end
+
 	if event.action == "production-recipe-product-add" then
 		if event.control == false and event.shift == false then
 			if event.button == defines.mouse_button_type.right then
@@ -2289,20 +2321,6 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 					Controller:send("on_gui_open", event, selector_name)
 				end
 			end
-		elseif block ~= nil and event.control == true and event.item3 ~= "none" then
-			local contraint = { type = "master", item = event.item }
-			local child = block.children[event.item3]
-			ModelBuilder.updateChildContraint(child, contraint)
-			ModelCompute.update(model)
-			User.setParameter("scroll_element", child.id)
-			Controller:send("on_gui_update", event)
-		elseif block ~= nil and event.shift == true and event.item3 ~= "none" then
-			local contraint = { type = "exclude", item = event.item }
-			local child = block.children[event.item3]
-			ModelBuilder.updateChildContraint(child, contraint)
-			ModelCompute.update(model)
-			User.setParameter("scroll_element", child.id)
-			Controller:send("on_gui_update", event)
 		end
 	end
 
@@ -2327,20 +2345,6 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 					Controller:send("on_gui_open", event, selector_name)
 				end
 			end
-		elseif block ~= nil and event.control == true and event.item4 ~= "none" then
-			local contraint = { type = "master", item = event.item }
-			local child = block.children[event.item3]
-			ModelBuilder.updateChildContraint(child, contraint)
-			ModelCompute.update(model)
-			User.setParameter("scroll_element", child.id)
-			Controller:send("on_gui_update", event)
-		elseif block ~= nil and event.shift == true and event.item4 ~= "none" then
-			local contraint = { type = "exclude", item = event.item }
-			local child = block.children[event.item3]
-			ModelBuilder.updateChildContraint(child, contraint)
-			ModelCompute.update(model)
-			User.setParameter("scroll_element", child.id)
-			Controller:send("on_gui_update", event)
 		end
 	end
 

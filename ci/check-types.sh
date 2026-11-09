@@ -82,8 +82,8 @@ reject_panel_edit 's/action="block-remove",/action="block-remvoe",/' assign-type
 reject_panel_edit 's/, block_id=block_id$//' missing-fields block_id
 reject_panel_edit 's/model_id=model.id, block_id=block_id/block_id=block_id/' missing-fields model_id
 reject_panel_edit 's/removal.action == "block-remove-canceled" then/removal.action == "block-remvoe-canceled" then/' assign-type-mismatch ConfirmBlockRemoval
-reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit)/self:clearForUpdate(BlockRemoval.decode(event), nil)/' param-type-mismatch RequestChildRemoval
-reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit)/self:clearForUpdate(nil, BlockRemoval.decode(event))/' param-type-mismatch RowConstraintEdit
+reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit, BlockHeader.decode(event))/self:clearForUpdate(BlockRemoval.decode(event), nil)/' param-type-mismatch RequestChildRemoval
+reject_panel_edit 's/self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit, BlockHeader.decode(event))/self:clearForUpdate(nil, BlockRemoval.decode(event))/' param-type-mismatch RowConstraintEdit
 reject_panel_edit 's/addRowScroll(gui_table, ConstraintView.side.products, recipe.id)/addRowScroll(gui_table, "produtcs", recipe.id)/' param-type-mismatch produtcs
 reject_panel_edit 's/skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)/skip_hidden_products, "relativ", display_hidden_products, max_count)/' param-type-mismatch relativ
 reject_panel_edit 's/action=TreeAction.name.blockToChild, model_id=model.id, block_id=parent.id, child_id=block.id/action=TreeAction.name.blockToChild, model_id=model.id, block_id=parent.id/' missing-fields child_id
@@ -91,4 +91,7 @@ reject_panel_edit 's/action=BlockMode.action.icon, model_id=model.id/action="row
 reject_panel_edit 's/action=BlockMode.action.icon, model_id=model.id, block_id=block.id/action=BlockMode.action.icon, model_id=model.id/' missing-fields block_id
 reject_panel_edit 's/click.action == "block-consumer" then/click.action == "block-by-product" then/' assign-type-mismatch ToggleInput
 reject_panel_edit 's/ProductionBlockMode.toggle(block, option)/ProductionBlockMode.toggle(block, "by_factory")/' param-type-mismatch by_factory
+reject_panel_edit 's/action=BlockHeader.action.clear, model_id=model.id/action="block-reset-inpt", model_id=model.id/' assign-type-mismatch block-reset-inpt
+reject_panel_edit 's/action=BlockHeader.action.clear, model_id=model.id, block_id=block.id/action=BlockHeader.action.clear, model_id=model.id/' missing-fields block_id
+reject_panel_edit 's/edit.action == "block-all-product-visible" then/edit.action == "block-all-ingredient-visible" then/' assign-type-mismatch ClearBlockInputs
 echo 'Verified removal contracts, display modes, constraint pane sides and viewport refresh scope.'

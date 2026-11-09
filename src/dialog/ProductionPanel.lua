@@ -1,3 +1,4 @@
+local BlockHeader = require "gui.controls.BlockHeader"
 local ProductionBlockMode = require "model.ProductionBlockMode"
 local BlockMode = require "gui.controls.BlockMode"
 local TreeAction = require "gui.controls.TreeAction"
@@ -279,12 +280,13 @@ end
 ---@param edit RowConstraintEdit?
 ---@param treeEdit TreeEdit?
 ---@param rowModeEdit boolean?
-function ProductionPanel:clearForUpdate(removal, edit, treeEdit, rowModeEdit)
-	if removal ~= nil or edit ~= nil or treeEdit ~= nil or rowModeEdit then
+---@param headerEdit BlockHeaderEdit?
+function ProductionPanel:clearForUpdate(removal, edit, treeEdit, rowModeEdit, headerEdit)
+	if removal ~= nil or edit ~= nil or treeEdit ~= nil or rowModeEdit or headerEdit ~= nil then
 		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
 		local menu, header, rows = self:getDataPanel()
 		menu.clear()
-		header.clear()
+		if headerEdit == nil then header.clear() end
 		local list = rows[resultTableName]
 		local pane = edit and list and list[GuiScroll(edit.side, edit.child_id):getName()]
 		if pane then
@@ -313,7 +315,7 @@ function ProductionPanel:onUpdate(event)
 		treeEdit = nil
 	end
 	local rowModeEdit = event.action == BlockMode.action.icon and event.button == defines.mouse_button_type.left and event.control ~= event.shift
-	self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit)
+	self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit, rowModeEdit, BlockHeader.decode(event))
 	self:onEventAutoCancel(event, removal)
 
 	self:updateIndexPanel(model)
@@ -724,14 +726,15 @@ function ProductionPanel:updateInputBlock(model, block)
 	end
 
 	input_tool.clear()
-	local all_visible = User.getParameter("block_all_ingredient_visible")
+	local all_visible = User.getParameter(BlockHeader.setting.ingredients)
+	local filter = GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.ingredients, model_id=model.id, block_id=block.id})
 	if all_visible == true then
-		GuiElement.add(input_tool, GuiButton(self.classname, "block-all-ingredient-visible", model.id, block.id):sprite("menu",defines.sprites.filter.white, defines.sprites.filter.black):style("helmod_button_menu_sm_selected"):tooltip({ "helmod_button.all-product-visible" }))
+		GuiElement.add(input_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.white, defines.sprites.filter.black):style(defines.styles.button.menu_sm_selected):tooltip({ BlockHeader.tooltip.filter }))
 	else
-		GuiElement.add(input_tool, GuiButton(self.classname, "block-all-ingredient-visible", model.id, block.id):sprite("menu", defines.sprites.filter.black, defines.sprites.filter.black):style("helmod_button_menu_sm"):tooltip({"helmod_button.all-product-visible" }))
+		GuiElement.add(input_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.black, defines.sprites.filter.black):style(defines.styles.button.menu_sm):tooltip({ BlockHeader.tooltip.filter }))
 	end
 	if block_by_product == false then
-		GuiElement.add(input_tool, GuiButton(self.classname, "block-reset-input", model.id, block.id):sprite("menu", defines.sprites.eraser.black, defines.sprites.eraser.black):style("helmod_button_menu_sm"):tooltip({"helmod_button.clear" }))
+		GuiElement.add(input_tool, GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.clear, model_id=model.id, block_id=block.id}):sprite(defines.sprite_type.menu, defines.sprites.eraser.black, defines.sprites.eraser.black):style(defines.styles.button.menu_sm):tooltip({ BlockHeader.tooltip.clear }))
 	end
 
 	---generate a constant combinator from the input list (item/fluid request lists)
@@ -876,14 +879,15 @@ function ProductionPanel:updateOutputBlock(model, block)
 	end
 
 	output_tool.clear()
-	local all_visible = User.getParameter("block_all_product_visible")
+	local all_visible = User.getParameter(BlockHeader.setting.products)
+	local filter = GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.products, model_id=model.id, block_id=block.id})
 	if all_visible == true then
-		GuiElement.add(output_tool, GuiButton(self.classname, "block-all-product-visible", model.id, block.id):sprite("menu", defines.sprites.filter.white, defines.sprites.filter.black):style("helmod_button_menu_sm_selected"):tooltip({ "helmod_button.all-product-visible" }))
+		GuiElement.add(output_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.white, defines.sprites.filter.black):style(defines.styles.button.menu_sm_selected):tooltip({ BlockHeader.tooltip.filter }))
 	else
-		GuiElement.add(output_tool, GuiButton(self.classname, "block-all-product-visible", model.id, block.id):sprite("menu", defines.sprites.filter.black, defines.sprites.filter.black):style("helmod_button_menu_sm"):tooltip({"helmod_button.all-product-visible" }))
+		GuiElement.add(output_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.black, defines.sprites.filter.black):style(defines.styles.button.menu_sm):tooltip({ BlockHeader.tooltip.filter }))
 	end
 	if block_by_product ~= false then
-		GuiElement.add(output_tool, GuiButton(self.classname, "block-reset-input", model.id, block.id):sprite("menu", defines.sprites.eraser.black, defines.sprites.eraser.black):style("helmod_button_menu_sm"):tooltip({"helmod_button.clear" }))
+		GuiElement.add(output_tool, GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.clear, model_id=model.id, block_id=block.id}):sprite(defines.sprite_type.menu, defines.sprites.eraser.black, defines.sprites.eraser.black):style(defines.styles.button.menu_sm):tooltip({ BlockHeader.tooltip.clear }))
 	end
 
 	---generate a constant combinator from the input list (item/fluid request lists)
@@ -1835,6 +1839,13 @@ function ProductionPanel:onEvent(event)
 	if block == nil then
 		block = model.blocks[event.item2]
 	end
+	local header = BlockHeader.decode(event)
+	if header ~= nil then
+		if block ~= nil and header.model_id == model.id and header.block_id == block.id then
+			self:onHeaderEdit(header, event, model)
+		end
+		return
+	end
 	local mode = BlockMode.decode(event)
 	if mode ~= nil and block ~= nil then
 		self:onBlockModeClick(event, mode, model, block)
@@ -1876,6 +1887,28 @@ function ProductionPanel:onEvent(event)
 	if User.isAdmin() then
 		self:onEventAccessAdmin(event, model, block)
 	end
+end
+
+---@param edit BlockHeaderEdit
+---@param event LuaEvent
+---@param model ModelData
+function ProductionPanel:onHeaderEdit(edit, event, model)
+	local setting
+	if edit.action == "block-all-ingredient-visible" then
+		setting = BlockHeader.setting.ingredients
+	elseif edit.action == "block-all-product-visible" then
+		setting = BlockHeader.setting.products
+	else
+		---@type ClearBlockInputs
+		local clear = edit
+		if not User.isWriter(model) then return end
+		ModelCompute.clearBlockInputs(model.blocks[clear.block_id] or model.block_root)
+		ModelCompute.update(model)
+		Controller:send(defines.mod.events.on_gui_update, event)
+		return
+	end
+	User.setParameter(setting, not User.getParameter(setting))
+	Controller:send(defines.mod.events.on_gui_update, event, self.classname)
 end
 
 ---@param event LuaEvent
@@ -1978,12 +2011,6 @@ function ProductionPanel:onEventAccessAll(event, model, block)
 		Controller:send("on_gui_update", event)
 	end
 
-	if event.action == "block-all-ingredient-visible" then
-		local all_visible = User.getParameter("block_all_ingredient_visible")
-		User.setParameter("block_all_ingredient_visible", not (all_visible))
-		Controller:send("on_gui_update", event, self.classname)
-	end
-
 	if event.action == "block-combinator-solids" then
 		local items = ProductionPanel.get_elements(block, event.item3, "item")
 		if #items > 0 then
@@ -2025,12 +2052,6 @@ function ProductionPanel:onEventAccessAll(event, model, block)
 			User.setParameter("combinator_selection", {})
 			User.setParameter("combinator_select_mode", event.item3)
 		end
-		Controller:send("on_gui_update", event, self.classname)
-	end
-
-	if event.action == "block-all-product-visible" then
-		local all_visible = User.getParameter("block_all_product_visible")
-		User.setParameter("block_all_product_visible", not (all_visible))
 		Controller:send("on_gui_update", event, self.classname)
 	end
 
@@ -2272,13 +2293,6 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 			ModelCompute.update(model)
 			Controller:send("on_gui_update", event)
 		end
-	end
-
-	if event.action == "block-reset-input" then
-		local chid_block = model.blocks[event.item2] or model.block_root
-        ModelCompute.clearBlockInputs(chid_block)
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
 	end
 
 	local treeEdit = TreeAction.decode(event)

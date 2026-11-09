@@ -1,3 +1,4 @@
+local TreeAction = require "gui.controls.TreeAction"
 local DisplayMode = require "gui.controls.DisplayMode"
 local BlockRemoval = require "gui.controls.BlockRemoval"
 local ChildRemoval = require "gui.controls.ChildRemoval"
@@ -274,8 +275,9 @@ end
 
 ---@param removal ChildRemovalAction?
 ---@param edit RowConstraintEdit?
-function ProductionPanel:clearForUpdate(removal, edit)
-	if removal ~= nil or edit ~= nil then
+---@param treeEdit TreeEdit?
+function ProductionPanel:clearForUpdate(removal, edit, treeEdit)
+	if removal ~= nil or edit ~= nil or treeEdit ~= nil then
 		-- Keep the scroll panes alive while rebuilding their contents so Factorio retains the viewport.
 		local menu, header, rows = self:getDataPanel()
 		menu.clear()
@@ -302,10 +304,14 @@ end
 ---@param event LuaEvent
 function ProductionPanel:onUpdate(event)
 	local removal = ChildRemoval.decode(event)
-	self:clearForUpdate(removal, ConstraintView.edit(event))
+	local model, block, _ = self:getParameterObjects()
+	local treeEdit = TreeAction.decode(event)
+	if treeEdit and treeEdit.action ~= TreeAction.name.toggleLink and model.blocks[treeEdit.block_id] == nil and model.block_root.id ~= treeEdit.block_id then
+		treeEdit = nil
+	end
+	self:clearForUpdate(removal, ConstraintView.edit(event), treeEdit)
 	self:onEventAutoCancel(event, removal)
 
-	local model, block, _ = self:getParameterObjects()
 	self:updateIndexPanel(model)
 
 	self:updateSubMenuPanel(model, block)
@@ -444,10 +450,11 @@ function ProductionPanel:updateSubMenuLeftPanel(model, block)
 	if block ~= nil then
 		---unlinked button
 		local unlinked = Model.isUnlinkedBlock(block)
+		local toggle = GuiButton(self.classname, TreeAction.linkButtonArgs{action=TreeAction.name.toggleLink, model_id=model.id, block_id=block.id})
 		if unlinked or block.index == 0 then
-			GuiElement.add(group_tool, GuiButton(self.classname, "block-unlink", model.id, block.id):sprite("menu", defines.sprites.unplugged.black, defines.sprites.unplugged.black):style("helmod_button_menu"):tooltip({ "tooltip.unlink-element" }))
+			GuiElement.add(group_tool, toggle:sprite("menu", defines.sprites.unplugged.black, defines.sprites.unplugged.black):style("helmod_button_menu"):tooltip({ "tooltip.unlink-element" }))
 		else
-			GuiElement.add(group_tool, GuiButton(self.classname, "block-unlink", model.id, block.id):sprite("menu", defines.sprites.plugged.white, defines.sprites.plugged.black):style("helmod_button_menu_selected"):tooltip({ "tooltip.unlink-element" }))
+			GuiElement.add(group_tool, toggle:sprite("menu", defines.sprites.plugged.white, defines.sprites.plugged.black):style("helmod_button_menu_selected"):tooltip({ "tooltip.unlink-element" }))
 		end
 
 		GuiElement.add(group_tool, GuiButton("HMPinPanel", "OPEN", model.id, block_id):sprite("menu", defines.sprites.push_pin.black, defines.sprites.push_pin.black):style("helmod_button_menu"):tooltip({"helmod_result-panel.tab-button-pin" }))
@@ -1282,6 +1289,18 @@ function ProductionPanel:addTableRowCommon(gui_table, element)
 	end
 end
 
+---@param cell LuaGuiElement
+---@param classname string
+---@param edit MoveTreeRow
+local function addTreeArrow(cell, classname, edit)
+	local sprite, tooltip = defines.sprites.arrow_right.black, "tooltip.up-element-in-tree"
+	if TreeAction.toParent(edit.action) then
+		sprite, tooltip = defines.sprites.arrow_left.black, "tooltip.down-element-in-tree"
+	end
+	local button = GuiButton(classname, TreeAction.moveButtonArgs(edit))
+	GuiElement.add(cell, button:sprite("menu", sprite, sprite):style("helmod_button_menu_sm"):tooltip({tooltip, User.getModSetting("row_move_step")}))
+end
+
 -------------------------------------------------------------------------------
 ---Add table row
 ---@param gui_table LuaGuiElement
@@ -1303,14 +1322,18 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 		uri_button_bottom = "block-child-up"
 	end
 	local uri_button_copy = "recipe-copy"
-	local tree_down = GuiElement.add(cell_action, GuiButton(self.classname, "tree-recipe-down", model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_left.black, defines.sprites.arrow_left.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element-in-tree", User.getModSetting("row_move_step") }))
+	addTreeArrow(cell_action, self.classname, {
+	    action=TreeAction.name.recipeToParent, model_id=model.id, block_id=block.id, child_id=recipe.id
+	})
 	GuiElement.add(cell_action, GuiButton(self.classname, uri_button_top, model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_top.black, defines.sprites.arrow_top.black):style("helmod_button_menu_sm"):tooltip({"tooltip.up-element", User.getModSetting("row_move_step") }))
 	local remove = GuiButton(self.classname, ChildRemoval.buttonArgs{
 	    action="block-child-remove", model_id=model.id, block_id=block.id, child_id=recipe.id
 	})
 	GuiElement.add(cell_action, remove:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_red"):tooltip({"tooltip.remove-element" }))
 
-	local tree_up = GuiElement.add(cell_action, GuiButton(self.classname, "tree-recipe-up", model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_right.black, defines.sprites.arrow_right.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.up-element-in-tree", User.getModSetting("row_move_step") }))
+	addTreeArrow(cell_action, self.classname, {
+	    action=TreeAction.name.recipeToChild, model_id=model.id, block_id=block.id, child_id=recipe.id
+	})
 	GuiElement.add(cell_action, GuiButton(self.classname, uri_button_bottom, model.id, block.id, recipe.id):sprite("menu", defines.sprites.arrow_bottom.black, defines.sprites.arrow_bottom.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element", User.getModSetting("row_move_step") }))
 	local tooltip_copy = {"", {"tooltip.copy-element"}}
 	if Player.hasFeatureQuality() and recipe_prototype.is_support_quality then
@@ -1554,19 +1577,25 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
             uri_button_top = "block-child-down"
             uri_button_bottom = "block-child-up"
         end
-        GuiElement.add(cell_action, GuiButton(self.classname, "tree-block-down", model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_left.black, defines.sprites.arrow_left.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element-in-tree", User.getModSetting("row_move_step") }))
+        addTreeArrow(cell_action, self.classname, {
+            action=TreeAction.name.blockToParent, model_id=model.id, block_id=parent.id, child_id=block.id
+        })
         GuiElement.add(cell_action, GuiButton(self.classname, uri_button_top, model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_top.black, defines.sprites.arrow_top.black):style("helmod_button_menu_sm"):tooltip({"tooltip.up-element", User.getModSetting("row_move_step") }))
         local remove = GuiButton(self.classname, ChildRemoval.buttonArgs{
             action="block-child-remove", model_id=model.id, block_id=parent.id, child_id=block.id
         })
         GuiElement.add(cell_action, remove:sprite("menu", defines.sprites.close.black, defines.sprites.close.black):style("helmod_button_menu_sm_red"):tooltip({ "tooltip.remove-element" }))
 
-        local tree_up = GuiElement.add(cell_action, GuiButton(self.classname, "tree-block-up", model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_right.black, defines.sprites.arrow_right.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element-in-tree", User.getModSetting("row_move_step") }))
+        addTreeArrow(cell_action, self.classname, {
+            action=TreeAction.name.blockToChild, model_id=model.id, block_id=parent.id, child_id=block.id
+
+        })
         GuiElement.add(cell_action, GuiButton(self.classname, uri_button_bottom, model.id, parent.id, block.id):sprite("menu", defines.sprites.arrow_bottom.black, defines.sprites.arrow_bottom.black):style("helmod_button_menu_sm"):tooltip({ "tooltip.down-element", User.getModSetting("row_move_step") }))
+        local toggle = GuiButton(self.classname, TreeAction.linkButtonArgs{action=TreeAction.name.toggleLink, model_id=model.id, block_id=block.id})
         if unlinked then
-            GuiElement.add(cell_action, GuiButton(self.classname, "block-unlink", model.id, block.id):sprite("menu", defines.sprites.unplugged.black, defines.sprites.unplugged.black):style("helmod_button_menu_sm"):tooltip({"tooltip.unlink-element" }))
+            GuiElement.add(cell_action, toggle:sprite("menu", defines.sprites.unplugged.black, defines.sprites.unplugged.black):style("helmod_button_menu_sm"):tooltip({"tooltip.unlink-element" }))
         else
-            GuiElement.add(cell_action, GuiButton(self.classname, "block-unlink", model.id, block.id):sprite("menu", defines.sprites.plugged.white, defines.sprites.plugged.black):style("helmod_button_menu_sm_selected"):tooltip({ "tooltip.unlink-element" }))
+            GuiElement.add(cell_action, toggle:sprite("menu", defines.sprites.plugged.white, defines.sprites.plugged.black):style("helmod_button_menu_sm_selected"):tooltip({ "tooltip.unlink-element" }))
         end
     end
     ---common cols
@@ -2204,11 +2233,17 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 		Controller:send("on_gui_update", event)
 	end
 
-	if event.action == "block-unlink" then
-		local chid_block = model.blocks[event.item2]
-        ModelBuilder.blockUnlink(chid_block)
+	local treeEdit = TreeAction.decode(event)
+	if treeEdit ~= nil then
+		if treeEdit.action == TreeAction.name.toggleLink then
+			ModelBuilder.blockUnlink(model.blocks[treeEdit.block_id])
+		elseif TreeAction.toParent(treeEdit.action) then
+			ModelBuilder.updateTreeChildDown(model, block, block.children[treeEdit.child_id], event.control)
+		else
+			ModelBuilder.updateTreeChildUp(model, block, block.children[treeEdit.child_id], event.control)
+		end
 		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
+		Controller:send(defines.mod.events.on_gui_update, event)
 	end
 
 	if event.action == "past-block" then
@@ -2233,34 +2268,6 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 			ModelBuilder.updateProductionBlockOption(block, "by_factory", false)
 			ModelBuilder.updateProductionBlockOption(block, "solver", false)
 		end
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "tree-block-down" then
-		local chid_block = model.blocks[event.item3]
-		ModelBuilder.updateTreeBlockDown(model, block, chid_block, event.control)
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "tree-block-up" then
-		local chid_block = block.children[event.item3]
-		ModelBuilder.updateTreeBlockUp(model, block, chid_block, event.control)
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "tree-recipe-down" then
-		local chid_recipe = block.children[event.item3]
-		ModelBuilder.updateTreeChildDown(model, block, chid_recipe, event.control)
-		ModelCompute.update(model)
-		Controller:send("on_gui_update", event)
-	end
-
-	if event.action == "tree-recipe-up" then
-		local chid_recipe = block.children[event.item3]
-		ModelBuilder.updateTreeChildUp(model, block, chid_recipe, event.control)
 		ModelCompute.update(model)
 		Controller:send("on_gui_update", event)
 	end

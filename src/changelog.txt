@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.4.0
+Date: 2026-11-08
+  Bugfixes:
+    - You can undo a main or excluded item selection even when the block stops running. Input and output tooltips now show the available shortcuts.
+    - Removing a row from a long production table keeps the rows above it in place.
+    - Linked intermediate products can now meet demand across multiple levels of nested production blocks.
+  Features:
+    - Linked power blocks now scale their generators and fuel to the electricity used by your factories and beacons.
+    - Electricity is hidden from ingredient lists by default. Enable “Show electricity as an input” in Preferences to see it.
+---------------------------------------------------------------------------------------------------
 Version: 2.3.11
 Date: 2026-11-08
   Bugfixes:

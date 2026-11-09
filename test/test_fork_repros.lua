@@ -28,6 +28,33 @@ local function openBlock(model, block)
 end
 
 ---@param player LuaPlayer
+local function checkExcludedOutput(player)
+    local model = Model.newModel()
+    local root = model.block_root
+    ModelBuilder.addRecipeIntoProductionBlock(model, root, "inserter-recycling", "recipe")
+    local child = Model.newBlock(model, {name="inserter", type="recipe"})
+    child.parent_id, child.index, child.by_product = root.id, 1, false
+    root.children[child.id], model.blocks[child.id] = child, child
+    ModelBuilder.addRecipeIntoProductionBlock(model, child, "inserter", "recipe")
+    ModelCompute.update(model)
+    local button = "production-recipe-product-add=" .. model.id .. "=" .. root.id .. "=" .. child.id .. "=inserter"
+    local function shiftClick()
+        local el = assert(find(player.gui.screen, button), "missing inserter output control")
+        EventController.onGuiClickButton{player_index=player.index, element=el, button=defines.mouse_button_type.left, shift=true, control=false}
+    end
+    for _, threshold in ipairs({User.getPreferenceSetting("display_hidden_products"), 0}) do
+        User.setPreference("display_hidden_products", nil, threshold)
+        openBlock(model, root)
+        assert(child.products.inserter.amount == 1)
+        shiftClick()
+        assert(child.contraints.inserter.type == "exclude" and child.products.inserter.amount == 0)
+        openBlock(model, root)
+        shiftClick()
+        assert(child.contraints.inserter == nil and child.products.inserter.amount == 1)
+    end
+end
+
+---@param player LuaPlayer
 local function checkHeaderRemoval(player)
     local model = Model.newModel()
     local root = model.block_root
@@ -119,6 +146,8 @@ return function(case)
         assert(model and model.block_root, "expected a saved sheet")
         if case == "consumer-controls" then
             checkConsumerControls(player)
+        elseif case == "excluded-output" then
+            checkExcludedOutput(player)
         elseif case == "electricity-inputs" then
             local sheet = Model.newModel()
             local block, recipe = ModelBuilder.addRecipeIntoProductionBlock(sheet, sheet.block_root, "iron-gear-wheel", "recipe")

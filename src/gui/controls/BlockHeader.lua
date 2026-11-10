@@ -8,7 +8,7 @@ BlockHeader.action = {
 }
 
 BlockHeader.setting = {ingredients = "block_all_ingredient_visible", products = "block_all_product_visible"}
-BlockHeader.tooltip = {filter = "helmod_button.all-product-visible", clear = "helmod_button.clear"}
+BlockHeader.tooltip = {filter = "helmod_button.all-product-visible", ingredients = "helmod_button.all-ingredient-visible", clear = "helmod_button.clear"}
 
 ---@class BlockHeaderTarget
 ---@field model_id string

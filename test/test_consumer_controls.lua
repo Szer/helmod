@@ -1,3 +1,5 @@
+local BlockHeader = require "gui.controls.BlockHeader"
+
 return function(player)
     local model = Model.newModel()
     local root = model.block_root
@@ -14,6 +16,8 @@ return function(player)
     ModelCompute.update(model)
     local before = child.ingredients["steel-plate"].amount
     assert(before > 0, "consumer must start active")
+    User.setParameter(BlockHeader.setting.products, false)
+    User.setParameter(BlockHeader.setting.ingredients, false)
     Controller:getView("HMProductionPanel"):close()
     User.setParameterObjects("HMProductionPanel", model.id, root.id)
     Controller:send("on_gui_open",{name="OPEN",item1=model.id,item2=root.id},"HMProductionPanel")
@@ -47,6 +51,9 @@ return function(player)
     end
     clickSteel(false)
     assert(child.ingredients["steel-plate"].amount == 0, "steel should stop consumption")
+    assert(not button(player.gui.screen,"ingredient","steel-plate"), "hide zero steel until all ingredients are requested")
+    User.setParameter(BlockHeader.setting.ingredients, true)
+    Controller:send("on_gui_update", {}, "HMProductionPanel")
     assert(button(player.gui.screen,"ingredient","concrete"), "missing concrete input control")
     assert(button(player.gui.screen,"ingredient","processing-unit"), "missing processing-unit input control")
     clickSteel(false)
@@ -55,6 +62,8 @@ return function(player)
     assert(child.contraints["steel-plate"].type == "exclude")
     clickSteel(true)
     assert(child.contraints["steel-plate"] == nil)
+    User.setParameter(BlockHeader.setting.products, true)
+    Controller:send("on_gui_update", {}, "HMProductionPanel")
     for _, shift in ipairs({false, true}) do
         for i = 1, 2 do
             clickConstraint(assert(button(player.gui.screen, "product", "holmium-ore", scrap.id)), shift)

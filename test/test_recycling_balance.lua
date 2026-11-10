@@ -78,7 +78,7 @@ local function checkCircuitBalances(block)
     for key, amount in pairs(feed) do near(block.ingredients[key].amount, amount, key) end
 end
 
-local function checkNestedFoundries()
+local function buildNestedFoundries()
     local model = Model.newModel()
     model.time = 1
     local root = model.block_root
@@ -97,6 +97,13 @@ local function checkNestedFoundries()
     loop.products_linked = {[carbide]=true}
     loop.matrix_supplies = {["tungsten-carbide"]=true, ["electronic-circuit"]=true, ["steel-plate"]=true, ["refined-concrete"]=true}
     ModelCompute.updateNow(model)
+    return model, loop
+end
+
+local function checkNestedFoundries()
+    local model, loop = buildNestedFoundries()
+    local root = model.block_root
+    local carbide = "tungsten-carbide#legendary"
     local standalone = table.deepcopy(model)
     standalone.block_root = standalone.blocks[loop.id]
     standalone.block_root.products[carbide].input = 1
@@ -190,4 +197,4 @@ local function check()
     User.setParameter("solver_selected", previous)
 end
 
-return {check=check, buildLoop=buildLoop, checkBalances=checkBalances, buildCircuitLoop=buildCircuitLoop, checkCircuitBalances=checkCircuitBalances}
+return {check=check, buildNestedFoundries=buildNestedFoundries, buildLoop=buildLoop, checkBalances=checkBalances, buildCircuitLoop=buildCircuitLoop, checkCircuitBalances=checkCircuitBalances}

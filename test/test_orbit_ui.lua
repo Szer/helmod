@@ -1,3 +1,4 @@
+local FusionControl = require "gui.controls.FusionControl"
 local BlockHeader = require "gui.controls.BlockHeader"
 local ConstraintView = require "gui.controls.ConstraintView"
 local MatrixSupply = require "gui.controls.MatrixSupply"
@@ -50,6 +51,40 @@ local function checkSiloPartPicker(player)
  assert(dropdown.tags.recipes[dropdown.selected_index] == recipe.factory.rocket_part_recipe, "retain the selection on reopen")
  Controller:getView("HMRecipeEdition"):close()
  game.tick_paused = false
+end
+
+local function checkFusionControls(player)
+ local model = Model.newModel()
+ local block, reactor = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, "fusion-reactor", "energy")
+ local _, generator = ModelBuilder.addRecipeIntoProductionBlock(model, block, "fusion-generator", "energy")
+ ModelCompute.updateNow(model)
+ local function open(row)
+  Controller:send("on_gui_open", {name="OPEN",item1=model.id,item2=block.id,item3=row.id}, "HMRecipeEdition")
+ end
+ local function field(action)
+  return assert(find_element(player.gui.screen.HMRecipeEdition, function(el) return el.name:find(action, 1, true) end))
+ end
+ local function enter(action, text)
+  local input = field(action)
+  input.text = text
+  EventController.onGuiClick{player_index=player.index, element=input}
+  assert(not Player.getLastError(), "fusion editor update")
+ end
+ open(reactor)
+ assert(field(FusionControl.neighbours).text == "0")
+ enter(FusionControl.neighbours, "1")
+ assert(reactor.factory.fusion_neighbours == 1)
+ Controller:getView("HMRecipeEdition"):close()
+ open(reactor)
+ assert(field(FusionControl.neighbours).text == "1")
+ Controller:getView("HMRecipeEdition"):close()
+ open(generator)
+ enter(FusionControl.inlet, "2000000")
+ assert(generator.factory.fusion_inlet_temperature == 2e6)
+ enter(FusionControl.inlet, "")
+ assert(generator.factory.fusion_inlet_temperature == nil)
+ Controller:getView("HMRecipeEdition"):close()
+ game.tick_paused=false
 end
 
 local function checkReactorSettings(player)
@@ -281,6 +316,7 @@ script.on_nth_tick(60, function(event)
   assert(marked(panel, "iron-plate", "normal") and marked(panel, "copper-cable", "normal"))
   recycling.checkCircuitBalances(block)
   game.take_screenshot{player=player,resolution={2200,1100},show_gui=true,path="circuit-external-supplies.png"}
+  checkFusionControls(player)
   checkReactorSettings(player)
   checkBoilerInlet(player)
   checkSiloPartPicker(player)

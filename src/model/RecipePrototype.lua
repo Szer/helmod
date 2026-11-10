@@ -608,15 +608,12 @@ function RecipePrototype:getEnergyProducts(factory)
             local amount = prototype:getEnergyProduction()
             local product = { name = "steam-heat", type = "energy", amount = amount }
             table.insert(products, product)
-        elseif prototype_type == "fusion-reactor" then
-            local fluid_name = "fusion-plasma"
-            local fluid_production = prototype:getFluidProductionFilter()
-            if fluid_production ~= nil and fluid_production.name ~= nil then
-                fluid_name = fluid_production.name
-            end
-            if fluid_name ~= nil then
-                local amount = prototype:getFluidProductionFusionReactor()
-                local product = { name = fluid_name, type = "fluid", amount = amount }
+        elseif prototype_type == EntityType.fusionReactor then
+            local fluid = prototype:getFluidProductionFilter()
+            if fluid then
+                local temperature = prototype:getFusionPlasmaTemperature(fluid)
+                local product = {name=fluid.name, type="fluid", amount=prototype:getFluidProductionFusionReactor()}
+                product.fusion_temperature = temperature
                 table.insert(products, product)
             end
         elseif prototype_type == EntityType.fusionGenerator then
@@ -687,17 +684,9 @@ function RecipePrototype:getRawIngredients(factory)
                 table.insert(ingredients, ingredient)
             end
 
-            if prototype_type == "fusion-reactor" then
-                local fluid_name = "fluoroketone-cold"
-                local fluid_production = prototype:getFluidConsumptionFilter()
-                if fluid_production ~= nil and fluid_production.name ~= nil then
-                    fluid_name = fluid_production.name
-                end
-                if fluid_name ~= nil then
-                    local amount = prototype:getFluidProductionFusionReactor()
-                    local product = { name = fluid_name, type = "fluid", amount = amount }
-                    table.insert(ingredients, product)
-                end
+            if prototype_type == EntityType.fusionReactor then
+                local inlet = prototype:getFluidConsumptionFilter()
+                if inlet then table.insert(ingredients, {name=inlet.name, type="fluid", amount=prototype:getFluidProductionFusionReactor()}) end
                 local amount = prototype:getEnergyConsumption()
                 if amount > 0 then
                     local ingredient = { name = "energy", type = "energy", amount = amount }

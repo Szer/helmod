@@ -1343,7 +1343,7 @@ function Player.getEnergyMachines()
     local machines = {}
 
     local filters = {}
-    for _, type in pairs({ "fusion-reactor", EntityType.fusionGenerator, "generator", "solar-panel", "accumulator", "reactor", "burner-generator", "electric-energy-interface" }) do
+    for _, type in pairs({ EntityType.fusionReactor, EntityType.fusionGenerator, "generator", "solar-panel", "accumulator", "reactor", "burner-generator", "electric-energy-interface" }) do
         table.insert(filters, { filter = "type", mode = "or", invert = false, type = type })
         table.insert(filters, { filter = "hidden", mode = "and", invert = true })
         table.insert(filters, { filter = "type", mode = "or", invert = false, type = type })

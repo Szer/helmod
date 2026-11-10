@@ -2,6 +2,7 @@ local EntityType = require "model.EntityType"
 local SiloPartControl = require "gui.controls.SiloPartControl"
 local SiloRecipes = require "model.SiloRecipes"
 local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
+local FusionControl = require "gui.controls.FusionControl"
 local BoilerInletControl = require "gui.controls.BoilerInletControl"
 local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
 local RecipePercentage = require "gui.controls.RecipePercentage"
@@ -292,6 +293,32 @@ function RecipeEdition:onEvent(event)
             recipe.factory.rocket_part_recipe = name
             ModelBuilder.applyFactoryModulePriority(recipe)
             ModelBuilder.applyBeaconModulePriority(recipe)
+            if ModelCompute.update(model, block) then return end
+            self:update(event)
+            Controller:send("on_gui_recipe_update", event)
+            return
+        end
+
+        local fusion = FusionControl.decode(event)
+        if fusion and fusion.model_id == model.id and fusion.block_id == block.id and fusion.recipe_id == recipe.id then
+            local machine = EntityPrototype(recipe.factory)
+            if recipe.type ~= defines.mod.recipes.energy.name then return end
+            if fusion.action == FusionControl.neighbours and machine:getType() == EntityType.fusionReactor then
+                local valid, value = FusionControl.parse(event.element.text, 0, math.huge)
+                if not valid then return end
+                recipe.factory.fusion_neighbours = value
+            elseif fusion.action == FusionControl.inlet and machine:getType() == EntityType.fusionGenerator and not machine:native().burns_fluid then
+                local minimum, maximum = machine:getFluidInletRange(machine:getFluidConsumptionFilter())
+                local valid, value = FusionControl.parse(event.element.text, minimum, maximum)
+                if not valid then
+                    game.get_player(event.player_index).print({FusionControl.caption.invalidInlet, minimum, maximum})
+                    return
+                end
+                recipe.factory.fusion_inlet_temperature = value
+            else
+                return
+            end
+            event.element.tags = {applied_text=event.element.text}
             if ModelCompute.update(model, block) then return end
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
@@ -873,7 +900,7 @@ function RecipeEdition:updateFactoryInfo(event)
         end
         if recipe.type == defines.mod.recipes.boiler.name and factory_prototype:getType() == "boiler" then
             local tooltip = {"tooltip.boiler-inlet"}
-            GuiElement.add(input_panel, GuiLabel("label-boiler-inlet"):caption({"helmod_label.boiler-inlet"}):tooltip(tooltip))
+            GuiElement.add(input_panel, GuiLabel("label-boiler-inlet"):caption({BoilerInletControl.caption.inlet}):tooltip(tooltip))
             local cell = GuiElement.add(input_panel, GuiFlowH("boiler-inlet"))
             local text = factory.boiler_inlet_temperature and tostring(factory.boiler_inlet_temperature) or ""
             local field = GuiElement.add(cell, GuiTextField(self.classname, BoilerInletControl.buttonArgs{
@@ -884,12 +911,40 @@ function RecipeEdition:updateFactoryInfo(event)
             if factory.boiler_inlet_temperature == nil then
                 local fluid = factory_prototype:getBoilerInletFluid()
                 local automatic = factory.boiler_inlet_auto or fluid.default_temperature
-                local caption = {"helmod_label.boiler-inlet-auto", Format.formatNumber(automatic)}
+                local caption = {BoilerInletControl.caption.automatic, Format.formatNumber(automatic)}
                 if factory.boiler_inlet_ambiguous then
                     caption[1] = "helmod_label.boiler-inlet-ambiguous"
                     tooltip = {"tooltip.boiler-inlet-ambiguous"}
                 end
                 GuiElement.add(cell, GuiLabel("boiler-inlet-status"):caption(caption):tooltip(tooltip))
+            end
+        end
+        if factory_prototype:getType() == EntityType.fusionReactor and factory_prototype:native().neighbour_bonus > 0 then
+            local tooltip = {FusionControl.tooltip.neighbours}
+            GuiElement.add(input_panel, GuiLabel(FusionControl.element.neighboursLabel):caption({FusionControl.caption.neighbours}):tooltip(tooltip))
+            local cell = GuiElement.add(input_panel, GuiFlowH(FusionControl.element.neighboursRow))
+            local field = GuiElement.add(cell, GuiTextField(self.classname, FusionControl.buttonArgs{
+                action=FusionControl.neighbours, model_id=model.id, block_id=block.id, recipe_id=recipe.id
+            }):isNumeric():allowDecimal():text(tostring(factory.fusion_neighbours or 0)):tooltip(tooltip))
+            field.style.width = 65
+            field.tags = {applied_text=field.text}
+            local temperature = factory_prototype:getFusionPlasmaTemperature(factory_prototype:getFluidProductionFilter())
+            GuiElement.add(cell, GuiLabel(FusionControl.element.plasmaTemperature):caption({FusionControl.caption.plasmaTemperature, Format.formatNumber(temperature)}))
+        elseif factory_prototype:getType() == EntityType.fusionGenerator and not factory_prototype:native().burns_fluid then
+            local tooltip = {FusionControl.tooltip.inlet}
+            GuiElement.add(input_panel, GuiLabel(FusionControl.element.inletLabel):caption({BoilerInletControl.caption.inlet}):tooltip(tooltip))
+            local cell = GuiElement.add(input_panel, GuiFlowH(FusionControl.element.inletRow))
+            local text = factory.fusion_inlet_temperature and tostring(factory.fusion_inlet_temperature) or ""
+            local field = GuiElement.add(cell, GuiTextField(self.classname, FusionControl.buttonArgs{
+                action=FusionControl.inlet, model_id=model.id, block_id=block.id, recipe_id=recipe.id
+            }):isNumeric():allowDecimal():allowNegative():text(text):tooltip(tooltip))
+            field.style.width = 65
+            field.tags = {applied_text=text}
+            if factory.fusion_inlet_temperature == nil then
+                local caption = {FusionControl.caption.ratedOutput}
+                if factory.fusion_inlet_auto then caption = {BoilerInletControl.caption.automatic, Format.formatNumber(factory.fusion_inlet_auto)} end
+                if factory.fusion_inlet_ambiguous then caption = {FusionControl.caption.ambiguousInlet} end
+                GuiElement.add(cell, GuiLabel(FusionControl.element.inletStatus):caption(caption):tooltip(tooltip))
             end
         end
         if ReactorNeighbour.available(factory_prototype:native()) then

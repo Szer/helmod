@@ -71,7 +71,7 @@ mkdir -p "$panel/model/energy" "$panel/model/launch"
 cp src/model/{EntityType,Orbit,SiloRecipes}.lua "$panel/model/"
 cp src/model/launch/PartRecipe.lua "$panel/model/launch/"
 cp src/model/energy/BoilerInlet.lua "$panel/model/energy/"
-cp src/data/{SheetPlanner,SheetDependencies,ModelCompute,BoilerRouting}.lua "$panel/data/"
+cp src/data/{SheetPlanner,SheetDependencies,ModelCompute,BoilerRouting,FusionSupply}.lua "$panel/data/"
 echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
 mkdir -p "$panel/math/balance"
 cp src/math/{TemperatureLinks,SimplexBalance,Matrix,SolverMatrix,SolverLinkedMatrix,SolverMatrixAlgebra,SolverLinkedMatrixAlgebra,SolverMatrixSimplex,SolverLinkedMatrixSimplex}.lua "$panel/math/"
@@ -163,6 +163,15 @@ if check_panel > "$tmp/silo-part.log" 2>&1; then
 fi
 grep -q '(missing-fields)' "$tmp/silo-part.log" && grep -q 'silo' "$tmp/silo-part.log" || {
   cat "$tmp/silo-part.log" >&2
+  exit 1
+}
+sed '/action=FusionControl.neighbours/s/, recipe_id=recipe.id//' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"
+if check_panel > "$tmp/fusion-control.log" 2>&1; then
+  echo 'A fusion neighbour edit must identify its recipe.' >&2
+  exit 1
+fi
+grep -q '(missing-fields)' "$tmp/fusion-control.log" && grep -q 'recipe_id' "$tmp/fusion-control.log" || {
+  cat "$tmp/fusion-control.log" >&2
   exit 1
 }
 sed '/action=BoilerInletControl.action/s/, recipe_id=recipe.id//' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"

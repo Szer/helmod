@@ -829,6 +829,8 @@ function ModelBuilder.copyFactory(factory)
     new_factory.fuel = factory.fuel
     new_factory.fuel_quality = factory.fuel_quality
     new_factory.rocket_part_recipe = factory.rocket_part_recipe
+    new_factory.fusion_neighbours = factory.fusion_neighbours
+    new_factory.fusion_inlet_temperature = factory.fusion_inlet_temperature
     new_factory.boiler_inlet_temperature = factory.boiler_inlet_temperature
     new_factory.input = factory.input
     new_factory.modules = {}

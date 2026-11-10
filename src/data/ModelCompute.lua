@@ -1,6 +1,7 @@
 local EntityType = require "model.EntityType"
 local SiloRecipes = require "model.SiloRecipes"
 local TemperatureSupply = require "math.balance.TemperatureSupply"
+local FusionSupply = require "data.FusionSupply"
 local BoilerRouting = require "data.BoilerRouting"
 local FixedRecipe = require "model.recipe.FixedRecipe"
 local SheetPlanner = require "data.SheetPlanner"
@@ -160,10 +161,15 @@ local function solvePreparedBlock(model, block)
         ModelCompute.prepareBlockObjectives(prepared)
         ModelCompute.computeBlock(prepared, model.parameters, true)
     end
-    local boilers = {}
-    ModelCompute.prepareBlockElements(block, boilers)
-    if #boilers > 0 then BoilerRouting.apply(block, boilers, solve) end
+    local inlets, plasmaKeys = {}, {}
+    ModelCompute.prepareBlockElements(block, inlets, plasmaKeys)
+    local outputs = FusionSupply.collect(block, plasmaKeys)
+    if #inlets > 0 then BoilerRouting.apply(block, inlets, solve, outputs) end
+    for _, row in ipairs(inlets) do
+        if row.type == defines.mod.recipes.energy.name then ModelCompute.computeEnergyFactory(row) end
+    end
     solve(block)
+    FusionSupply.publish(block, outputs)
 end
 
 ---@param model ModelData
@@ -657,8 +663,9 @@ end
 -------------------------------------------------------------------------------
 ---Prepare products and ingredients of block
 ---@param block BlockData
----@param boilers? RecipeData[] Automatic boiler rows for the block solve
-function ModelCompute.prepareBlockElements(block, boilers)
+---@param inlets? RecipeData[] Thermal consumers with automatic inlet temperature
+---@param plasmaKeys? table<string,boolean> Fluids heated by fusion reactors
+function ModelCompute.prepareBlockElements(block, inlets, plasmaKeys)
     local children = block.children
     if children ~= nil then
         local block_products = {}
@@ -678,11 +685,20 @@ function ModelCompute.prepareBlockElements(block, boilers)
                 child_products = child.products
                 child_ingredients = child.ingredients
             else
-                if boilers and child.type == defines.mod.recipes.boiler.name and child.factory then
+                if inlets and child.type == defines.mod.recipes.energy.name and child.factory then
+                    local machine = EntityPrototype(child.factory):native()
+                    if machine and machine.type == EntityType.fusionGenerator then
+                        child.factory.fusion_inlet_auto, child.factory.fusion_inlet_ambiguous = nil, nil
+                        if not machine.burns_fluid and child.factory.fusion_inlet_temperature == nil then
+                            table.insert(inlets, child)
+                        end
+                    end
+                end
+                if inlets and child.type == defines.mod.recipes.boiler.name and child.factory then
                     child.factory.boiler_inlet_auto = nil
                     child.factory.boiler_inlet_ambiguous = nil
                     if child.factory.boiler_inlet_temperature == nil and EntityPrototype(child.factory):getType() == "boiler" then
-                        table.insert(boilers, child)
+                        table.insert(inlets, child)
                     end
                 end
                 local recipe_prototype = RecipePrototype(child)
@@ -696,6 +712,7 @@ function ModelCompute.prepareBlockElements(block, boilers)
                     local product = Product(lua_product)
                     local product_key = product:getTableKey()
 
+                    if plasmaKeys and lua_product.fusion_temperature then plasmaKeys[product_key] = true end
                     lua_product.spoil = product:getSpoil()
                     if child.spoilage ~= nil and lua_product.spoil ~= nil then
                         local amount = product:getAmount()

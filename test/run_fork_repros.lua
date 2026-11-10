@@ -60,10 +60,11 @@ for _, case in ipairs({
     {directory="376", suite="test_temperature_supply_save", marker="TEMPERATURE SUPPLY SAVE PASSED"},
     {directory="377", suite="test_coolant_deficit_save", marker="COOLANT DEFICIT SAVE PASSED"},
     {directory="507", suite="test_selectable_silo_save", marker="SELECTABLE SILO SAVE PASSED"},
-    {directory="624", suite="test_fusion_generator_save", marker="FUSION GENERATOR SAVE PASSED"}
+    {directory="624", suite="test_fusion_generator_save", marker="FUSION GENERATOR SAVE PASSED"},
+    {save=saves .. "/fusion-neighbours/repro.zip", suite="test_fusion_reactor_save", marker="FUSION REACTOR SAVE PASSED"}
 }) do
     local copy = work .. "/" .. case.suite .. ".zip"
-    Runner.copy(upstream .. "/" .. case.directory .. "/repro.zip", copy)
+    Runner.copy(case.save or upstream .. "/" .. case.directory .. "/repro.zip", copy)
     Runner.copy(root .. "/test/" .. case.suite .. ".lua", mod .. "/" .. case.suite .. ".lua")
     Runner.write(mod .. "/control.lua", control .. '\nrequire "' .. case.suite .. '"\n')
     local log = Runner.factorio(executable, work, {"--benchmark", copy, "--benchmark-ticks", "5"})

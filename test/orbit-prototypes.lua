@@ -183,3 +183,12 @@ for _, spec in ipairs({
     end
     data:extend{generator}
 end
+
+local plasma = table.deepcopy(data.raw.fluid["fusion-plasma"])
+plasma.name = "test-reactor-plasma"
+plasma.default_temperature, plasma.max_temperature = 500000, 2000000
+local reactor = table.deepcopy(data.raw[EntityType.fusionReactor]["fusion-reactor"])
+reactor.name = "test-warm-reactor"
+reactor.output_fluid_box.filter = plasma.name
+reactor.target_temperature, reactor.neighbour_bonus, reactor.burner.effectivity = 1500000, 0.5, 0.5
+data:extend{plasma, reactor}

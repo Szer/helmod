@@ -1,5 +1,6 @@
 local BoilerInlet = require "model.energy.BoilerInlet"
 local EntityType = require "model.EntityType"
+local FusionReactor = require "model.energy.FusionReactor"
 local FusionGenerator = require "model.energy.FusionGenerator"
 local hasEntityTemperatureLimits = helpers.compare_versions(helpers.game_version, "2.1.22") >= 0
 -------------------------------------------------------------------------------
@@ -155,8 +156,8 @@ function EntityPrototype:getEnergyConsumption()
     return self:getMaxEnergyProduction()
   end
 
-  if self.lua_prototype.type == "fusion-reactor" then
-    return self:getMaxEnergyUsage()
+  if self.lua_prototype.type == EntityType.fusionReactor then
+    return self.lua_prototype.get_max_energy_usage(self.factory.quality) * 60
   end
 
   local energy_prototype = self:getEnergySource()
@@ -372,7 +373,7 @@ end
 ---Return traget temperature
 ---@return number --default 0
 function EntityPrototype:getTargetTemperature()
-  if self.lua_prototype ~= nil and (self:getType() == "boiler" or self:getType() == "fusion-reactor") then
+  if self.lua_prototype ~= nil and (self:getType() == "boiler" or self:getType() == EntityType.fusionReactor) then
     return self.lua_prototype.target_temperature or 0
   end
   return 0
@@ -614,6 +615,13 @@ function EntityPrototype:getFluidProduction()
   return 0
 end
 
+---@param fluid LuaFluidPrototype
+---@return number temperature Output temperature in °C at the specified average number of active neighbours.
+function EntityPrototype:getFusionPlasmaTemperature(fluid)
+  return FusionReactor.temperature(fluid, self.lua_prototype.target_temperature, self.lua_prototype.neighbour_bonus,
+      self.factory.fusion_neighbours or 0)
+end
+
 ---@return FusionGeneratorRates
 function EntityPrototype:getFusionGeneratorRates()
   local generator = self.lua_prototype
@@ -622,6 +630,10 @@ function EntityPrototype:getFusionGeneratorRates()
   if fluid == nil then return {power=0, flow=0} end
 
   local minimum, maximum = self:getFluidInletRange(fluid)
+  local inlet = self.factory.fusion_inlet_temperature or self.factory.fusion_inlet_auto
+  if inlet and not generator.burns_fluid then
+    minimum, maximum = math.max(minimum, inlet), math.min(maximum, inlet)
+  end
   if minimum > maximum then return {power=0, flow=0} end
   local minimumEnergy, maximumEnergy
   if generator.burns_fluid then
@@ -699,7 +711,7 @@ end
 ---Return fluid production
 ---@return number --default 0
 function EntityPrototype:getFluidProductionFusionReactor()
-  if self:getType() == "fusion-reactor" then
+  if self:getType() == EntityType.fusionReactor then
     local fluid_usage = self:getFluidUsagePerTick()
     return fluid_usage * 60
   end
@@ -728,7 +740,7 @@ end
 ---Return fluid consumption filter
 ---@return LuaFluidPrototype?
 function EntityPrototype:getFluidConsumptionFilter()
-  if self.lua_prototype ~= nil and (self.lua_prototype.type == "boiler" or self.lua_prototype.type == EntityType.fusionGenerator) then
+  if self.lua_prototype ~= nil and (self.lua_prototype.type == "boiler" or self.lua_prototype.type == EntityType.fusionGenerator or self.lua_prototype.type == EntityType.fusionReactor) then
     local fluidbox = self:getFluidboxPrototype("input")
     if fluidbox == nil then
       fluidbox = self:getFluidboxPrototype("input-output")
@@ -978,6 +990,7 @@ end
 ---Return energy type (electric or burner)
 ---@return string
 function EntityPrototype:getEnergyTypeInput()
+  if self:getType() == EntityType.fusionReactor then return "burner" end
   if self.lua_prototype ~= nil then
     local fluid_usage = self:getFluidUsage()
     if fluid_usage > 0 then

@@ -1,5 +1,25 @@
 local FusionControl = {neighbours="fusion-neighbours-update", inlet="fusion-inlet-update"}
 
+FusionControl.element = {
+    neighboursLabel = "label-fusion-neighbours",
+    neighboursRow = "fusion-neighbours",
+    plasmaTemperature = "fusion-plasma-temperature",
+    inletLabel = "label-fusion-inlet",
+    inletRow = "fusion-inlet",
+    inletStatus = "fusion-inlet-status",
+}
+FusionControl.caption = {
+    neighbours = "helmod_label.fusion-neighbours",
+    plasmaTemperature = "helmod_label.fusion-temperature",
+    ratedOutput = "helmod_label.fusion-inlet-nominal",
+    ambiguousInlet = "helmod_label.fusion-inlet-ambiguous",
+    invalidInlet = "helmod_label.fusion-inlet-invalid",
+}
+FusionControl.tooltip = {
+    neighbours = "tooltip.fusion-neighbours",
+    inlet = "tooltip.fusion-inlet",
+}
+
 ---@class FusionNeighboursEdit
 ---@field action "fusion-neighbours-update"
 ---@field model_id string

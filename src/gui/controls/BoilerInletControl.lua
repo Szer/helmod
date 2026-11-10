@@ -1,5 +1,10 @@
 local BoilerInletControl = {action = "boiler-inlet-update"}
 
+BoilerInletControl.caption = {
+    inlet = "helmod_label.boiler-inlet",
+    automatic = "helmod_label.boiler-inlet-auto",
+}
+
 ---@class BoilerInletEdit
 ---@field action "boiler-inlet-update"
 ---@field model_id string

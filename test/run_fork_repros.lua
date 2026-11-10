@@ -12,12 +12,16 @@ Runner.copy(root .. "/test/test_consumer_controls.lua", mod .. "/test_consumer_c
 Runner.copy(root .. "/test/test_sheet_jobs.lua", mod .. "/test_sheet_jobs.lua")
 local control = Runner.read(mod .. "/control.lua")
 for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolbar-scroll", "header-scroll", "tree-controls", "excluded-output", "electricity-inputs", "header-block-removal", "row-removal-scroll", "consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
-                       "blank-selector-rule", "truncated-import", "empty-blueprint-book", "quantity-after-reload", "quantity-confirm"}) do
+                       "blank-selector-rule", "empty-ingredient-search", "truncated-import", "empty-blueprint-book", "quantity-after-reload", "quantity-confirm"}) do
     Runner.write(mod .. "/control.lua", control .. '\nrequire "test_fork_repros"("' .. case .. '")\n')
     local save = saves .. "/" .. case .. "/repro.zip"
     if case == "sheet-jobs" or case == "refresh-scroll" or case == "quantity-scroll" or case == "toolbar-scroll" or case == "header-scroll" or case == "tree-controls" or case == "excluded-output" or case == "electricity-inputs" or case == "header-block-removal" or case == "consumer-controls" or case == "row-removal-scroll" then save = saves .. "/empty-explorer/repro.zip" end
     local log
-    if case == "quantity-after-reload" then
+    if case == "empty-ingredient-search" and not headless then
+        local copy = work .. "/empty-ingredient-search.zip"
+        Runner.copy(saves .. "/upstream-2.6.0/406/repro.zip", copy)
+        log = Runner.factorio(executable, work, {"--load-game", copy, "--disable-audio", "--disable-migration-window"}, true)
+    elseif case == "quantity-after-reload" then
         if headless then
             local settings = work .. "/server-settings.json"
             local template = Runner.read(data .. "/server-settings.example.json")
@@ -33,6 +37,10 @@ for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolb
             log = Runner.factorio(executable, work, {"--load-game", save, "--disable-audio"}, true)
         end
     else
+        if case == "empty-ingredient-search" then
+            -- A benchmark needs a saved player to drive the selector.
+            save = saves .. "/empty-explorer/repro.zip"
+        end
         if case == "quantity-confirm" then
             save = work .. "/write/saves/_autosave-fork-quantity.zip"
             if headless then save = work .. "/write/saves/fork-quantity.zip" end

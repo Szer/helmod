@@ -1,11 +1,7 @@
 require "selector.AbstractSelector"
+local RecipeSearchIndex = require "selector.RecipeSearchIndex"
 -------------------------------------------------------------------------------
----Class to build recipe selector
---
----@module RecipeSelector
----@extends #AbstractSelector
---
-
+---@class RecipeSelector : AbstractSelector
 RecipeSelector = newclass(AbstractSelector)
 
 function RecipeSelector:rulesFilter(prototype)
@@ -48,67 +44,41 @@ end
 -------------------------------------------------------------------------------
 ---Get prototype
 ---@param element table
----@param type string
----@return table
-function RecipeSelector:getPrototype(element, type)
-  return RecipePrototype(element, type)
+---@param recipe_type? string
+---@return RecipePrototype
+function RecipeSelector:getPrototype(element, recipe_type)
+  return RecipePrototype(element, recipe_type)
 end
 
 -------------------------------------------------------------------------------
 ---Append groups
----@param element string
----@param type string
----@param list_products table
----@param list_ingredients table
+---@param element table
+---@param recipe_type string
+---@param list_products RecipeMaterialIndex
+---@param list_ingredients RecipeMaterialIndex
 ---@param list_translate table
-function RecipeSelector:appendGroups(element, type, list_products, list_ingredients, list_translate)
-  local prototype = self:getPrototype(element, type)
-
+function RecipeSelector:appendGroups(element, recipe_type, list_products, list_ingredients, list_translate)
+  local prototype = self:getPrototype(element, recipe_type)
   local lua_prototype = prototype:native()
-  if lua_prototype == nil then
-    return
-  end
-  local prototype_name = string.format("%s-%s", type, lua_prototype.name)
+  if lua_prototype == nil then return end
 
-  if prototype:getRawProducts() ~= nil then
-    for key, raw_product in pairs(prototype:getRawProducts()) do
-      if raw_product.name ~= nil then
-        if list_products[raw_product.name] == nil then
-          list_products[raw_product.name] = {}
-        end
-        list_products[raw_product.name][prototype_name] = {name=lua_prototype.name, group=lua_prototype.group.name, subgroup=lua_prototype.subgroup.name, type=type, order=lua_prototype.order}
-        
-        local product = Product(raw_product)
-        local localised_name = product:getLocalisedName()
-        if localised_name ~= nil and localised_name ~= "unknow" then
-          list_translate[raw_product.name] = localised_name
-        end
-      end
+  ---@type RecipeSearchEntry
+  local entry = {name=lua_prototype.name, type=recipe_type, group=lua_prototype.group.name,
+      subgroup=lua_prototype.subgroup.name, order=lua_prototype.order}
+  local function translate(material)
+    local localised_name = Product(material):getLocalisedName()
+    if localised_name ~= nil and localised_name ~= "unknow" then
+      list_translate[material.name] = localised_name
     end
   end
-
-  if prototype:getRawIngredients() ~= nil then
-    for key, raw_ingredient in pairs(prototype:getRawIngredients()) do
-      if raw_ingredient.name ~= nil then
-        if list_ingredients[raw_ingredient.name] == nil then
-          list_ingredients[raw_ingredient.name] = {}
-        end
-        list_ingredients[raw_ingredient.name][prototype_name] = {name=lua_prototype.name, group=lua_prototype.group.name, subgroup=lua_prototype.subgroup.name, type=type, order=lua_prototype.order}
-        
-        local ingredient = Product(raw_ingredient)
-        local localised_name = ingredient:getLocalisedName()
-        if localised_name ~= nil and localised_name ~= "unknow" then
-          list_translate[raw_ingredient.name] = localised_name
-        end
-      end
-    end
-  end
+  RecipeSearchIndex.register(list_products, entry, prototype:getRawProducts(), translate)
+  RecipeSearchIndex.register(list_ingredients, entry, prototype:getRawIngredients(), translate)
 end
 
 -------------------------------------------------------------------------------
 ---Update groups
----@param list_products table
----@param list_ingredients table
+---@param list_products RecipeMaterialIndex
+---@param list_ingredients RecipeMaterialIndex
 ---@param list_translate table
 function RecipeSelector:updateGroups(list_products, list_ingredients, list_translate)
   RecipeSelector:updateUnlockRecipesCache()

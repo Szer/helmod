@@ -78,6 +78,8 @@ cp src/math/{TemperatureLinks,SimplexBalance,Matrix,SolverMatrix,SolverLinkedMat
 cp src/math/balance/*.lua "$panel/math/balance/"
 cp src/math/incremental/Unit.lua "$panel/math/incremental/"
 cp src/edition/{RecipeEdition,BlockEdition}.lua "$panel/"
+mkdir -p "$panel/selector"
+cp src/selector/{RecipeSearchIndex,RecipeSelector}.lua "$panel/selector/"
 cp src/model/{ProductionBlockMode,MatrixSupplies}.lua "$panel/model/"
 cp src/gui/controls/*.lua "$panel/gui/controls/"
 cp src/gui/ProductionScroll.lua "$panel/gui/"
@@ -87,6 +89,16 @@ check_panel() {
     --logpath="$tmp/log" --configpath="$(pwd)/ci/production-panel.luarc.json"
 }
 check_panel
+sed 's/subgroup=lua_prototype.subgroup.name, //' src/selector/RecipeSelector.lua > "$panel/selector/RecipeSelector.lua"
+if check_panel > "$tmp/recipe-search.log" 2>&1; then
+  echo 'A searchable recipe must identify its subgroup.' >&2
+  exit 1
+fi
+grep -q '(missing-fields)' "$tmp/recipe-search.log" && grep -q 'subgroup' "$tmp/recipe-search.log" || {
+  cat "$tmp/recipe-search.log" >&2
+  exit 1
+}
+cp src/selector/RecipeSelector.lua "$panel/selector/"
 sed 's/output=linked:get_column_index(output), yields=group.yields/yields=group.yields/' \
   src/math/TemperatureLinks.lua > "$panel/math/TemperatureLinks.lua"
 if check_panel > "$tmp/temperature.log" 2>&1; then

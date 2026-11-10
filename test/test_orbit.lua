@@ -71,6 +71,23 @@ local function check(background)
     ModelCompute.update(model)
     near(recipe.factory.count, 60 / 1000 * 1097 / 60, "quality animation cap")
     near(block.ingredients["processing-unit"].amount, before / 2, "speed never changes ingredient consumption")
+    local smelting = Model.newModel()
+    local furnace_block, smelt = ModelBuilder.addRecipeIntoProductionBlock(smelting, smelting.block_root, "iron-plate", "recipe")
+    Model.setFactory(smelt, "test-residue-furnace", "normal", "test-iron-residue-fuel", "normal")
+    ModelCompute.update(smelting)
+    furnace_block.products["iron-plate"].input = 1
+    for _, matrix in ipairs({false, true}) do
+        furnace_block.solver = matrix
+        ModelCompute.update(smelting)
+        local fuel_per_craft = 90000 * 3.2 / 4000000
+        near(furnace_block.ingredients["iron-ore"].amount, 1 / (1 + fuel_per_craft), "ore for smelted plates plus burnt residue")
+        near(furnace_block.ingredients["test-iron-residue-fuel"].amount, fuel_per_craft / (1 + fuel_per_craft), "residue fuel")
+    end
+    smelt.factory.fuel_quality = "uncommon"
+    ModelCompute.update(smelting)
+    near(furnace_block.ingredients["iron-ore"].amount, 1, "uncommon residue cannot supply normal plate demand")
+    assert(furnace_block.products["iron-plate#uncommon"].amount > 0, "separate residue quality")
+
     near(Orbit.capacity("express-transport-belt", prototypes.entity["rocket-silo"]), 100, "express belt capacity")
     model.parameters.effects.speed = 0
     model.parameters.effects.productivity = 0

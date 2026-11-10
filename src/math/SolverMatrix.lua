@@ -1,3 +1,4 @@
+local RowFlows = require "math.balance.RowFlows"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class SolverMatrix
@@ -367,15 +368,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                 else
                     product_amount = product:getAmount(child)
                 end
-                lua_products[product_key] = {
-                    name = lua_product.name,
-                    type = lua_product.type,
-                    quality = lua_product.quality,
-                    amount = product_amount,
-                    temperature = lua_product.temperature,
-                    minimum_temperature = lua_product.minimum_temperature,
-                    maximum_temperature = lua_product.maximum_temperature
-                }
+                RowFlows.add(lua_products, product_key, lua_product, product_amount)
             end
             for i, lua_ingredient in pairs(child_ingredients) do
                 local ingredient = Product(lua_ingredient)
@@ -391,19 +384,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                     end
                 end
                 
-                if lua_ingredients[ingredient_key] == nil then
-                    lua_ingredients[ingredient_key] = {
-                        name = lua_ingredient.name,
-                        type = lua_ingredient.type,
-                        quality = lua_ingredient.quality,
-                        amount = ingredient_amount,
-                        temperature = lua_ingredient.temperature,
-                        minimum_temperature = lua_ingredient.minimum_temperature,
-                        maximum_temperature = lua_ingredient.maximum_temperature
-                    }
-                else
-                    lua_ingredients[ingredient_key].amount = lua_ingredients[ingredient_key].amount + ingredient_amount
-                end
+                RowFlows.add(lua_ingredients, ingredient_key, lua_ingredient, ingredient_amount)
             end
 
             if not (block.by_product == false) then

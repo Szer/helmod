@@ -547,8 +547,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
 
         ---end loop recipes
 
-        local ordered = block.solver ~= true or block.by_factory == true
-        matrix = TemperatureLinks.build(matrix, block.by_product, ordered)
+        matrix = TemperatureLinks.build(matrix, block)
         if block.by_product ~= false then matrix.external_supplies = block.matrix_supplies end
         matrix.objectives = block.objectives
         return matrix

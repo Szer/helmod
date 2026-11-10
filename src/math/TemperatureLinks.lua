@@ -15,8 +15,9 @@ end
 ---@param from MatrixHeader
 ---@param to MatrixHeader
 ---@param ingredient boolean
+---@param reportedInputs? table<string,ProductData> Inputs that can carry a deficit in a simplex result
 ---@return MatrixRowParameters
-local function addTransfer(matrix, from, to, ingredient)
+local function addTransfer(matrix, from, to, ingredient, reportedInputs)
     local row = MatrixRow("recipe", TemperatureLinks.recipeName, "")
     row.header.is_ingredient = ingredient
     row.header.primary, row.header.secondary = from.product, to.product
@@ -24,6 +25,12 @@ local function addTransfer(matrix, from, to, ingredient)
     row:add_value(to, 1)
     local parameters = MatrixRowParameters()
     matrix:add_row(row, parameters)
+    if reportedInputs and not reportedInputs[from.key] then
+        matrix.temperature_routes = matrix.temperature_routes or {}
+        ---@type TemperatureRoute
+        local route = {source=matrix:get_column_index(from), inlet=matrix:get_column_index(to), row=#matrix.rows}
+        table.insert(matrix.temperature_routes, route)
+    end
     return parameters
 end
 
@@ -39,7 +46,8 @@ end
 ---@param outputs table<string,MatrixHeader>
 ---@param previousInputs table<string,table<string,MatrixHeader>>
 ---@param byProduct boolean?
-local function addSupplyTransfers(linked, row, outputs, previousInputs, byProduct)
+---@param reportedInputs? table<string,ProductData>
+local function addSupplyTransfers(linked, row, outputs, previousInputs, byProduct, reportedInputs)
     ---@type table<MatrixHeader,TemperatureDemandGroup>
     local byInput = {}
     ---@type TemperatureDemandGroup[]
@@ -73,7 +81,7 @@ local function addSupplyTransfers(linked, row, outputs, previousInputs, byProduc
     end
     for _, group in ipairs(groups) do
         for _, output in ipairs(group.outputs) do
-            local parameters = addTransfer(linked, output, group.input, false)
+            local parameters = addTransfer(linked, output, group.input, false, reportedInputs)
             if group.choices > 1 then
                 parameters.temperature_transfer = {output=linked:get_column_index(output), yields=group.yields}
             end
@@ -82,10 +90,16 @@ local function addSupplyTransfers(linked, row, outputs, previousInputs, byProduc
 end
 
 ---@param matrix Matrix
----@param byProduct boolean?
----@param ordered boolean Use forward and return transfers around an ordered supplier row
+---@param block BlockData
 ---@return Matrix
-function TemperatureLinks.build(matrix, byProduct, ordered)
+function TemperatureLinks.build(matrix, block)
+    local byProduct = block.by_product
+    local ordered = block.solver ~= true or block.by_factory == true
+    local reportedInputs
+    if not ordered then
+        reportedInputs = block.ingredients
+        if byProduct == false then reportedInputs = block.products end
+    end
     local linked = Matrix()
     linked.column_sum = matrix.column_sum
     local previousInputs, previousOutputs = {}, {}
@@ -110,7 +124,7 @@ function TemperatureLinks.build(matrix, byProduct, ordered)
             end
         end
 
-        addSupplyTransfers(linked, original, outputs, previousInputs, byProduct)
+        addSupplyTransfers(linked, original, outputs, previousInputs, byProduct, reportedInputs)
         linked:add_row(original, matrix.parameters[index])
         if ordered then
             for _, output in pairs(outputs) do
@@ -125,7 +139,7 @@ function TemperatureLinks.build(matrix, byProduct, ordered)
             previousInputs[name][input.key] = input
             for _, output in pairs(previousOutputs[name] or {}) do
                 if compatible(output, input, byProduct) then
-                    addTransfer(linked, output, input, true)
+                    addTransfer(linked, output, input, true, reportedInputs)
                     if ordered then addTransfer(linked, input, output, true) end
                 end
             end

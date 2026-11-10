@@ -303,8 +303,7 @@ function SolverLinkedMatrixSimplex:solve_matrix(Mbase, debug, by_factory, time)
 		---finalisation
 		local matrix_result = self:clone(Mbase)
 		matrix_result = self:table_compute(matrix_result, Mstep)
-		matrix_result = self:finalize(matrix_result)
-		matrix_result = self:apply_state(matrix_result)
+		matrix_result = Balance.finalize(self, matrix_result)
 		self:add_runtime(debug, runtime, "final", matrix_result)
 		return matrix_result, runtime
 	end

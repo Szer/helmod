@@ -124,6 +124,7 @@ end
 ---@field columnIndex {[string] : integer}
 ---@field parameters {[integer] : MatrixRowParameters}
 ---@field objectives table<string,ObjectiveData>
+---@field temperature_routes? TemperatureRoute[] Links from produced temperatures without a matching real input key
 ---@field external_supplies? table<string,boolean>
 ---@field objective_values {[integer] : number}
 

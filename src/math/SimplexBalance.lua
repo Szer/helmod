@@ -1,4 +1,5 @@
 local Pivot = require "math.balance.Pivot"
+local TemperatureSupply = require "math.balance.TemperatureSupply"
 local Balance = {}
 
 ---@param rows number[][]
@@ -60,6 +61,18 @@ function Balance.try(solver, prepared, source)
     local matrix = solver:clone(prepared)
     if not addColumns(matrix, source) then return nil end
     return Pivot.solve(solver, matrix, 4 * (#matrix.columns + #matrix.rows))
+end
+
+---@param solver SolverMatrixSimplex|SolverLinkedMatrixSimplex
+---@param matrix Matrix
+---@return Matrix
+function Balance.finalize(solver, matrix)
+    matrix = solver:finalize(matrix)
+    if matrix.temperature_routes then
+        local balances = matrix.rows[#matrix.rows]
+        TemperatureSupply.limitTransfers(matrix.temperature_routes, balances, matrix.objective_values, matrix.parameters)
+    end
+    return solver:apply_state(matrix)
 end
 
 return Balance

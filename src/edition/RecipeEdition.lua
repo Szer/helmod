@@ -1,4 +1,5 @@
 local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
+local BoilerInletControl = require "gui.controls.BoilerInletControl"
 local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
 local RecipePercentage = require "gui.controls.RecipePercentage"
 local SheetPlanner = require "data.SheetPlanner"
@@ -275,6 +276,24 @@ function RecipeEdition:onEvent(event)
             ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
+        end
+
+        local inlet = BoilerInletControl.decode(event)
+        if inlet and inlet.model_id == model.id and inlet.block_id == block.id and inlet.recipe_id == recipe.id then
+            local prototype = EntityPrototype(recipe.factory)
+            if recipe.type ~= defines.mod.recipes.boiler.name or prototype:getType() ~= "boiler" then return end
+            local minimum, maximum, target = prototype:getBoilerInletRange()
+            local valid, temperature = BoilerInletControl.parse(event.element.text, minimum, maximum, target)
+            if not valid then
+                game.get_player(event.player_index).print({"helmod_label.boiler-inlet-invalid", minimum, maximum, target})
+                return
+            end
+            recipe.factory.boiler_inlet_temperature = temperature
+            event.element.tags = {applied_text=event.element.text}
+            if ModelCompute.update(model, block) then return end
+            self:update(event)
+            Controller:send("on_gui_recipe_update", event)
+            return
         end
 
         local edit = RecipePercentage.decode(event)
@@ -813,6 +832,27 @@ function RecipeEdition:updateFactoryInfo(event)
         GuiElement.add(input_panel, GuiLabel("label-module-slots"):caption({ "helmod_label.module-slots" }))
         GuiElement.add(input_panel, GuiLabel("module-slots"):caption(factory_prototype:getModuleInventorySize()))
 
+        if recipe.type == defines.mod.recipes.boiler.name and factory_prototype:getType() == "boiler" then
+            local tooltip = {"tooltip.boiler-inlet"}
+            GuiElement.add(input_panel, GuiLabel("label-boiler-inlet"):caption({"helmod_label.boiler-inlet"}):tooltip(tooltip))
+            local cell = GuiElement.add(input_panel, GuiFlowH("boiler-inlet"))
+            local text = factory.boiler_inlet_temperature and tostring(factory.boiler_inlet_temperature) or ""
+            local field = GuiElement.add(cell, GuiTextField(self.classname, BoilerInletControl.buttonArgs{
+                action=BoilerInletControl.action, model_id=model.id, block_id=block.id, recipe_id=recipe.id
+            }):isNumeric():allowDecimal():allowNegative():text(text):tooltip(tooltip))
+            field.style.width = 65
+            field.tags = {applied_text=text}
+            if factory.boiler_inlet_temperature == nil then
+                local fluid = factory_prototype:getBoilerInletFluid()
+                local automatic = factory.boiler_inlet_auto or fluid.default_temperature
+                local caption = {"helmod_label.boiler-inlet-auto", Format.formatNumber(automatic)}
+                if factory.boiler_inlet_ambiguous then
+                    caption[1] = "helmod_label.boiler-inlet-ambiguous"
+                    tooltip = {"tooltip.boiler-inlet-ambiguous"}
+                end
+                GuiElement.add(cell, GuiLabel("boiler-inlet-status"):caption(caption):tooltip(tooltip))
+            end
+        end
         if ReactorNeighbour.available(factory_prototype:native()) then
             local items = {}
             local selected

@@ -450,7 +450,7 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepar
                 child_info.products = recipe_prototype:getQualityProducts(recipe.factory, recipe.quality)
                 child_info.ingredients = recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality)
                 local row_factor = factor
-                if recipe.unbuildable then
+                if not ModelCompute.canRunRecipe(recipe) then
                     row_factor = 0
                     child_info.factory_count = 0
                 end

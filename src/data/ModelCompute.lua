@@ -1,3 +1,4 @@
+local BoilerRouting = require "data.BoilerRouting"
 local FixedRecipe = require "model.recipe.FixedRecipe"
 local SheetPlanner = require "data.SheetPlanner"
 local Orbit = require "model.Orbit"
@@ -151,9 +152,14 @@ local function solvePreparedBlock(model, block)
         block.ingredients, block.products = {}, {}
         return
     end
-    ModelCompute.prepareBlockElements(block)
-    ModelCompute.prepareBlockObjectives(block)
-    ModelCompute.computeBlock(block, model.parameters, true)
+    local function solve(prepared)
+        ModelCompute.prepareBlockObjectives(prepared)
+        ModelCompute.computeBlock(prepared, model.parameters, true)
+    end
+    local boilers = {}
+    ModelCompute.prepareBlockElements(block, boilers)
+    if #boilers > 0 then BoilerRouting.apply(block, boilers, solve) end
+    solve(block)
 end
 
 ---@param model ModelData
@@ -647,7 +653,8 @@ end
 -------------------------------------------------------------------------------
 ---Prepare products and ingredients of block
 ---@param block BlockData
-function ModelCompute.prepareBlockElements(block)
+---@param boilers? RecipeData[] Automatic boiler rows for the block solve
+function ModelCompute.prepareBlockElements(block, boilers)
     local children = block.children
     if children ~= nil then
         local block_products = {}
@@ -667,6 +674,13 @@ function ModelCompute.prepareBlockElements(block)
                 child_products = child.products
                 child_ingredients = child.ingredients
             else
+                if boilers and child.type == defines.mod.recipes.boiler.name and child.factory then
+                    child.factory.boiler_inlet_auto = nil
+                    child.factory.boiler_inlet_ambiguous = nil
+                    if child.factory.boiler_inlet_temperature == nil and EntityPrototype(child.factory):getType() == "boiler" then
+                        table.insert(boilers, child)
+                    end
+                end
                 local recipe_prototype = RecipePrototype(child)
                 child_products = recipe_prototype:getQualityProducts(child.factory, child.quality)
                 child_ingredients = recipe_prototype:getQualityIngredients(child.factory, child.quality)
@@ -888,6 +902,16 @@ function ModelCompute.computeBlock(block, parameters, factories_prepared)
         my_solver:solve(block, parameters, debug, factories_prepared)
         
     end
+end
+
+---@param recipe RecipeData
+---@return boolean
+function ModelCompute.canRunRecipe(recipe)
+    if recipe.unbuildable then return false end
+    if recipe.type == defines.mod.recipes.boiler.name then
+        return EntityPrototype(recipe.factory):getFluidProductionOfBoiler() > 0
+    end
+    return true
 end
 
 ----@param recipe RecipeData

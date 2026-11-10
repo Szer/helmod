@@ -106,3 +106,33 @@ for _, name in ipairs({"test-dedicated-cable", "test-unbuildable-cable"}) do
     data:extend{recipe}
 end
 cableMachine("test-dedicated-assembler", "test-dedicated-crafting", "test-dedicated-cable")
+
+data:extend{{
+    type="recipe", name="test-warm-water", categories={"chemistry"}, enabled=true,
+    energy_required=1, ingredients={{type="item", name="stone", amount=1}},
+    results={{type="fluid", name="water", temperature=100, amount=100}}, auto_recycle=false
+}}
+
+for _, feed in ipairs({
+    {name="test-cold-water-coproduct", product="iron-plate", temperature=15},
+    {name="test-hot-water-coproduct", product="copper-plate", temperature=100},
+}) do
+    data:extend{{
+        type="recipe", name=feed.name, categories={"chemistry"}, enabled=true, auto_recycle=false,
+        energy_required=1, ingredients={{type="item", name="stone", amount=1}},
+        main_product=feed.product,
+        results={{type="item", name=feed.product, amount=1}, {type="fluid", name="water", temperature=feed.temperature, amount=1}}
+    }}
+end
+
+local low_target = table.deepcopy(data.raw.boiler.boiler)
+low_target.name = "test-low-target-boiler"
+low_target.target_temperature = 99
+local hot_inlet = table.deepcopy(data.raw.boiler.boiler)
+hot_inlet.name = "test-hot-inlet-boiler"
+if helpers.compare_versions(helpers.game_version, "2.1.22") >= 0 then
+    hot_inlet.minimum_input_temperature = 50
+else
+    hot_inlet.fluid_box.minimum_temperature = 50
+end
+data:extend{low_target, hot_inlet}

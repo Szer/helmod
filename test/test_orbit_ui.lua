@@ -24,6 +24,9 @@ local function checkReactorSettings(player)
   recipe.factory.neighbour_bonus = "∞"
   ModelCompute.update(model)
   Controller:send("on_gui_open", {name="OPEN",item1=model.id,item2=block.id,item3=recipe.id}, "HMRecipeEdition")
+  assert(not find_element(player.gui.screen.HMRecipeEdition, function(el)
+   return el.name:find("boiler-inlet-update", 1, true)
+  end), "reactors have no boiler inlet temperature control")
   local dropdown = find_element(player.gui.screen.HMRecipeEdition, function(el)
    return el.name:find("neighbour-bonus-update", 1, true)
   end)
@@ -39,6 +42,36 @@ local function checkReactorSettings(player)
   end
   Controller:getView("HMRecipeEdition"):close()
  end
+ game.tick_paused = false
+end
+
+local function checkBoilerInlet(player)
+ local model = Model.newModel()
+ local block = model.block_root
+ local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, block, "water->steam#165", "boiler")
+ ModelCompute.update(model)
+ Controller:send("on_gui_open", {name="OPEN",item1=model.id,item2=block.id,item3=recipe.id}, "HMRecipeEdition")
+ local function field()
+  return assert(find_element(player.gui.screen.HMRecipeEdition, function(el)
+   return el.name:find("boiler-inlet-update", 1, true)
+  end), "boiler editor has an inlet temperature field")
+ end
+ local function enter(value)
+  local element = field()
+  element.text = value
+  EventController.onGuiClick{player_index=player.index, element=element}
+  assert(not Player.getLastError(), "boiler inlet edit failed")
+ end
+ assert(field().text == "", "a newly added boiler uses the automatic temperature")
+ local status = find_element(player.gui.screen.HMRecipeEdition, function(el) return el.name == "boiler-inlet-status" end)
+ assert(status and status.caption[1] == "helmod_label.boiler-inlet-auto" and tonumber(status.caption[2]) == 15)
+ enter("57.5")
+ assert(recipe.factory.boiler_inlet_temperature == 57.5 and field().text == "57.5", "confirm a mixed inlet temperature")
+ enter("5000")
+ assert(recipe.factory.boiler_inlet_temperature == 57.5, "an out-of-range temperature leaves the applied inlet alone")
+ enter("")
+ assert(recipe.factory.boiler_inlet_temperature == nil and field().text == "", "clearing the inlet restores automatic detection")
+ Controller:getView("HMRecipeEdition"):close()
  game.tick_paused = false
 end
 
@@ -213,6 +246,7 @@ script.on_nth_tick(60, function(event)
   recycling.checkCircuitBalances(block)
   game.take_screenshot{player=player,resolution={2200,1100},show_gui=true,path="circuit-external-supplies.png"}
   checkReactorSettings(player)
+  checkBoilerInlet(player)
   log("ORBIT UI SMOKE PASSED")
   storage.orbit_ui_step=10
  end

@@ -1,3 +1,4 @@
+local SiloRecipes = require "model.SiloRecipes"
 local TemperatureSupply = require "math.balance.TemperatureSupply"
 local BoilerRouting = require "data.BoilerRouting"
 local FixedRecipe = require "model.recipe.FixedRecipe"
@@ -130,7 +131,8 @@ end
 function ModelCompute.productivityRecipe(recipe)
     if recipe.type == "orbit" and recipe.factory then
         local silo = EntityPrototype(recipe.factory):native()
-        if silo and silo.fixed_recipe then return silo.fixed_recipe.name end
+        local part = SiloRecipes.resolve(silo, recipe.factory.rocket_part_recipe)
+        if part then return part.name end
     end
     return recipe.name
 end
@@ -1069,9 +1071,8 @@ function ModelCompute.computeFactory(recipe)
     -- end
     recipe.factory.speed = recipe.factory.speed_total
     if recipe.type == "orbit" then
-        recipe.orbit = nil
-        if recipe_prototype:native() ~= nil then
-            recipe.orbit = Orbit.details(recipe)
+        recipe.orbit = Orbit.details(recipe)
+        if recipe.orbit then
             recipe.time = recipe.orbit.cycle_time / recipe.orbit.capacity * recipe.factory.speed
         end
     end

@@ -77,6 +77,7 @@ local success, message = xpcall(function()
             Runner.copy(root .. "/test/test_recycling_balance.lua", work .. "/mods/helmod-fork/test_recycling_balance.lua")
         end
         if mode == "integration" then
+            Runner.copy(root .. "/test/test_selectable_silo.lua", work .. "/mods/helmod-fork/test_selectable_silo.lua")
             Runner.copy(root .. "/test/test_boiler_inlet.lua", work .. "/mods/helmod-fork/test_boiler_inlet.lua")
             Runner.copy(root .. "/test/test_temperature_supply.lua", work .. "/mods/helmod-fork/test_temperature_supply.lua")
             Runner.copy(root .. "/test/test_fixed_recipe.lua", work .. "/mods/helmod-fork/test_fixed_recipe.lua")
@@ -84,6 +85,12 @@ local success, message = xpcall(function()
             Runner.copy(root .. "/test/test_nested_intermediates.lua", work .. "/mods/helmod-fork/test_nested_intermediates.lua")
             Runner.copy(root .. "/test/test_cracking.lua", work .. "/mods/helmod-fork/test_cracking.lua")
             Runner.copy(root .. "/test/test_balance_pivot.lua", work .. "/mods/helmod-fork/test_balance_pivot.lua")
+        end
+        if mode == "integration" or mode == "ui" then
+            local mod = work .. "/mods/helmod-fork"
+            Runner.copy(root .. "/test/selectable-silo-prototypes.lua", mod .. "/selectable-silo-prototypes.lua")
+            local capture = mod .. "/data-final-fixes.lua"
+            Runner.write(capture, 'require "selectable-silo-prototypes"\n' .. Runner.read(capture))
         end
         Runner.suite(root, work, suites[mode])
         if mode == "integration" or mode == "timing" then

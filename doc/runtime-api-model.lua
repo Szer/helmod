@@ -44,6 +44,7 @@
 ---@field quality number
 
 ---@class FactoryData
+---@field rocket_part_recipe? string Selected construction recipe for a configurable rocket silo
 ---@field boiler_inlet_temperature? number User-specified boiler inlet in °C
 ---@field boiler_inlet_auto? number Inlet in °C inferred from solved fluid supplies
 ---@field boiler_inlet_ambiguous? boolean Several inlet routes fit the solved flows

@@ -60,7 +60,10 @@ function ModelBuilder.addRecipeIntoProductionBlock(model, block, recipe_name, re
                     end
                     if is_match == true then
                         is_match = Model.setFactory(ModelRecipe, default_factory.name, default_factory.quality, default_factory.fuel, default_factory.fuel_quality)
-                        if is_match then ModelBuilder.setFactoryModulePriority(ModelRecipe, default_factory.module_priority) end
+                        if is_match then
+                            ModelRecipe.factory.rocket_part_recipe = default_factory.rocket_part_recipe
+                            ModelBuilder.setFactoryModulePriority(ModelRecipe, default_factory.module_priority)
+                        end
                     end
                 end
 
@@ -539,19 +542,23 @@ function ModelBuilder.setFactoryBlock(block, current_recipe)
                     local recipe_categories = prototype_recipe:getAllCategories()
                     local recipe_ingredient_count = prototype_recipe:getIngredientCount()
                     --- check ingredient limitation
-                    if factory_ingredient_count < recipe_ingredient_count then
-                        -- Skip
-                    elseif default_factory_mode ~= "category" or prototype_recipe:getCategory() == RecipePrototype(current_recipe):getCategory() then
-                        local is_match = false
+                    local is_match = false
+                    if recipe.type == defines.mod.recipes.orbit.name then
+                        is_match = current_recipe.type == recipe.type
+                    elseif factory_ingredient_count >= recipe_ingredient_count
+                        and (default_factory_mode ~= "category" or prototype_recipe:getCategory() == RecipePrototype(current_recipe):getCategory()) then
                         for _, recipe_category in pairs(recipe_categories) do
                             if factory_categories[recipe_category] then
                                 is_match = true
                                 break
                             end
                         end
-                        if is_match and Model.setFactory(recipe, current_recipe.factory.name, current_recipe.factory.quality, current_recipe.factory.fuel) then
-                            ModelBuilder.setFactoryModulePriority(recipe, current_recipe.factory.module_priority)
+                    end
+                    if is_match and Model.setFactory(recipe, current_recipe.factory.name, current_recipe.factory.quality, current_recipe.factory.fuel) then
+                        if recipe.type == defines.mod.recipes.orbit.name then
+                            recipe.factory.rocket_part_recipe = current_recipe.factory.rocket_part_recipe
                         end
+                        ModelBuilder.setFactoryModulePriority(recipe, current_recipe.factory.module_priority)
                     end
                 end
             end
@@ -821,6 +828,7 @@ function ModelBuilder.copyFactory(factory)
     new_factory.limit = factory.limit
     new_factory.fuel = factory.fuel
     new_factory.fuel_quality = factory.fuel_quality
+    new_factory.rocket_part_recipe = factory.rocket_part_recipe
     new_factory.boiler_inlet_temperature = factory.boiler_inlet_temperature
     new_factory.input = factory.input
     new_factory.modules = {}

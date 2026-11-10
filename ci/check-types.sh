@@ -67,7 +67,9 @@ panel="$tmp/panel"
 mkdir -p "$panel/gui/controls" "$panel/model" "$panel/data" "$panel/math/incremental"
 mkdir -p "$panel/model/recipe"
 cp src/model/recipe/{FixedRecipe,RecipeTypes}.lua "$panel/model/recipe/"
-mkdir -p "$panel/model/energy"
+mkdir -p "$panel/model/energy" "$panel/model/launch"
+cp src/model/{Orbit,SiloRecipes}.lua "$panel/model/"
+cp src/model/launch/PartRecipe.lua "$panel/model/launch/"
 cp src/model/energy/BoilerInlet.lua "$panel/model/energy/"
 cp src/data/{SheetPlanner,SheetDependencies,ModelCompute,BoilerRouting}.lua "$panel/data/"
 echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
@@ -142,6 +144,15 @@ reject_panel_edit 's/limit = function(model, block, event)/limti = function(mode
 reject_panel_edit 's/location = function(event, model)/loaction = function(event, model)/' missing-fields location
 reject_panel_edit 's/panelAction{action=BlockToolbar.action.location}/panelAction{action=BlockToolbar.action.deep}/' assign-type-mismatch display-count-deep
 cp src/dialog/ProductionPanel.lua "$panel/"
+sed '/action=SiloPartControl.action/s/, silo=silo.name//' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"
+if check_panel > "$tmp/silo-part.log" 2>&1; then
+  echo 'A construction recipe picker must identify its silo.' >&2
+  exit 1
+fi
+grep -q '(missing-fields)' "$tmp/silo-part.log" && grep -q 'silo' "$tmp/silo-part.log" || {
+  cat "$tmp/silo-part.log" >&2
+  exit 1
+}
 sed '/action=BoilerInletControl.action/s/, recipe_id=recipe.id//' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"
 if check_panel > "$tmp/boiler-inlet.log" 2>&1; then
   echo 'A boiler inlet edit must identify its recipe.' >&2

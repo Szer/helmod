@@ -16,6 +16,42 @@ local function click(element, player)
  game.tick_paused=false
 end
 
+local function checkSiloPartPicker(player)
+ local model = Model.newModel()
+ local block, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, "iron-plate", "orbit")
+ Model.setFactory(recipe, "rocket-silo")
+ ModelCompute.updateNow(model)
+ local function open()
+  Controller:send("on_gui_open", {name="OPEN",item1=model.id,item2=block.id,item3=recipe.id}, "HMRecipeEdition")
+ end
+ local function picker()
+  return find_element(player.gui.screen.HMRecipeEdition, function(el)
+   return el.name:find("silo-part-recipe-select", 1, true)
+  end)
+ end
+ open()
+ assert(not picker(), "fixed silos have no part recipe picker")
+ click(find_element(player.gui.screen.HMRecipeEdition, function(el)
+  return el.name:find("factory-select", 1, true) and el.tags.name == "test-selectable-silo"
+ end), player)
+ local dropdown = assert(picker(), "selectable silo has a part recipe picker")
+ assert(dropdown.tags.recipes[dropdown.selected_index] == "rocket-part")
+ local selected
+ for index, name in ipairs(dropdown.tags.recipes) do
+  if name == "test-copper-rocket-part" then selected = index end
+ end
+ dropdown.selected_index = assert(selected)
+ EventController.onGuiClick{player_index=player.index, element=dropdown}
+ assert(not Player.getLastError() and recipe.factory.rocket_part_recipe == "test-copper-rocket-part")
+ assert(block.ingredients["copper-plate"].amount > 0 and not block.ingredients["processing-unit"])
+ Controller:getView("HMRecipeEdition"):close()
+ open()
+ dropdown = picker()
+ assert(dropdown.tags.recipes[dropdown.selected_index] == recipe.factory.rocket_part_recipe, "retain the selection on reopen")
+ Controller:getView("HMRecipeEdition"):close()
+ game.tick_paused = false
+end
+
 local function checkReactorSettings(player)
  local model = Model.newModel()
  local block = model.block_root
@@ -247,6 +283,7 @@ script.on_nth_tick(60, function(event)
   game.take_screenshot{player=player,resolution={2200,1100},show_gui=true,path="circuit-external-supplies.png"}
   checkReactorSettings(player)
   checkBoilerInlet(player)
+  checkSiloPartPicker(player)
   log("ORBIT UI SMOKE PASSED")
   storage.orbit_ui_step=10
  end

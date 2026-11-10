@@ -1,3 +1,4 @@
+local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
 local RecipePercentage = require "gui.controls.RecipePercentage"
 local SheetPlanner = require "data.SheetPlanner"
 -------------------------------------------------------------------------------
@@ -266,10 +267,10 @@ function RecipeEdition:onEvent(event)
     end
 
     if User.isWriter(model) then
-        if event.action == "neighbour-bonus-update" then
-            local index = event.element.selected_index
-            local items = { 1, 2, 4, 8, "∞" }
-            ModelBuilder.updateRecipeNeighbourBonus(recipe, items[index])
+        if event.action == ReactorNeighbour.action then
+            local layout = ReactorNeighbour.layouts[event.element.selected_index]
+            if layout == nil then return end
+            ModelBuilder.updateRecipeNeighbourBonus(recipe, layout)
             ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
@@ -802,24 +803,15 @@ function RecipeEdition:updateFactoryInfo(event)
         GuiElement.add(input_panel, GuiLabel("label-module-slots"):caption({ "helmod_label.module-slots" }))
         GuiElement.add(input_panel, GuiLabel("module-slots"):caption(factory_prototype:getModuleInventorySize()))
 
-        ---neighbour
-        if factory_prototype:getType() == "reactor" then
+        if ReactorNeighbour.available(factory_prototype:native()) then
             local items = {}
-            local default_neighbour = nil
-            local item = nil
-            for _, value in pairs({ 1, 2, 4, 8, "∞"}) do
-                item = { "", value, " ", { "entity-name.nuclear-reactor" } }
-                table.insert(items, item)
-                if default_neighbour == nil then
-                    default_neighbour = item
-                end
-                if factory.neighbour_bonus == value then
-                    default_neighbour = item
-                end
+            local selected
+            for index, layout in ipairs(ReactorNeighbour.layouts) do
+                items[index] = {"", layout, " ", factory_prototype:getLocalisedName()}
+                if layout == factory.neighbour_bonus then selected = items[index] end
             end
-
-            GuiElement.add(input_panel, GuiLabel("label-neighbour"):caption({ "description.neighbour-bonus" }))
-            GuiElement.add(input_panel, GuiDropDown(self.classname, "neighbour-bonus-update", model.id, block.id, recipe.id):items(items, default_neighbour))
+            GuiElement.add(input_panel, GuiLabel("label-neighbour"):caption({"description.neighbour-bonus"}))
+            GuiElement.add(input_panel, GuiDropDown(self.classname, ReactorNeighbour.action, model.id, block.id, recipe.id):items(items, selected or items[1]))
         end
         ---energy
         local cell_energy = GuiElement.add(input_panel, GuiFlowH("label-energy"))

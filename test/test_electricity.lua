@@ -1,3 +1,4 @@
+local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
 local function near(actual, expected)
     assert(math.abs(actual - expected) < 1e-6, "expected " .. expected .. ", got " .. actual)
 end
@@ -109,6 +110,8 @@ local function checkTurbineByproduct()
 end
 
 return function()
+    assert(ReactorNeighbour.available(prototypes.entity["nuclear-reactor"]))
+    assert(not ReactorNeighbour.available(prototypes.entity["heating-tower"]))
     checkElectricityDemand()
     User.setParameter("solver_selected", defines.constant.solvers.default)
     checkFusionGenerator()

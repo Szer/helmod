@@ -1179,8 +1179,8 @@ end
 
 -------------------------------------------------------------------------------
 ---Update recipe Neighbour Bonus
----@param recipe table
----@param value number
+---@param recipe RecipeData
+---@param value ReactorLayout
 function ModelBuilder.updateRecipeNeighbourBonus(recipe, value)
     if recipe ~= nil then
         recipe.factory.neighbour_bonus = value

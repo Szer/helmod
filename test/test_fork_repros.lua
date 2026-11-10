@@ -18,6 +18,40 @@ local function click(player, name, exact)
     game.tick_paused = false
 end
 
+local function checkIngredientSearch(player)
+    local function finishSearch()
+        for _ = 1, 100 do
+            if User.getParameter("next_event") == nil then return end
+            Controller:onTick{tick=game.tick}
+        end
+        error("recipe search did not finish")
+    end
+    User.setParameter("recipe_group_selected", "helmod")
+    click(player, "HMRecipeSelector=OPEN")
+    local window = player.gui.screen.HMRecipeSelector
+    local water = "HMRecipeSelector=element-select=fluid=water"
+    finishSearch()
+    assert(find(window, water), "unfiltered product list includes water extraction")
+    local switch = assert(find(window, "recipe-filter-switch", "switch"))
+    switch.switch_state = "right"
+    EventController.onGuiClick{player_index=player.index, element=switch}
+    finishSearch()
+    assert(find(window, water), "unfiltered ingredient list includes water extraction")
+
+    local field = assert(find(window, "recipe-filter=", "textfield"))
+    local function search(text)
+        field.text = text
+        local submit = find(window, "recipe-filter=filter-button") or field
+        EventController.onGuiClick{player_index=player.index, element=submit}
+        finishSearch()
+    end
+    search("water")
+    assert(not find(window, water), "water extraction does not consume water")
+    assert(find(window, "element-select=boiler=water->steam#165"), "water matches a boiler ingredient")
+    search("")
+    assert(find(window, water), "clearing the ingredient search restores water extraction")
+end
+
 ---@param model ModelData
 ---@param block BlockData
 ---@return ProductionPanel
@@ -508,6 +542,8 @@ return function(case)
                     assert(#ingredients == 0)
                 end
                 assert(#prototype:getQualityProducts(nil, "normal") > 0)
+            elseif case == "empty-ingredient-search" then
+                checkIngredientSearch(player)
             elseif case == "blank-selector-rule" then
                 local blank = false
                 for _, rule in pairs(Model.getRules()) do

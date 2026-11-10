@@ -41,4 +41,12 @@ for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolb
     end
     assert(log:find("FORK REGRESSION PASS " .. case, 1, true), case .. ": see " .. work)
 end
+local offshore = saves .. "/upstream-2.6.0"
+local fixture = "triage-prototypes_1.0.0.zip"
+Runner.copy(offshore .. "/" .. fixture, work .. "/mods/" .. fixture)
+Runner.copy(offshore .. "/639/repro.zip", work .. "/offshore.zip")
+Runner.copy(root .. "/test/test_offshore_save.lua", mod .. "/test_offshore_save.lua")
+Runner.write(mod .. "/control.lua", control .. '\nrequire "test_offshore_save"\n')
+local log = Runner.factorio(executable, work, {"--benchmark", work .. "/offshore.zip", "--benchmark-ticks", "5"})
+assert(log:find("OFFSHORE SAVE PASSED", 1, true), "offshore extraction: see " .. work)
 Runner.cleanup(work)

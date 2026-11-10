@@ -1,3 +1,4 @@
+local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
 local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
 local RecipePercentage = require "gui.controls.RecipePercentage"
 local SheetPlanner = require "data.SheetPlanner"
@@ -637,10 +638,11 @@ function RecipeEdition:onUpdate(event)
     if recipe and recipe.unbuildable then
         scroll.clear()
         self:updateHeader(event)
-        GuiElement.add(scroll, GuiLabel("unbuildable"):caption({"helmod_common.no-compatible-machine"}))
+        GuiElement.add(scroll, GuiLabel(UnbuildableRecipe.element):caption({UnbuildableRecipe.reason}))
         return
     end
-    if scroll["unbuildable"] then scroll["unbuildable"].destroy() end
+    local notice = scroll[UnbuildableRecipe.element]
+    if notice then notice.destroy() end
     self:updateHeader(event)
     local recipe_prototype = RecipePrototype(recipe)
     if recipe ~= nil and recipe_prototype:isSupportFactory() then

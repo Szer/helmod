@@ -1,3 +1,5 @@
+local FixedRecipe = require "model.recipe.FixedRecipe"
+
 return function()
     local function offers(recipe, machine)
         for _, candidate in pairs(RecipePrototype(recipe, "recipe"):getAllowedMachines()) do
@@ -7,6 +9,11 @@ return function()
     end
 
     local machine = "test-cable-assembler"
+    local dedicated = prototypes.entity[machine]
+    local kinds = defines.mod.recipes
+    assert(FixedRecipe.allows(dedicated, nil, "copper-cable"), "legacy recipe without a kind")
+    assert(not FixedRecipe.allows(dedicated, kinds.burnt.name, "iron-gear-wheel"), "burnt recipe still checks its machine")
+    assert(FixedRecipe.allows(prototypes.entity["rocket-silo"], kinds.orbit.name, "iron-plate"), "orbital cargo is independent of the fixed part recipe")
     assert(not offers("iron-gear-wheel", machine), "gear picker includes a cable-only machine")
     assert(offers("copper-cable", machine), "matching fixed recipe must remain usable")
     assert(not Player.getProductionsCrafting("crafting", prototypes.recipe["iron-gear-wheel"])[machine], "legacy machine lookup")

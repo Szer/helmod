@@ -8,9 +8,10 @@ check() {
 check src/model/launch
 check src/model/energy
 check src/model/recipe
-mkdir "$tmp/fixed-recipe"
-sed '/^return FixedRecipe$/i FixedRecipe.allows({type="assembling-machine", fixed_recipe="copper-cable"}, "recipe", "iron-gear-wheel")' \
-  src/model/recipe/FixedRecipe.lua > "$tmp/fixed-recipe/FixedRecipe.lua"
+mkdir -p "$tmp/fixed-recipe/model/recipe"
+cp src/model/recipe/RecipeTypes.lua "$tmp/fixed-recipe/model/recipe/"
+sed '/^return FixedRecipe$/i FixedRecipe.allows({fixed_recipe="copper-cable"}, RecipeTypes.recipe.name, "iron-gear-wheel")' \
+  src/model/recipe/FixedRecipe.lua > "$tmp/fixed-recipe/model/recipe/FixedRecipe.lua"
 if check "$tmp/fixed-recipe" > "$tmp/fixed-recipe.log" 2>&1; then
   echo 'A fixed recipe must be a named prototype.' >&2
   exit 1
@@ -65,7 +66,7 @@ grep -q 'param-type-mismatch' "$tmp/bad-action.log" || { cat "$tmp/bad-action.lo
 panel="$tmp/panel"
 mkdir -p "$panel/gui/controls" "$panel/model" "$panel/data" "$panel/math/incremental"
 mkdir -p "$panel/model/recipe"
-cp src/model/recipe/FixedRecipe.lua "$panel/model/recipe/"
+cp src/model/recipe/{FixedRecipe,RecipeTypes}.lua "$panel/model/recipe/"
 cp src/data/{SheetPlanner,SheetDependencies,ModelCompute}.lua "$panel/data/"
 echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
 mkdir -p "$panel/math/balance"

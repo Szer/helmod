@@ -1,3 +1,4 @@
+local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
 local MatrixSupply = require "gui.controls.MatrixSupply"
 local MatrixSupplies = require "model.MatrixSupplies"
 local SheetPlanner = require "data.SheetPlanner"
@@ -1480,7 +1481,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 	---col factory
 	local cell_factory = GuiElement.add(gui_table, GuiTable("factory", recipe.id):column(2):style("helmod_table_list"))
 	if recipe.unbuildable then
-		GuiElement.add(cell_factory, GuiLabel("unbuildable"):caption({"helmod_common.unbuildable"}):tooltip({"helmod_common.no-compatible-machine"}))
+		GuiElement.add(cell_factory, GuiLabel(UnbuildableRecipe.element):caption({UnbuildableRecipe.caption}):tooltip({UnbuildableRecipe.reason}))
 	elseif is_support_factory then
 		local factory = recipe.factory
 		if factory ~= nil then

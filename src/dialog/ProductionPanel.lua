@@ -764,10 +764,16 @@ function ProductionPanel:updateInputBlock(model, block)
 	input_tool.clear()
 	local all_visible = User.getParameter(BlockHeader.setting.ingredients)
 	local filter = GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.ingredients, model_id=model.id, block_id=block.id})
+	local filterTooltip = {BlockHeader.tooltip.filter}
+	if MatrixSupplies.available(block) then
+		filterTooltip = {MatrixSupply.tooltip.filter}
+	elseif block_by_product then
+		filterTooltip = {"", filterTooltip, "\n", {MatrixSupply.tooltip.mode}}
+	end
 	if all_visible == true then
-		GuiElement.add(input_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.white, defines.sprites.filter.black):style(defines.styles.button.menu_sm_selected):tooltip({ BlockHeader.tooltip.filter }))
+		GuiElement.add(input_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.white, defines.sprites.filter.black):style(defines.styles.button.menu_sm_selected):tooltip(filterTooltip))
 	else
-		GuiElement.add(input_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.black, defines.sprites.filter.black):style(defines.styles.button.menu_sm):tooltip({ BlockHeader.tooltip.filter }))
+		GuiElement.add(input_tool, filter:sprite(defines.sprite_type.menu, defines.sprites.filter.black, defines.sprites.filter.black):style(defines.styles.button.menu_sm):tooltip(filterTooltip))
 	end
 	if block_by_product == false then
 		GuiElement.add(input_tool, GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.clear, model_id=model.id, block_id=block.id}):sprite(defines.sprite_type.menu, defines.sprites.eraser.black, defines.sprites.eraser.black):style(defines.styles.button.menu_sm):tooltip({ BlockHeader.tooltip.clear }))
@@ -804,7 +810,8 @@ function ProductionPanel:updateInputBlock(model, block)
 			local hidden_ingredients = {}
 			
 			local show_hidden_input_products = User.getParameter("show_hidden_input_products")
-			local canEditSupplies = MatrixSupplies.available(block) and User.isWriter(model)
+			local matrixSuppliesAvailable = MatrixSupplies.available(block)
+			local canEditSupplies = matrixSuppliesAvailable and User.isWriter(model)
 			local visible = GuiElement.visibleIngredients(block.ingredients)
 			local skip_hidden_products = table.size(visible) < 2*column_count
 
@@ -827,7 +834,16 @@ function ProductionPanel:updateInputBlock(model, block)
 					if block_by_product then
 						ingredient.button_action = ConstraintView.action.ingredient
 						ingredient.button_tooltip = "tooltip.add-recipe"
-						ingredient.control_info = canEditSupplies and supplyEligible and MatrixSupply.hint or nil
+						ingredient.control_info = nil
+						if not combinator_select_mode then
+							if canEditSupplies and supplyEligible then
+								ingredient.control_info = MatrixSupply.hint.toggle
+							elseif canEditSupplies and not block.products[index] then
+								ingredient.control_info = MatrixSupply.hint.automatic
+							elseif not matrixSuppliesAvailable and block.products[index] then
+								ingredient.control_info = MatrixSupply.hint.mode
+							end
+						end
 						if supplied then ingredient.contraint_type = ConstraintView.kind.master end
 					else
 						if not (block.unlinked or true) or block.by_factory == true then
@@ -2472,9 +2488,9 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 	end
 
 	if event.button == defines.mouse_button_type.left and block then
-		local supply, enabled = MatrixSupply.headerEdit(event)
+		local supply = MatrixSupply.headerEdit(event)
 		if supply and supply.model_id == model.id and supply.block_id == block.id then
-			if MatrixSupplies.set(block, supply.material, enabled) then
+			if MatrixSupplies.toggle(block, supply.material) then
 				ModelCompute.update(model, block)
 				Controller:send("on_gui_refresh", event)
 			end

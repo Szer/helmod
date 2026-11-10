@@ -893,6 +893,11 @@ end
 ---@param seconds number Planning period in seconds
 ---@param parameters ParametersData?
 function ModelCompute.prepareRecipeFactory(recipe, seconds, parameters)
+    if recipe.type == defines.mod.recipes.fluid.name and recipe.factory
+        and not Player.canPumpFluid(recipe.factory.name, recipe.name) then
+        local replacement = Model.getDefaultPrototypeFactory(RecipePrototype(recipe))
+        if replacement then Model.setFactory(recipe, replacement, recipe.factory.quality) end
+    end
     recipe.base_time = seconds
     ModelCompute.computeModuleEffects(recipe, parameters)
     if recipe.type == defines.mod.recipes.energy.name then

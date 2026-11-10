@@ -32,6 +32,38 @@ local function checkSplitCoalReturn()
     near(gross_coal, 0.75, "gross coal return across qualities")
 end
 
+local function checkOffshoreExtraction()
+    local function offers(fluid, name)
+        for _, pump in pairs(RecipePrototype(fluid, "fluid"):getAllowedMachines()) do
+            if pump.name == name then return true end
+        end
+        return false
+    end
+    assert(Player.getFluidRecipes()["sulfuric-acid"], "a filtered pump supplies acid without an acid tile")
+    assert(offers("water", "offshore-pump") and not offers("water", "test-acid-pump"))
+    assert(offers("sulfuric-acid", "test-acid-pump") and not offers("sulfuric-acid", "offshore-pump"))
+    local model = Model.newModel()
+    local block, acid = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, "sulfuric-acid", "fluid")
+    assert(acid.factory.name == "test-acid-pump")
+    ModelCompute.update(model)
+    block.products["sulfuric-acid"].input = 600
+    ModelCompute.update(model)
+    near(acid.factory.count, 2, "two pumps at five acid per tick")
+    local old_defaults = table.deepcopy(User.getParameter("default_factory"))
+    Model.setFactory(acid, "test-acid-pump", "uncommon")
+    User.setDefaultFactory(acid)
+    local _, water = ModelBuilder.addRecipeIntoProductionBlock(model, block, "water", "fluid")
+    assert(water.factory.name == "offshore-pump", "ignore an incompatible extraction default")
+    local second = Model.newModel()
+    local _, other_acid = ModelBuilder.addRecipeIntoProductionBlock(second, second.block_root, "sulfuric-acid", "fluid")
+    assert(other_acid.factory.name == "test-acid-pump" and other_acid.factory.quality == "uncommon", "keep a compatible default")
+    User.setParameter("default_factory", old_defaults)
+    Model.setFactory(water, "test-acid-pump", "uncommon")
+    ModelCompute.update(model)
+    assert(water.factory.name == "offshore-pump" and water.factory.quality == "uncommon", "repair saved incompatible pump")
+    assert(acid.factory.name == "test-acid-pump" and block.products["sulfuric-acid"].input == 600)
+end
+
 local function check(background)
     settings.global.helmod_incremental_percentages = {value=background}
     assert(script.feature_flags.space_travel == true, "orbit feature flag")
@@ -177,6 +209,7 @@ local function check(background)
     local defaults=Model.newModel()
     local _,dr=ModelBuilder.addRecipeIntoProductionBlock(defaults,defaults.block_root,"transport-belt","orbit")
     assert(dr.factory.quality=="legendary","saved silo quality default")
+    checkOffshoreExtraction()
     checkSplitCoalReturn()
     check_electricity()
     check_cracking()

@@ -1,3 +1,4 @@
+local OffshoreFluids = require "model.recipe.OffshoreFluids"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class Player
@@ -1144,7 +1145,9 @@ function Player.getProductionsCrafting(category, lua_recipe)
     local rules_included, rules_excluded = Player.getRules("production-crafting")
     if lua_recipe.name ~= nil and category == "fluid" then
         for key, lua_entity in pairs(Player.getOffshorePumps()) do
-            productions[lua_entity.name] = lua_entity
+            if Player.canPumpFluid(lua_entity.name, lua_recipe.name) then
+                productions[lua_entity.name] = lua_entity
+            end
         end
     else
         local lua_entities = Player.getProductionMachines()
@@ -1589,35 +1592,43 @@ function Player.getEnergyRecipe(name)
     return recipe
 end
 
--------------------------------------------------------------------------------
----Return table of fluid recipes
----@return table
-function Player.getFluidRecipes()
-    local recipes = {}
+---@type table<string, OffshoreFluidSource>?
+local offshore_sources
 
-    local tiles = Player.getTilePrototypes()
-    for _, tile in pairs(tiles) do
-        if tile.fluid then
-            local recipe = Player.buildFluidRecipe(tile.fluid.name, {}, nil)
-            recipe.subgroup = { name = "helmod-fluid", order = "bbbb" }
-            if not recipes[tile.fluid.name] then
-                recipes[tile.fluid.name] = recipe
-            end
-            if tile.hidden then
-                recipes[tile.fluid.name].hidden = true
-            end
-        end
+---@return table<string, OffshoreFluidSource>
+local function offshoreSources()
+    if offshore_sources == nil then
+        offshore_sources = OffshoreFluids.index(Player.getTilePrototypes(), Player.getOffshorePumps())
     end
-    return recipes
+    return offshore_sources
 end
 
--------------------------------------------------------------------------------
----Return recipe
+---@param pump string
+---@param fluid string
+---@return boolean
+function Player.canPumpFluid(pump, fluid)
+    local source = offshoreSources()[fluid]
+    return source ~= nil and source.pumps[pump] == true
+end
+
 ---@param name string
----@return table
+---@return table?
 function Player.getFluidRecipe(name)
-    local recipes = Player.getFluidRecipes()
-    return recipes[name]
+    local source = offshoreSources()[name]
+    if source == nil then return nil end
+    local recipe = Player.buildFluidRecipe(name, {}, nil)
+    recipe.subgroup = { name = "helmod-fluid", order = "bbbb" }
+    recipe.hidden = source.hidden
+    return recipe
+end
+
+---@return table<string, table>
+function Player.getFluidRecipes()
+    local recipes = {}
+    for name in pairs(offshoreSources()) do
+        recipes[name] = Player.getFluidRecipe(name)
+    end
+    return recipes
 end
 
 -------------------------------------------------------------------------------

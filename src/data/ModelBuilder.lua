@@ -55,6 +55,9 @@ function ModelBuilder.addRecipeIntoProductionBlock(model, block, recipe_name, re
                     if recipe_type == "orbit" and recipe_prototype:getAllowedMachines()[default_factory.name] ~= nil then
                         is_match = true
                     end
+                    if recipe_type == defines.mod.recipes.fluid.name then
+                        is_match = Player.canPumpFluid(default_factory.name, recipe_name)
+                    end
                     if is_match == true then
                         Model.setFactory(ModelRecipe, default_factory.name, default_factory.quality, default_factory.fuel, default_factory.fuel_quality)
                         ModelBuilder.setFactoryModulePriority(ModelRecipe, default_factory.module_priority)

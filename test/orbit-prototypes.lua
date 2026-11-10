@@ -82,3 +82,9 @@ data:extend{{
         {type="item", name="copper-plate", amount=1}
     }
 }}
+
+local acid_pump = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
+acid_pump.name = "test-acid-pump"
+acid_pump.fluid_box.filter = "sulfuric-acid"
+acid_pump.pumping_speed = 5
+data:extend{acid_pump}

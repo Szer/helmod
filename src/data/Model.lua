@@ -1,3 +1,4 @@
+local FixedRecipe = require "model.recipe.FixedRecipe"
 ------------------------------------------------------------------------------
 ---Description of the module.
 ---@class Model
@@ -604,29 +605,29 @@ end
 ---@param factory_quality? string
 ---@param factory_fuel? string
 ---@param factory_fuel_quality? string
+---@return boolean assigned
 function Model.setFactory(recipe, factory_name, factory_quality, factory_fuel, factory_fuel_quality)
-  if recipe ~= nil then
-    if factory_quality == "" then
-      factory_quality = nil
-    end
-    local factory_prototype = EntityPrototype(factory_name)
-    if factory_prototype:native() ~= nil then
-      if recipe.factory == nil then
-        recipe.factory = Model.newFactory()
-        if recipe.beacons == nil or #recipe.beacons == 0 then
-          recipe.beacons = {}
-          table.insert(recipe.beacons, Model.newBeacon())
-        end
-      end
-      recipe.factory.name = factory_name
-      recipe.factory.quality = factory_quality
-      recipe.factory.fuel = factory_fuel
-      recipe.factory.fuel_quality = factory_fuel_quality
-      if Model.countModulesModel(recipe.factory) >= factory_prototype:getModuleInventorySize() then
-        recipe.factory.modules = {}
-      end
+  if recipe == nil then return false end
+  local factory_prototype = EntityPrototype(factory_name)
+  local machine = factory_prototype:native()
+  if machine == nil or not FixedRecipe.allows(machine, recipe.type, recipe.name) then return false end
+
+  if factory_quality == "" then factory_quality = nil end
+  if recipe.factory == nil then
+    recipe.factory = Model.newFactory()
+    if recipe.beacons == nil or #recipe.beacons == 0 then
+      recipe.beacons = {}
+      table.insert(recipe.beacons, Model.newBeacon())
     end
   end
+  recipe.factory.name = factory_name
+  recipe.factory.quality = factory_quality
+  recipe.factory.fuel = factory_fuel
+  recipe.factory.fuel_quality = factory_fuel_quality
+  if Model.countModulesModel(recipe.factory) >= factory_prototype:getModuleInventorySize() then
+    recipe.factory.modules = {}
+  end
+  return true
 end
 
 -------------------------------------------------------------------------------

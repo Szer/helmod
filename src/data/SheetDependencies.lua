@@ -5,6 +5,7 @@ local Dependencies = {}
 ---@field parameters ParametersData
 ---@field force uint
 ---@field solver string?
+---@field default_factory_level string
 ---@field one boolean?
 ---@field mining number
 ---@field lab number
@@ -38,6 +39,7 @@ function Dependencies.capture(model, scope)
     local ctx = {
         environment={
             time=model.time, parameters=model.parameters, force=force.index,
+            default_factory_level=User.getPreferenceSetting("default_factory_level"),
             solver=User.getParameter("solver_selected"), one=User.getPreferenceSetting("one_block_factor_enable"),
             mining=force.mining_drill_productivity_bonus, lab=force.laboratory_speed_modifier,
             lab_productivity=force.laboratory_productivity_bonus, day={Player.getGameDay()},

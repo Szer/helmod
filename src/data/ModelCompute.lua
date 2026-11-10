@@ -1,3 +1,4 @@
+local FixedRecipe = require "model.recipe.FixedRecipe"
 local SheetPlanner = require "data.SheetPlanner"
 local Orbit = require "model.Orbit"
 require "math.Matrix"
@@ -392,7 +393,7 @@ function ModelCompute.finalizeBlock(block, factor)
                             beacon.amount = 0
                         end
                         -- add constant only if has a beacon
-                        if beacon.amount > 0 then
+                        if beacon.amount > 0 and not recipe.unbuildable then
                             constant = beacon.per_factory_constant or 0
                         end
                         beacon.count = beacon.amount * recipe.count + constant
@@ -893,10 +894,20 @@ end
 ---@param seconds number Planning period in seconds
 ---@param parameters ParametersData?
 function ModelCompute.prepareRecipeFactory(recipe, seconds, parameters)
-    if recipe.type == defines.mod.recipes.fluid.name and recipe.factory
-        and not Player.canPumpFluid(recipe.factory.name, recipe.name) then
+    local factory = recipe.factory
+    recipe.unbuildable = nil
+    local machine = factory and Player.getEntityPrototype(factory.name)
+    local compatible = FixedRecipe.allows(machine, recipe.type, recipe.name)
+    if recipe.type == defines.mod.recipes.fluid.name and factory then
+        compatible = Player.canPumpFluid(factory.name, recipe.name)
+    end
+    if not compatible then
         local replacement = Model.getDefaultPrototypeFactory(RecipePrototype(recipe))
-        if replacement then Model.setFactory(recipe, replacement, recipe.factory.quality) end
+        if replacement then
+            Model.setFactory(recipe, replacement, factory and factory.quality)
+        else
+            recipe.unbuildable = true
+        end
     end
     recipe.base_time = seconds
     ModelCompute.computeModuleEffects(recipe, parameters)

@@ -1,3 +1,4 @@
+local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
 local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
 local RecipePercentage = require "gui.controls.RecipePercentage"
 local SheetPlanner = require "data.SheetPlanner"
@@ -300,7 +301,7 @@ function RecipeEdition:onEvent(event)
 
         if event.action == "factory-select" then
             local element_quality = GuiElement.getElementQuality(event.element)
-            Model.setFactory(recipe, event.item4, element_quality)
+            if not Model.setFactory(recipe, event.item4, element_quality) then return end
             ModelBuilder.applyFactoryModulePriority(recipe)
             ModelCompute.update(model, block)
             self:update(event)
@@ -633,6 +634,15 @@ end
 function RecipeEdition:onUpdate(event)
     local model, block, recipe = self:getParameterObjects()
     ---header
+    local scroll = self:getScrollPanel()
+    if recipe and recipe.unbuildable then
+        scroll.clear()
+        self:updateHeader(event)
+        GuiElement.add(scroll, GuiLabel(UnbuildableRecipe.element):caption({UnbuildableRecipe.reason}))
+        return
+    end
+    local notice = scroll[UnbuildableRecipe.element]
+    if notice then notice.destroy() end
     self:updateHeader(event)
     local recipe_prototype = RecipePrototype(recipe)
     if recipe ~= nil and recipe_prototype:isSupportFactory() then

@@ -1,3 +1,5 @@
+local MatrixSupplies = require "model.MatrixSupplies"
+local DefaultObjective = require "math.balance.DefaultObjective"
 local EntityType = require "model.EntityType"
 local SiloRecipes = require "model.SiloRecipes"
 local TemperatureSupply = require "math.balance.TemperatureSupply"
@@ -57,7 +59,7 @@ end
 -------------------------------------------------------------------------------
 ---Check and valid unlinked block
 ---@param model table
----@param block table
+---@param block BlockData
 function ModelCompute.checkUnlinkedBlock(model, block)
     local unlinked = true
     local recipe = Player.getPlayerRecipe(block.name)
@@ -557,104 +559,56 @@ function ModelCompute.prepareBlockObjectives(block)
         ModelCompute.computeBlock(block)
     end
     local objectives_block = {}
-
-    local factor = 1
     local block_elements = block.products
-    if block.by_product == false then
-        block_elements = block.ingredients
-        factor = 1
+    if block.by_product == false then block_elements = block.ingredients end
+    for key, element in pairs(block_elements or {}) do
+        if element.input ~= nil then objectives_block[key] = {key=key, value=element.input} end
     end
-    if block_elements ~= nil then
-        for _, element in pairs(block_elements) do
-            local element_key = Product(element):getTableKey()
-            local objective = {}
-            if element.input ~= nil then
-                objective.key = element_key
-                objective.value = element.input * factor
-                objectives_block[element_key] = objective
-            end
-        end
-    end
-    local objectives_size = table.size(objectives_block)
-    block.has_input = objectives_size > 0
+    block.has_input = next(objectives_block) ~= nil
 
-    local first_candidat_objective = nil
-    local has_objective = false
-    -- if empty objectives create from the children
-    if objectives_size == 0 then
-        local children = block.children
-        for _, child in spairs(children, defines.sorters.block.sort) do
-            if child.need_candidat_objective == false then
-                -- skip candidat objective because the child linked
-                goto continue
-            end
+    if not block.has_input then
+        local fallback
+        local supplies
+        if MatrixSupplies.available(block) then supplies = block.matrix_supplies end
+        for _, child in spairs(block.children, defines.sorters.block.sort) do
+            if child.need_candidat_objective == false then goto continue end
             local is_block = Model.isBlock(child)
+            local elements
             if is_block then
-                local child_elements = nil
-                local factor = 1
-                if block.by_product == false then
-                    child_elements = child.ingredients
-                    factor = 1
-                else
-                    child_elements = child.products
-                end
-                for _, lua_product in pairs(child_elements) do
-                    local product = Product(lua_product)
-                    local element_key = product:getTableKey()
-                    local state = 0
-                    if block_elements[element_key] ~= nil then
-                        state = block_elements[element_key].state
-                    end
-
-                    local count = lua_product.amount
-                    local objective = {}
-                    objective.key = element_key
-                    objective.value = count * factor
-                    if state == 1 then
-                        objectives_block[element_key] = objective
-                        has_objective = true
-                    elseif child.need_candidat_objective == true and first_candidat_objective == nil then
-                        first_candidat_objective = objective
-                    end
-                    break
-                end
+                elements = child.products
+                if block.by_product == false then elements = child.ingredients end
             else
-                local recipe_prototype = RecipePrototype(child)
-                local child_elements = nil
-                local factor = 1
+                local recipe = RecipePrototype(child)
                 if block.by_product == false then
-                    child_elements = recipe_prototype:getQualityIngredients(child.factory, child.quality)
-                    factor = 1
+                    elements = recipe:getQualityIngredients(child.factory, child.quality)
                 else
-                    child_elements = recipe_prototype:getQualityProducts(child.factory, child.quality)
+                    elements = recipe:getQualityProducts(child.factory, child.quality)
                 end
-                for _, lua_product in pairs(child_elements) do
-                    local product = Product(lua_product)
-                    local element_key = product:getTableKey()
-                    local state = 0
-                    if block_elements[element_key] ~= nil then
-                        state = block_elements[element_key].state
-                    end
+            end
 
-                    local count = product:getAmount()
-                    local objective = {}
-                    objective.key = element_key
-                    objective.value = count * factor
-                    if state == 1 then
-                        objectives_block[element_key] = objective
-                        has_objective = true
-                    elseif child.need_candidat_objective == true and first_candidat_objective == nil then
-                        first_candidat_objective = objective
-                    end
-                    break
+            local best, bestIsNetOutput
+            local bestRank = DefaultObjective.priority.ineligible
+            for _, material in pairs(elements) do
+                local product = Product(material)
+                local key = product:getTableKey()
+                local netOutput = block_elements[key] ~= nil and block_elements[key].state == 1
+                local amount = material.amount
+                if not is_block then amount = product:getAmount() end
+                local rank = DefaultObjective.rank(key, amount, netOutput, supplies, child.contraints)
+                if rank > bestRank then
+                    best = {key=key, value=amount}
+                    bestRank, bestIsNetOutput = rank, netOutput
                 end
+                if best and not supplies and not child.contraints then break end
+            end
+            if best and bestIsNetOutput then
+                objectives_block[best.key] = best
+            elseif fallback == nil and child.need_candidat_objective then
+                fallback = best
             end
             ::continue::
         end
-    end
-
-    if has_objective == false and first_candidat_objective ~= nil then
-        objectives_block[first_candidat_objective.key] = first_candidat_objective
+        if not next(objectives_block) and fallback then objectives_block[fallback.key] = fallback end
     end
 
     block.objectives = objectives_block

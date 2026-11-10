@@ -2,6 +2,8 @@ local Electricity = require "model.energy.Electricity"
 
 -------------------------------------------------------------------------------
 ---@class MatrixHeader
+---@field child_id? string
+---@field product_linked? ProductData
 ---@field index uint
 ---@field key string
 ---@field type string
@@ -125,6 +127,7 @@ end
 ---@field parameters {[integer] : MatrixRowParameters}
 ---@field objectives table<string,ObjectiveData>
 ---@field temperature_routes? TemperatureRoute[] Links from produced temperatures without a matching real input key
+---@field linked_exports? table<string,table<string,boolean>> Solved export keys by child block ID
 ---@field external_supplies? table<string,boolean>
 ---@field objective_values {[integer] : number}
 

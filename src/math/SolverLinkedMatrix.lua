@@ -370,6 +370,7 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepar
         local matrix = Matrix()
         matrix.column_sum = {}
 
+        local linked_exports
         local col_index = {}
         local factor = 1
         local sorter = defines.sorters.block.sort
@@ -406,6 +407,15 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepar
                 if child.blocks_linked ~= nil then
                     -- add virtual row of linked blocks
                     for key, child_linked in pairs(child.blocks_linked) do
+                        -- Reserve each linked export for its own profile when selecting a driving column.
+                        local product = child_linked.products[key]
+                        if block.by_product ~= false and not block.by_factory and not block.solver
+                            and child.by_product ~= false and not child.consumer and not Model.isUnlinkedBlock(child)
+                            and product and product.amount > 0 then
+                            linked_exports = linked_exports or {}
+                            linked_exports[child.id] = linked_exports[child.id] or {}
+                            linked_exports[child.id][key] = true
+                        end
                         local child_linked_info = {}
                         child_linked_info.name = child.name
                         child_linked_info.type = child.type
@@ -463,6 +473,7 @@ function SolverLinkedMatrix:get_block_matrix(block, parameters, factories_prepar
         ---end loop recipes
 
         matrix = TemperatureLinks.build(matrix, block)
+        matrix.linked_exports = linked_exports
         if block.by_product ~= false then matrix.external_supplies = block.matrix_supplies end
         matrix.objectives = block.objectives
         return matrix

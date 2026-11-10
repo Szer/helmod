@@ -35,7 +35,10 @@ grep -q 'param-type-mismatch' "$tmp/profile.log" && grep -q 'BlockData' "$tmp/pr
   cat "$tmp/profile.log" >&2
   exit 1
 }
-check src/gui/controls
+mkdir -p "$tmp/controls/gui" "$tmp/controls/math/balance"
+cp -R src/gui/controls "$tmp/controls/gui/"
+cp src/math/balance/ConstraintKind.lua "$tmp/controls/math/balance/"
+check "$tmp/controls"
 
 # Verify the live call site rejects swapped coordinates, without editing the checkout.
 mkdir "$tmp/swapped"
@@ -52,7 +55,8 @@ grep -q 'param-type-mismatch' "$tmp/negative.log" && grep -q 'PivotRow' "$tmp/ne
 echo 'Verified that LuaLS rejects swapped pivot coordinates.'
 
 # A constraint kind is not a button action, even though both are strings.
-mkdir "$tmp/bad-action"
+mkdir -p "$tmp/bad-action/math/balance"
+cp src/math/balance/ConstraintKind.lua "$tmp/bad-action/math/balance/"
 cp src/gui/controls/DisplayMode.lua "$tmp/bad-action/"
 sed '/^return ConstraintView$/i ConstraintView.hint(false, "master")' \
   src/gui/controls/ConstraintView.lua > "$tmp/bad-action/ConstraintView.lua"

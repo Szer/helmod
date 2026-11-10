@@ -2,16 +2,16 @@
 
 **Send to orbit.** Set a cargo rate and Helmod calculates rocket-part ingredients and silo counts from cargo capacity, productivity and launch timing.
 
-**Linked power plants.** Size boilers, fuel supplies and generators for your factory’s demand. Two normal fusion reactors can power four generators in isolation or eight as a connected pair.
+**Electricity and fluid planning.** Size steam, nuclear and fusion power plants for your factory’s demand. Calculations account for reactor neighbour bonuses and the temperature of mixed fluid supplies.
 
-**Quality recycling.** Ctrl-click a material in the main Input row to mark it as an external supply. Matrix Solver balances the rest of the loop at each quality.
+**Quality upcycling.** Choose which materials and qualities can come from outside a block. Matrix Solver balances crafting and recycling across quality tiers to meet your production target.
 
-**Shared multiplayer sheets.** An experimental solver spreads recalculation across ticks to reduce stalls during edits. Enable it in **Settings → Mod settings → Map**.
+**Smoother shared-sheet edits.** The experimental background solver spreads recalculation across ticks to reduce multiplayer stutter when someone edits a large sheet. Enable it in **Settings → Mod settings → Map**.
 
 ### Smaller improvements
 
 - Keep your place when editing rows or switching a sub-block’s mode.
-- Balance intermediates across nested blocks and account for fluid temperatures.
+- Link intermediate products across nested production blocks.
 - Plan modded pumps, recipe-locked machines and alternative rocket-part recipes.
 - Count productivity and spent fuel correctly when recipe outputs overlap.
 

@@ -2,6 +2,22 @@
 return function()
     for _, solver in ipairs({defines.constant.solvers.default, defines.constant.solvers.matrix}) do
         User.setParameter("solver_selected", solver)
+        local factory_model = Model.newModel()
+        local factory_block = factory_model.block_root
+        factory_block.by_factory = true
+        local _, cracking = ModelBuilder.addRecipeIntoProductionBlock(factory_model, factory_block, "light-oil-cracking", "recipe")
+        local _, refinery = ModelBuilder.addRecipeIntoProductionBlock(factory_model, factory_block, "advanced-oil-processing", "recipe")
+        ModelBuilder.updateFactoryNumber(refinery, 1)
+        ModelCompute.update(factory_model)
+        assert(math.abs(cracking.count - 0.3) < 1e-8, solver .. ": cracking should consume 9 light oil/s")
+        assert(math.abs(factory_block.products["light-oil"].amount) < 1e-8)
+        assert(math.abs(factory_block.products["petroleum-gas"].amount - 17) < 1e-8)
+        local _, second = ModelBuilder.addRecipeIntoProductionBlock(factory_model, factory_block, "advanced-oil-processing", "recipe")
+        ModelBuilder.updateFactoryNumber(second, 1)
+        ModelCompute.update(factory_model)
+        assert(math.abs(cracking.count - 0.6) < 1e-8, solver .. ": both fixed refineries must supply the row")
+        assert(math.abs(factory_block.products["petroleum-gas"].amount - 34) < 1e-8)
+
         local model = Model.newModel()
         local block = model.block_root
         block.solver = true

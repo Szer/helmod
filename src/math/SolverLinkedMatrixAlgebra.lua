@@ -1,3 +1,5 @@
+local FactoryBalance = require "math.balance.FactoryBalance"
+
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class SolverLinkedMatrixAlgebra : SolverLinkedMatrix
@@ -181,7 +183,7 @@ function SolverLinkedMatrixAlgebra:solve_matrix(matrix_base, debug, by_factory, 
                                 if factory_count == 0 then
                                     icol = self:get_col(Mstep, xrow, true)
                                     self:add_runtime(debug, runtime, "Step " .. num_loop, Mstep, { x = icol, y = xrow })
-                                    Mstep = self:line_compute(Mstep, xrow, icol)
+                                    FactoryBalance.consume(Mstep.rows[xrow], Mstep.rows[#Mstep.rows], parameters, icol)
                                     num_loop = num_loop + 1
                                 end
                             end

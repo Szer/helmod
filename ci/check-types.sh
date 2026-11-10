@@ -7,6 +7,7 @@ check() {
 }
 check src/model/launch
 check src/model/energy
+check src/model/recipe
 check src/math/balance
 mkdir "$tmp/linked"
 cp src/math/linked/*.lua "$tmp/linked/"

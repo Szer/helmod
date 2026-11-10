@@ -8,6 +8,30 @@ local function near(actual, expected, label)
     assert(math.abs(actual - expected) < 1e-8, label .. ": expected " .. expected .. ", got " .. tostring(actual))
 end
 
+local function checkSplitCoalReturn()
+    local model = Model.newModel()
+    local block, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, "test-split-coal-return", "recipe")
+    Model.setFactory(recipe, "assembling-machine-3")
+    ModelCompute.update(model)
+    block.products.stone.input = 1
+    ModelCompute.update(model)
+    near(block.ingredients.coal.amount, 0.70, "coal input with no productivity")
+    model.parameters.effects.productivity = 3
+    ModelCompute.update(model)
+    near(block.products.stone.amount, 1, "productivity-exempt target")
+    near(block.ingredients.coal.amount, 0.25, "coal input after split returns at +300% productivity")
+    near(block.products.coal.amount, 0, "recycled coal surplus")
+    near(block.products["copper-plate"].amount, 7.5, "three results with a partially exempt return")
+
+    model.parameters.effects.quality = 0.1
+    ModelCompute.update(model)
+    local gross_coal = 0
+    for _, result in ipairs(RecipePrototype(recipe):getQualityProducts(recipe.factory, recipe.quality)) do
+        if result.name == "coal" then gross_coal = gross_coal + Product(result):getAmount(recipe) end
+    end
+    near(gross_coal, 0.75, "gross coal return across qualities")
+end
+
 local function check(background)
     settings.global.helmod_incremental_percentages = {value=background}
     assert(script.feature_flags.space_travel == true, "orbit feature flag")
@@ -136,6 +160,7 @@ local function check(background)
     local defaults=Model.newModel()
     local _,dr=ModelBuilder.addRecipeIntoProductionBlock(defaults,defaults.block_root,"transport-belt","orbit")
     assert(dr.factory.quality=="legendary","saved silo quality default")
+    checkSplitCoalReturn()
     check_electricity()
     check_cracking()
     recycling.check()

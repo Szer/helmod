@@ -1,5 +1,6 @@
 local Electricity = require "model.energy.Electricity"
 local Orbit = require "model.Orbit"
+local ProductYield = require "model.recipe.ProductYield"
 
 ---
 ---Description of the module.
@@ -332,17 +333,25 @@ function RecipePrototype:getProducts(factory)
     end
     local factory_prototype = EntityPrototype(factory)
     local lua_products = {}
+    ---@type table<string, CombinedProduct>?
+    local combined_products
     for index, raw_product in pairs(raw_products) do
         local product_id = raw_product.type .. "/" .. raw_product.name
         if raw_product.temperature then
             product_id = product_id .. "#" .. raw_product.temperature
         end
         if lua_products[product_id] ~= nil then
-            ---make a new product table for the combined result
-            ---combine product amounts, averaging in variable and probabilistic outputs
-            local amount_a = Product(lua_products[product_id]):getElementAmount()
-            local amount_b = Product(raw_product):getElementAmount()
-            lua_products[product_id] = { type = raw_product.type, name = raw_product.name, amount = amount_a + amount_b }
+            local previous = lua_products[product_id]
+            if self.lua_prototype.object_name == "LuaRecipePrototype" then
+                combined_products = combined_products or {}
+                local total = ProductYield.combine(self.lua_prototype, raw_product, previous.index, index,
+                    combined_products[product_id])
+                combined_products[product_id] = total
+                lua_products[product_id] = total
+            else
+                local amount = Product(previous):getElementAmount() + Product(raw_product):getElementAmount()
+                lua_products[product_id] = {type=raw_product.type, name=raw_product.name, amount=amount}
+            end
         else
             lua_products[product_id] = raw_product
         end

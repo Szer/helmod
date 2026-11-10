@@ -153,3 +153,33 @@ for _, product in ipairs({"iron-plate", "copper-plate"}) do
         energy_required=1, ingredients={inlet}, results={{type="item", name=product, amount=1}}, auto_recycle=false
     }}
 end
+
+local turbineFuel = table.deepcopy(data.raw.fluid.water)
+turbineFuel.name = "test-turbine-fuel"
+turbineFuel.fuel_value = "400kJ"
+data:extend{turbineFuel}
+
+for _, spec in ipairs({
+    {name="test-capped-turbine", maximum=250},
+    {name="test-unusable-turbine", minimum=1000},
+    {name="test-hot-turbine", minimum=400, power="3.6MW"},
+    {name="test-inefficient-turbine", maximum=500, effectivity=0.5},
+    {name="test-burning-turbine", burns=true, effectivity=0.5}
+}) do
+    local generator = table.deepcopy(data.raw[EntityType.fusionGenerator]["fusion-generator"])
+    generator.name = spec.name
+    generator.max_fluid_usage = 1.5
+    generator.energy_source.output_flow_limit = spec.power or "9MW"
+    generator.input_fluid_box.filter = spec.burns and turbineFuel.name or "steam"
+    generator.output_fluid_box.filter = "water"
+    generator.burns_fluid = spec.burns or false
+    generator.effectivity = spec.effectivity or 1
+    if helpers.compare_versions(helpers.game_version, "2.1.22") >= 0 then
+        generator.minimum_input_temperature = spec.minimum
+        generator.maximum_input_temperature = spec.maximum
+    else
+        generator.input_fluid_box.minimum_temperature = spec.minimum
+        generator.input_fluid_box.maximum_temperature = spec.maximum
+    end
+    data:extend{generator}
+end

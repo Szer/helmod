@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local SiloRecipes = require "model.SiloRecipes"
 local TemperatureSupply = require "math.balance.TemperatureSupply"
 local BoilerRouting = require "data.BoilerRouting"
@@ -1140,8 +1141,8 @@ function ModelCompute.computeEnergyFactory(recipe)
     end
 
     local energy_type = factory_prototype:getEnergyType()
-    if factory_prototype:getType() == "solar-panel" then
-        recipe.factory.energy = factory_prototype:getEnergyProduction() 
+    if factory_prototype:getType() == "solar-panel" or factory_prototype:getType() == EntityType.fusionGenerator then
+        recipe.factory.energy = factory_prototype:getEnergyProduction()
     else
         recipe.factory.energy = factory_prototype:getEnergyConsumption() * (1 + recipe.factory.effects.consumption)
     end

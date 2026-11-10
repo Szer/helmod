@@ -78,6 +78,65 @@ local function checkCircuitBalances(block)
     for key, amount in pairs(feed) do near(block.ingredients[key].amount, amount, key) end
 end
 
+local function checkNestedFoundries()
+    local model = Model.newModel()
+    model.time = 1
+    local root = model.block_root
+    local loop = Model.newBlock(model, {name="foundry-recycling", type="recipe"})
+    loop.parent_id, loop.index, loop.solver = root.id, 0, true
+    model.blocks[loop.id], root.children[loop.id] = loop, loop
+    for _, quality in ipairs({"normal", "uncommon", "rare", "epic"}) do
+        for _, name in ipairs({"foundry-recycling", "foundry"}) do
+            local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, loop, name, "recipe")
+            recipe.quality = quality
+            Model.setFactory(recipe, name == "foundry" and "foundry" or "recycler", "legendary")
+            ModelBuilder.addFactoryModule(recipe, "quality-module-3", "legendary", true)
+        end
+    end
+    local carbide = "tungsten-carbide#legendary"
+    loop.products_linked = {[carbide]=true}
+    loop.matrix_supplies = {["tungsten-carbide"]=true, ["electronic-circuit"]=true, ["steel-plate"]=true, ["refined-concrete"]=true}
+    ModelCompute.updateNow(model)
+    local standalone = table.deepcopy(model)
+    standalone.block_root = standalone.blocks[loop.id]
+    standalone.block_root.products[carbide].input = 1
+    ModelCompute.updateNow(standalone)
+    root.products[carbide].input = 1
+    for _, matrix in ipairs({true, false, true}) do
+        root.solver = matrix
+        ModelCompute.updateNow(model)
+        near(root.products[carbide].amount, 1, "parent legendary output")
+        near(root.ingredients.foundry.amount, 0, "foundries are made inside the loop")
+        near(root.products["tungsten-carbide#uncommon"].amount, 0, "intermediates stay inside the loop")
+        near(root.products["steel-plate#legendary"].amount, 1, "steel coproduct")
+        for _, side in ipairs({"products", "ingredients"}) do
+            for key, material in pairs(standalone.block_root[side]) do
+                near(root[side][key].amount, material.amount, "parent "..key)
+                near(loop[side][key].amount * loop.count_deep, material.amount, "child "..key)
+            end
+        end
+        for id, row in pairs(standalone.block_root.children) do
+            near(loop.children[id].count_deep, row.count_deep, "craft count "..id)
+        end
+    end
+    -- A primary profile can return the linked material as a byproduct of a different target.
+    root.solver = false
+    loop.products["tungsten-carbide"].input = 9.375
+    ModelCompute.updateNow(model)
+    near(root.ingredients.foundry.amount, 0, "use the linked profile for its requested quality")
+    near(root.products[carbide].amount, 1, "linked demand with a different local target")
+    assert(loop.products["tungsten-carbide"].input == 9.375, "preserve the explicit local target")
+    loop.products["tungsten-carbide"].input = nil
+    root.products[carbide].input = nil
+    ModelBuilder.updateChildContraint(loop, {type="master", item={name="tungsten-carbide", quality="legendary", type="item"}})
+    for _, matrix in ipairs({true, false}) do
+        root.solver = matrix
+        ModelCompute.updateNow(model)
+        assert(root.products[carbide].amount > 0, "a selected main output can drive an untargeted parent")
+        near(root.ingredients.foundry.amount, 0, "implicit target respects the recycling loop")
+    end
+end
+
 local function check()
     local previous = User.getParameter("solver_selected")
     for _, solver in ipairs({defines.constant.solvers.default, defines.constant.solvers.matrix}) do
@@ -108,6 +167,7 @@ local function check()
     end
 
     User.setParameter("solver_selected", defines.constant.solvers.default)
+    checkNestedFoundries()
     local model = Model.newModel()
     model.time = 1
     local root = model.block_root

@@ -1,3 +1,4 @@
+local ConstraintKind = require "math.balance.ConstraintKind"
 local TemperatureSupply = require "math.balance.TemperatureSupply"
 local FactoryBalance = require "math.balance.FactoryBalance"
 
@@ -40,8 +41,9 @@ end
 ---@param matrix Matrix
 ---@param xrow integer
 ---@param invert boolean
+---@param exports? table<string,boolean> Materials with a dedicated profile for this child
 ---@return integer
-function SolverLinkedMatrixAlgebra:get_col(matrix, xrow, invert)
+function SolverLinkedMatrixAlgebra:get_col(matrix, xrow, invert, exports)
     local row = matrix.rows[xrow]
     local parameters = matrix.parameters[xrow]
     if parameters.unlinked == 1 then
@@ -51,8 +53,13 @@ function SolverLinkedMatrixAlgebra:get_col(matrix, xrow, invert)
     local xcol = 0
     local max = 0
     local has_master = false
+    local linked = matrix.headers[xrow].product_linked
+    local linkedKey = linked and Product(linked):getTableKey()
     for icol, column in pairs(matrix.columns) do
         local cell_value = row[icol] or 0
+        if exports and exports[column.key] and linkedKey ~= column.key then
+            cell_value = 0
+        end
         if parameters.vent_material ~= nil and column.key ~= parameters.vent_material then cell_value = 0 end
         if parameters.consumer == 1 or parameters.voider == 1 then
             -- to consume value we must use -value
@@ -72,7 +79,7 @@ function SolverLinkedMatrixAlgebra:get_col(matrix, xrow, invert)
             local is_exclude = false
             if parameters.contraints ~= nil and column.product ~= nil and parameters.contraints[column.key] then
                 local contraint = parameters.contraints[column.key]
-                if contraint.type == "master" then
+                if contraint.type == ConstraintKind.master then
                     is_master = true
                     has_master = true
                 else
@@ -204,7 +211,8 @@ function SolverLinkedMatrixAlgebra:solve_matrix(matrix_base, debug, by_factory, 
             local primary
             for irow, _ in pairs(Mstep.rows) do
                 if irow < #Mstep.rows then
-                    icol = self:get_col(Mstep, irow, false)
+                    local exports = Mstep.linked_exports and Mstep.linked_exports[Mstep.headers[irow].child_id]
+                    icol = self:get_col(Mstep, irow, false, exports)
                     self:add_runtime(debug, runtime, "Step " .. num_loop, Mstep, { x = icol, y = irow })
                     Mstep = self:line_compute(Mstep, irow, icol)
                     num_loop = num_loop + 1

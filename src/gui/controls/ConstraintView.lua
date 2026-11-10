@@ -8,8 +8,7 @@ ConstraintView.action = {
     edition = "product-edition",
 }
 
----@enum ConstraintKind
-ConstraintView.kind = {master = "master", exclude = "exclude"}
+ConstraintView.kind = require "math.balance.ConstraintKind"
 
 ---@enum ConstraintSide
 ConstraintView.side = {products = "products", ingredients = "ingredients"}

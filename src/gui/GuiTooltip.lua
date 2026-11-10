@@ -216,9 +216,13 @@ function GuiTooltip:appendControlInfo(tooltip, element)
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.contraint-plus" } })
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.contraint-minus" } })
 		end
-		if self.m_with_control_info == MatrixSupply.hint then
-			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {MatrixSupply.tooltip.add}})
+		if self.m_with_control_info == MatrixSupply.hint.toggle then
+			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {MatrixSupply.tooltip.toggle}})
 			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {MatrixSupply.tooltip.remove}})
+		elseif self.m_with_control_info == MatrixSupply.hint.automatic then
+			table.insert(tooltip_section, {"", "\n", {MatrixSupply.tooltip.automatic}})
+		elseif self.m_with_control_info == MatrixSupply.hint.mode then
+			table.insert(tooltip_section, {"", "\n", {MatrixSupply.tooltip.mode}})
 		end
 		if self.m_with_control_info == "link-intermediate" then
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.link-intermediate" } })

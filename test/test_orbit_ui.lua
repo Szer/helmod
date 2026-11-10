@@ -151,11 +151,13 @@ script.on_nth_tick(60, function(event)
   ModelCompute.update(loop)
   Controller:send("on_gui_open",{name="OPEN",item1=loop.id,item2=block.id},"HMProductionPanel")
   local panel = player.gui.screen.HMProductionPanel
-  if not User.getParameter(BlockHeader.setting.ingredients) then
-   click(find_element(panel, function(el)
+  local function inputFilter()
+   return assert(find_element(panel, function(el)
     return el.name:find(BlockHeader.action.ingredients, 1, true)
-   end), player)
+   end))
   end
+  assert(helpers.table_to_json(inputFilter().tooltip):find(MatrixSupply.tooltip.filter, 1, true))
+  if not User.getParameter(BlockHeader.setting.ingredients) then click(inputFilter(), player) end
   click(find_element(panel, function(el)
    return el.name == "HMBlockEdition=OPEN=" .. loop.id .. "=" .. block.id .. "=block"
   end), player)
@@ -172,21 +174,24 @@ script.on_nth_tick(60, function(event)
     }):getName()
    end))
   end
-  local function mark(name, allow)
+  local function mark(name, ctrl, selected)
    EventController.onGuiClickButton{player_index=player.index, element=header(name, "normal"),
-    button=defines.mouse_button_type.left, control=allow, shift=not allow}
-   assert(box(name).state == allow and not box(name .. "#uncommon").state)
+    button=defines.mouse_button_type.left, control=ctrl, shift=not ctrl}
+   assert(box(name).state == selected, "unexpected external supply state after header click")
+   assert(not box(name .. "#uncommon").state)
   end
-  mark("iron-plate", true)
+  mark("iron-plate", true, true)
   assert(not box("copper-cable").state)
   local cable = box("copper-cable")
   cable.state = true
   EventController.onGuiClick{player_index=player.index, element=cable}
   local plus = GuiElement.getSprite(defines.sprite_info.master)
   assert(header("copper-cable","normal").mask_infos[plus])
-  mark("iron-plate", false)
+  mark("iron-plate", true, false)
+  mark("iron-plate", true, true)
+  mark("iron-plate", false, false)
   assert(box("copper-cable").state)
-  mark("iron-plate", true)
+  mark("iron-plate", true, true)
   recycling.checkCircuitBalances(block)
   assert(header("iron-plate","normal").mask_infos[plus])
   Controller:getView("HMBlockEdition"):close()

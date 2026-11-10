@@ -1,3 +1,4 @@
+local TemperatureSupply = require "math.balance.TemperatureSupply"
 local FactoryBalance = require "math.balance.FactoryBalance"
 
 -------------------------------------------------------------------------------
@@ -107,6 +108,9 @@ function SolverLinkedMatrixAlgebra:line_compute(matrix, xrow, xcol)
     local Z = zrow[xcol]                ---valeur demandee Z
     local V = row[xcol]                 ---valeur produite
     local C = -Z / V                    ---coefficient
+    if parameters.temperature_transfer then
+        C = TemperatureSupply.quantity(parameters.temperature_transfer, zrow, xcol)
+    end
     if parameters.unlinked == 1 then
         C = 1
     end

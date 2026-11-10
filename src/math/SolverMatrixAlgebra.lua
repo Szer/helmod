@@ -1,3 +1,4 @@
+local TemperatureSupply = require "math.balance.TemperatureSupply"
 local FactoryBalance = require "math.balance.FactoryBalance"
 
 -------------------------------------------------------------------------------
@@ -75,6 +76,9 @@ function SolverMatrixAlgebra:line_compute(matrix, xrow, xcol)
     local Z = zrow[xcol]                ---valeur demandee Z
     local V = row[xcol]                 ---valeur produite
     local C = -Z / V                    ---coefficient
+    if parameters.temperature_transfer then
+        C = TemperatureSupply.quantity(parameters.temperature_transfer, zrow, xcol)
+    end
     if Z < 0 or parameters.by_product == 0 or parameters.voider == 1 then
         parameters.coefficient = C
         parameters.recipe_count = P * C

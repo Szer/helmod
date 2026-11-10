@@ -72,7 +72,7 @@ cp src/model/energy/BoilerInlet.lua "$panel/model/energy/"
 cp src/data/{SheetPlanner,SheetDependencies,ModelCompute,BoilerRouting}.lua "$panel/data/"
 echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
 mkdir -p "$panel/math/balance"
-cp src/math/{SimplexBalance,Matrix,SolverMatrix,SolverLinkedMatrix,SolverMatrixSimplex,SolverLinkedMatrixSimplex}.lua "$panel/math/"
+cp src/math/{TemperatureLinks,SimplexBalance,Matrix,SolverMatrix,SolverLinkedMatrix,SolverMatrixAlgebra,SolverLinkedMatrixAlgebra,SolverMatrixSimplex,SolverLinkedMatrixSimplex}.lua "$panel/math/"
 cp src/math/balance/*.lua "$panel/math/balance/"
 cp src/math/incremental/Unit.lua "$panel/math/incremental/"
 cp src/edition/{RecipeEdition,BlockEdition}.lua "$panel/"
@@ -85,6 +85,17 @@ check_panel() {
     --logpath="$tmp/log" --configpath="$(pwd)/ci/production-panel.luarc.json"
 }
 check_panel
+sed 's/output=linked:get_column_index(output), yields=group.yields/yields=group.yields/' \
+  src/math/TemperatureLinks.lua > "$panel/math/TemperatureLinks.lua"
+if check_panel > "$tmp/temperature.log" 2>&1; then
+  echo 'A temperature transfer must identify the supplying column.' >&2
+  exit 1
+fi
+grep -q '(missing-fields)' "$tmp/temperature.log" && grep -q 'output' "$tmp/temperature.log" || {
+  cat "$tmp/temperature.log" >&2
+  exit 1
+}
+cp src/math/TemperatureLinks.lua "$panel/math/"
 sed 's/, material=event.item5//' src/gui/controls/MatrixSupply.lua > "$panel/gui/controls/MatrixSupply.lua"
 if check_panel > "$tmp/supply.log" 2>&1; then
   echo 'An external supply control must identify its material.' >&2

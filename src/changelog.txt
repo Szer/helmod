@@ -1,4 +1,22 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.6.1
+Date: 2026-11-10
+  Bugfixes:
+    - Recipes that return the same material several times now apply productivity only to the eligible part of each return.
+    - Burner machines now count both the recipe output and the spent fuel when they produce the same material and quality.
+    - Rows above a fixed machine count can now consume its outputs in Computing by factory mode.
+    - Edit Recipe shows the neighbour bonus only for reactors that benefit from it and labels each layout with the selected reactor’s name.
+    - Offshore pumps with a fixed output can now be planned for their own fluid, including fluids that have no source tile.
+    - Machines locked to one recipe are now offered only for that recipe. Saved rows without a compatible machine keep their target and show as unbuildable.
+    - Boiler counts and fuel use now account for inlet fluid temperature. You can set the temperature in Edit Recipe when the supply route is unclear.
+    - Linked suppliers now count all compatible fluid temperatures toward demand and respect temperature-specific inputs and exports.
+    - Matrix Solver now shows the additional fluid a recycling loop needs at the temperature range that consumes it.
+    - You can now choose a modded silo’s rocket part recipe in Edit Recipe when planning shipments to orbit.
+    - An empty ingredient search now includes recipes with no ingredients, such as Water extraction.
+    - Fusion generator plans now respect fluid and power limits when calculating generator counts, fluid consumption and fluid returned.
+    - The recipe selector now defaults to Shift+O, leaving O free for Trains. Existing custom bindings are preserved.
+    - Set the number of active neighbours per fusion reactor to plan how many generators its plasma can power.
+---------------------------------------------------------------------------------------------------
 Version: 2.6.0
 Date: 2026-11-10
   Bugfixes:

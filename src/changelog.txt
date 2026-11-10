@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.6.0
+Date: 2026-11-10
+  Bugfixes:
+    - In Matrix Solver loops, you can now choose which materials may come from outside the block so the solver can balance the remaining flows. Ctrl-click a material in the main Input row to toggle external supply for that quality.
+  Features:
+    - Added an experimental background sheet solver, off by default. Enable it under Settings → Mod settings → Map. It spreads recalculation across ticks to reduce stutter when editing shared sheets in multiplayer, even if recalculation takes just as long overall.
+---------------------------------------------------------------------------------------------------
 Version: 2.5.0
 Date: 2026-11-09
   Bugfixes:

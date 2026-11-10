@@ -923,10 +923,11 @@ function RecipeEdition:updateFactoryInfo(event)
             local tooltip = {FusionControl.tooltip.neighbours}
             GuiElement.add(input_panel, GuiLabel(FusionControl.element.neighboursLabel):caption({FusionControl.caption.neighbours}):tooltip(tooltip))
             local cell = GuiElement.add(input_panel, GuiFlowH(FusionControl.element.neighboursRow))
+            cell.style.horizontal_spacing = 8
             local field = GuiElement.add(cell, GuiTextField(self.classname, FusionControl.buttonArgs{
                 action=FusionControl.neighbours, model_id=model.id, block_id=block.id, recipe_id=recipe.id
             }):isNumeric():allowDecimal():text(tostring(factory.fusion_neighbours or 0)):tooltip(tooltip))
-            field.style.width = 65
+            field.style.width = 44
             field.tags = {applied_text=field.text}
             local temperature = factory_prototype:getFusionPlasmaTemperature(factory_prototype:getFluidProductionFilter())
             GuiElement.add(cell, GuiLabel(FusionControl.element.plasmaTemperature):caption({FusionControl.caption.plasmaTemperature, Format.formatNumber(temperature)}))

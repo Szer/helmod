@@ -100,6 +100,7 @@ function Product:clone()
     spoil = self.lua_prototype.spoil,
     state = self.lua_prototype.state,
     temperature = self.lua_prototype.temperature,
+    fusion_temperature = self.lua_prototype.fusion_temperature,
     minimum_temperature  = self.lua_prototype.minimum_temperature,
     maximum_temperature  = self.lua_prototype.maximum_temperature,
     burnt = self.lua_prototype.burnt,

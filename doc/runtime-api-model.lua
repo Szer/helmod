@@ -48,6 +48,10 @@
 ---@field boiler_inlet_temperature? number User-specified boiler inlet in °C
 ---@field boiler_inlet_auto? number Inlet in °C inferred from solved fluid supplies
 ---@field boiler_inlet_ambiguous? boolean Several inlet routes fit the solved flows
+---@field fusion_neighbours? number Average number of active connected neighbours per fusion reactor
+---@field fusion_inlet_auto? number Resolved fusion generator inlet in °C
+---@field fusion_inlet_temperature? number Manually selected fusion generator inlet in °C
+---@field fusion_inlet_ambiguous? boolean Several inlet routes fit the solved flows
 ---@field neighbour_bonus? ReactorLayout
 ---@field class string
 ---@field name string
@@ -76,6 +80,7 @@
 ---@field per_factory_constant number
 
 ---@class ProductData
+---@field fusion_temperature? number Plasma temperature carried by the unqualified fluid output, in °C
 ---@field temperature? number Fluid temperature in °C
 ---@field name string
 ---@field type string

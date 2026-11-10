@@ -1,31 +1,43 @@
+local EntityType = require "model.EntityType"
 local BoilerInlet = require "model.energy.BoilerInlet"
 local BoilerRouting = {}
 
 ---@class BoilerFeed
 ---@field name string
+---@field generator boolean
 ---@field probe number Feasible inlet in °C for the first flow calculation
 ---@field only_temperature? number Temperature of the sole available supply
 
 ---@param block BlockData
----@param boilers RecipeData[]
+---@param inlets RecipeData[]
+---@param outputs table<string,PlasmaOutput>
 ---@return table<string,BoilerFeed> feeds Row ID to possible supplies in this block
-local function findFeeds(block, boilers)
+local function findFeeds(block, inlets, outputs)
     local feeds = {}
-    for _, recipe in ipairs(boilers) do
+    for _, recipe in ipairs(inlets) do
         local entity = EntityPrototype(recipe.factory)
-        local fluid = entity:getBoilerInletFluid()
+        local generator = entity:getType() == EntityType.fusionGenerator
+        local fluid
+        if generator then fluid = entity:getFluidConsumptionFilter()
+        else fluid = entity:getBoilerInletFluid() end
         local temperatures = {}
         for _, product in pairs(block.products) do
             if product.type == "fluid" and product.name == fluid.name then
-                temperatures[product.temperature or fluid.default_temperature] = true
+                local output = outputs[product.key]
+                if output then
+                    for temperature in pairs(output.temperatures) do temperatures[temperature] = true end
+                else
+                    temperatures[product.temperature or fluid.default_temperature] = true
+                end
             end
         end
         local first = next(temperatures)
         if first then
             local multiple = next(temperatures, first) ~= nil
-            if multiple or first ~= fluid.default_temperature then
-                local minimum, maximum, target = entity:getBoilerInletRange()
-                local feed = {name=fluid.name, probe=minimum}
+            if multiple or first ~= fluid.default_temperature or (generator and outputs[fluid.name]) then
+                local minimum, maximum = entity:getFluidInletRange(fluid)
+                local target = generator and math.huge or entity:getTargetTemperature()
+                local feed = {name=fluid.name, probe=minimum, generator=generator}
                 if not multiple then
                     feed.only_temperature = first
                     if first >= minimum and first <= maximum and first < target then feed.probe = first end
@@ -43,8 +55,9 @@ end
 
 ---@param block BlockData Solved block
 ---@param feeds table<string,BoilerFeed>
+---@param trial boolean
 ---@return table<string,BoilerRoute>
-local function resolve(block, feeds)
+local function resolve(block, feeds, trial)
     ---@type table<string,BoilerSupply>
     local supplies = {}
     local demands = {}
@@ -70,7 +83,7 @@ local function resolve(block, feeds)
                     else
                         amount = Product(product):countProduct(child)
                     end
-                    local temperature = product.temperature or Player.getFluidPrototype(product.name).default_temperature
+                    local temperature = product.fusion_temperature or product.temperature or Player.getFluidPrototype(product.name).default_temperature
                     supply.volumes[temperature] = (supply.volumes[temperature] or 0) + amount
                 end
             end
@@ -92,32 +105,50 @@ local function resolve(block, feeds)
     end
     local routes = {}
     for id, feed in pairs(feeds) do
-        local temperature, ambiguous = BoilerInlet.resolve(supplies[feed.name], demands[id] or 0)
+        local supply = supplies[feed.name]
+        local temperature, ambiguous
+        if feed.generator then
+            temperature, ambiguous = BoilerInlet.resolve(supply, demands[id] or 0, trial, 1e-6)
+        else
+            temperature, ambiguous = BoilerInlet.resolve(supply, demands[id] or 0)
+        end
         routes[id] = {temperature=temperature, ambiguous=ambiguous}
     end
     return routes
 end
 
+---@param factory FactoryData
+---@param feed BoilerFeed
+---@param temperature number?
+---@param ambiguous boolean?
+local function setInlet(factory, feed, temperature, ambiguous)
+    if feed.generator then
+        factory.fusion_inlet_auto, factory.fusion_inlet_ambiguous = temperature, ambiguous
+    else
+        factory.boiler_inlet_auto, factory.boiler_inlet_ambiguous = temperature, ambiguous
+    end
+end
+
 ---@param block BlockData
----@param boilers RecipeData[]
+---@param inlets RecipeData[]
 ---@param solve fun(trial:BlockData)
-function BoilerRouting.apply(block, boilers, solve)
-    local feeds = findFeeds(block, boilers)
+---@param outputs? table<string,PlasmaOutput>
+function BoilerRouting.apply(block, inlets, solve, outputs)
+    local feeds = findFeeds(block, inlets, outputs or {})
     if not next(feeds) then return end
 
     -- Trial solves can change linked profiles and row constraints.
     local trial = table.deepcopy(block)
     for id, feed in pairs(feeds) do
-        trial.children[id].factory.boiler_inlet_auto = feed.probe
+        setInlet(trial.children[id].factory, feed, feed.probe)
     end
     solve(trial)
-    local routes = resolve(trial, feeds)
+    local routes = resolve(trial, feeds, true)
     local verify = false
-    for _, recipe in ipairs(boilers) do
+    for _, recipe in ipairs(inlets) do
         local route = routes[recipe.id]
         if route then
-            recipe.factory.boiler_inlet_auto = route.temperature
-            recipe.factory.boiler_inlet_ambiguous = route.ambiguous or nil
+            setInlet(recipe.factory, feeds[recipe.id], route.temperature, route.ambiguous or nil)
             if route.temperature and not feeds[recipe.id].only_temperature then verify = true end
         end
     end
@@ -126,14 +157,15 @@ function BoilerRouting.apply(block, boilers, solve)
     if verify then
         local heated = table.deepcopy(block)
         solve(heated)
-        local checked = resolve(heated, feeds)
-        for _, recipe in ipairs(boilers) do
+        local checked = resolve(heated, feeds, false)
+        for _, recipe in ipairs(inlets) do
             local route = routes[recipe.id]
             if route and route.temperature then
                 local revised = checked[recipe.id].temperature
-                if not revised or math.abs(route.temperature - revised) > 1e-7 then
-                    recipe.factory.boiler_inlet_auto = nil
-                    recipe.factory.boiler_inlet_ambiguous = true
+                local tolerance = 1e-7
+                if feeds[recipe.id].generator then tolerance = tolerance * math.max(1, math.abs(route.temperature)) end
+                if not revised or math.abs(route.temperature - revised) > tolerance then
+                    setInlet(recipe.factory, feeds[recipe.id], nil, true)
                 end
             end
         end

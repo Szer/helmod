@@ -1,3 +1,5 @@
+local FusionReactor = require "model.energy.FusionReactor"
+local EntityType = require "model.EntityType"
 require "model.Prototype"
 -------------------------------------------------------------------------------
 ---Class Object
@@ -226,6 +228,10 @@ function BurnerPrototype:getFuelCount()
   local factory_fuel = self:getFuelPrototype()
   if factory_fuel == nil then return nil end
   local fuel_value = factory_fuel:getFuelValue()
+  if factory_prototype:getType() == EntityType.fusionReactor then
+    local fluid = factory_prototype:getFluidProductionFilter()
+    energy_consumption = FusionReactor.fuelPower(fluid, factory_prototype:getFluidUsage(), self:getEffectivity())
+  end
   local burner_count = energy_consumption/fuel_value
   return {type="item", name=factory_fuel:native().name, count=burner_count}
 end

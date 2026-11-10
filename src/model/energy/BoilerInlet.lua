@@ -5,10 +5,12 @@ local BoilerInlet = {}
 ---@field demand number Total fluid units consumed in the block
 
 ---@param supply BoilerSupply
----@param demand number Fluid units consumed by this boiler row
+---@param demand number Fluid units consumed by this row
+---@param trialMixture? boolean Propose a mixture before checking the resulting generator demand
+---@param relativeTolerance? number Relative precision of the flow rates
 ---@return number? temperature
 ---@return boolean ambiguous
-function BoilerInlet.resolve(supply, demand)
+function BoilerInlet.resolve(supply, demand, trialMixture, relativeTolerance)
     local volume, heat, temperatures = 0, 0, 0
     local suppliedTemperature
     for temperature, amount in pairs(supply.volumes) do
@@ -20,11 +22,12 @@ function BoilerInlet.resolve(supply, demand)
         end
     end
     if temperatures == 0 then return nil, false end
-    local tolerance = 1e-8 * math.max(volume, supply.demand)
+    local tolerance = (relativeTolerance or 1e-8) * math.max(volume, supply.demand)
     if temperatures == 1 and volume + tolerance >= supply.demand then
         return suppliedTemperature, false
     end
-    if demand > 0 and math.abs(volume - demand) <= tolerance and math.abs(supply.demand - demand) <= tolerance then
+    if demand > 0 and (math.abs(volume - demand) <= tolerance or (trialMixture and temperatures > 1))
+        and math.abs(supply.demand - demand) <= tolerance then
         return heat / volume, false
     end
     return nil, true

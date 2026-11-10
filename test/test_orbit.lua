@@ -1,3 +1,4 @@
+local checkFusionNeighbours = require "test_fusion_neighbours"
 local checkSelectableSilo = require "test_selectable_silo"
 local checkBoilerInlet = require "test_boiler_inlet"
 local checkTemperatureSupply = require "test_temperature_supply"
@@ -223,6 +224,7 @@ local function check(background)
     checkOffshoreExtraction()
     checkSplitCoalReturn()
     check_electricity()
+    checkFusionNeighbours()
     check_cracking()
     recycling.check()
     check_nested()

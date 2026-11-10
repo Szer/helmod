@@ -1,50 +1,51 @@
+local Hotkey = require "gui.controls.Hotkey"
 data:extend(
   {
     {
       type = "custom-input",
-      name = "helmod-close",
+      name = Hotkey.close,
       key_sequence = "ESCAPE",
       consuming = "none"
 
     },
     {
       type = "custom-input",
-      name = "helmod-open-close",
+      name = Hotkey.openClose,
       key_sequence = "U",
       consuming = "none"
 
     },
     {
       type = "custom-input",
-      name = "helmod-production-line-open",
+      name = Hotkey.productionLine,
       key_sequence = "I",
       consuming = "none"
 
     },
     {
       type = "custom-input",
-      name = "helmod-recipe-selector-open",
-      key_sequence = "O",
+      name = Hotkey.recipeSelector,
+      key_sequence = "SHIFT + O",
       consuming = "none"
 
     },
     {
       type = "custom-input",
-      name = "helmod-recipe-explorer-open",
+      name = Hotkey.recipeExplorer,
       key_sequence = "Y",
       consuming = "none"
 
     },
     {
       type = "custom-input",
-      name = "helmod-richtext-open",
+      name = Hotkey.richText,
       key_sequence = "CONTROL + T",
       consuming = "none"
 
     },
     {
       type = "custom-input",
-      name = "helmod-create-or-where-used-open",
+      name = Hotkey.createOrWhereUsed,
       key_sequence = "CONTROL + U",
       consuming = "none"
 

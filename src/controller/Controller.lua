@@ -1,3 +1,4 @@
+local Hotkey = require "gui.controls.Hotkey"
 require "core.Object"
 require "core.Form"
 require "core.FormModel"
@@ -414,31 +415,30 @@ end
 -------------------------------------------------------------------------------
 ---On gui hotkey
 ---
----@param event table
----
+---@param event HelmodHotkeyEvent
 function Controller:onGuiHotkey(event)
   if views == nil then self:prepare() end
 
-  if event.input_name == "helmod-close" then
+  if event.input_name == Hotkey.close then
     if self:isOpened() then
       self:cleanController(Player.native())
     end
   end
-  if event.input_name == "helmod-open-close" then
+  if event.input_name == Hotkey.openClose then
     self:openMainPanel()
   end
-  if event.input_name == "helmod-production-line-open" then
+  if event.input_name == Hotkey.productionLine then
     if not(self:isOpened()) then
       self:openMainPanel()
     end
   end
-  if event.input_name == "helmod-recipe-selector-open" then
+  if event.input_name == Hotkey.recipeSelector then
     if not(self:isOpened()) then
       self:openMainPanel()
     end
     self:send("on_gui_open", event, "HMRecipeSelector")
   end
-  if event.input_name == "helmod-recipe-explorer-open" then
+  if event.input_name == Hotkey.recipeExplorer then
     local view = Controller:getView("HMRecipeExplorer")
     if not(view:isOpened()) then
       self:send("on_gui_open", event, "HMRecipeExplorer")
@@ -446,7 +446,7 @@ function Controller:onGuiHotkey(event)
       view:close()
     end
   end
-  if event.input_name == "helmod-richtext-open" then
+  if event.input_name == Hotkey.richText then
     local view = Controller:getView("HMRichTextPanel")
     if not(view:isOpened()) then
       self:send("on_gui_open", event, "HMRichTextPanel")
@@ -454,7 +454,7 @@ function Controller:onGuiHotkey(event)
       view:close()
     end
   end
-  if event.input_name == "helmod-create-or-where-used-open" then
+  if event.input_name == Hotkey.createOrWhereUsed then
     local view = Controller:getView("HMCreatedOrWhereUsedPanel")
     if not(view:isOpened()) then
       self:send("on_gui_open", event, "HMCreatedOrWhereUsedPanel")

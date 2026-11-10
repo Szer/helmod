@@ -152,6 +152,9 @@ function RecipePrototype:getAllowedMachines()
                         if factory_ingredient_count >= recipe_ingredient_count then
                             is_valid = true
                         end
+                        if is_valid and self.lua_type == defines.mod.recipes.fluid.name then
+                            is_valid = Player.canPumpFluid(production.name, self.object_name)
+                        end
                         --- check mineable require
                         if self.lua_prototype.name ~= nil and self.lua_type == defines.mod.recipes.resource.name then
                             local lua_entity_filter = Player.getEntityPrototype(self.lua_prototype.name)

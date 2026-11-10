@@ -39,4 +39,40 @@ function TemperatureSupply.quantity(transfer, balance, demand)
     return math.max(0, math.min(required, available))
 end
 
+---@class TemperatureRoute
+---@field source integer Supplied temperature column
+---@field inlet integer Compatible ingredient column
+---@field row integer Unit-for-unit transfer row
+
+---Keep unmet demand at a real inlet when a virtual transfer exceeds the supplied fluid.
+---@param routes TemperatureRoute[]
+---@param balances number[] Net quantities after replaying all recipes
+---@param objectives number[] Requested quantities by column
+---@param parameters {recipe_count:number, recipe_production:number, coefficient:number}[]
+function TemperatureSupply.limitTransfers(routes, balances, objectives, parameters)
+    ---@param route TemperatureRoute
+    ---@param limit number
+    local function reduce(route, limit)
+        local deficit = -balances[route.source]
+        if deficit <= 0 then return end
+        local transfer = parameters[route.row]
+        local missing = math.min(deficit, transfer.recipe_count, limit)
+        if missing <= 0 then return end
+        transfer.recipe_count = transfer.recipe_count - missing
+        if transfer.coefficient > 0 then
+            transfer.recipe_production = transfer.recipe_count / transfer.coefficient
+        end
+        balances[route.source] = balances[route.source] + missing
+        balances[route.inlet] = balances[route.inlet] - missing
+    end
+
+    -- Release unused transfers first, then preserve earlier allocations when several inlets compete.
+    for _, route in ipairs(routes) do
+        reduce(route, balances[route.inlet] - objectives[route.inlet])
+    end
+    for index = #routes, 1, -1 do
+        reduce(routes[index], math.huge)
+    end
+end
+
 return TemperatureSupply

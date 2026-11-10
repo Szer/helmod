@@ -1,3 +1,4 @@
+local FixedRecipe = require "model.recipe.FixedRecipe"
 local Electricity = require "model.energy.Electricity"
 local Orbit = require "model.Orbit"
 local ProductYield = require "model.recipe.ProductYield"
@@ -149,7 +150,7 @@ function RecipePrototype:getAllowedMachines()
                         local factory_prototype = EntityPrototype(production)
                         local factory_ingredient_count = factory_prototype:getIngredientCount()
                         --- check ingredient limitation
-                        if factory_ingredient_count >= recipe_ingredient_count then
+                        if factory_ingredient_count >= recipe_ingredient_count and FixedRecipe.allows(factory_prototype:native(), self.lua_type, self.object_name) then
                             is_valid = true
                         end
                         if is_valid and self.lua_type == defines.mod.recipes.fluid.name then

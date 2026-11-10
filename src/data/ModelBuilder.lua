@@ -59,8 +59,8 @@ function ModelBuilder.addRecipeIntoProductionBlock(model, block, recipe_name, re
                         is_match = Player.canPumpFluid(default_factory.name, recipe_name)
                     end
                     if is_match == true then
-                        Model.setFactory(ModelRecipe, default_factory.name, default_factory.quality, default_factory.fuel, default_factory.fuel_quality)
-                        ModelBuilder.setFactoryModulePriority(ModelRecipe, default_factory.module_priority)
+                        is_match = Model.setFactory(ModelRecipe, default_factory.name, default_factory.quality, default_factory.fuel, default_factory.fuel_quality)
+                        if is_match then ModelBuilder.setFactoryModulePriority(ModelRecipe, default_factory.module_priority) end
                     end
                 end
 
@@ -549,8 +549,7 @@ function ModelBuilder.setFactoryBlock(block, current_recipe)
                                 break
                             end
                         end
-                        if is_match == true then
-                            Model.setFactory(recipe, current_recipe.factory.name, current_recipe.factory.quality, current_recipe.factory.fuel)
+                        if is_match and Model.setFactory(recipe, current_recipe.factory.name, current_recipe.factory.quality, current_recipe.factory.fuel) then
                             ModelBuilder.setFactoryModulePriority(recipe, current_recipe.factory.module_priority)
                         end
                     end

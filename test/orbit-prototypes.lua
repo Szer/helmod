@@ -88,3 +88,21 @@ acid_pump.name = "test-acid-pump"
 acid_pump.fluid_box.filter = "sulfuric-acid"
 acid_pump.pumping_speed = 5
 data:extend{acid_pump}
+
+local function cableMachine(name, category, recipe)
+    local machine = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-2"])
+    machine.name = name
+    machine.fixed_recipe = recipe
+    machine.crafting_categories = {category}
+    data:extend{machine}
+end
+cableMachine("test-cable-assembler", "crafting", "copper-cable")
+data:extend{{type="recipe-category", name="test-dedicated-crafting"}}
+for _, name in ipairs({"test-dedicated-cable", "test-unbuildable-cable"}) do
+    local recipe = table.deepcopy(data.raw.recipe["copper-cable"])
+    recipe.name = name
+    recipe.categories = {"test-dedicated-crafting"}
+    recipe.auto_recycle = false
+    data:extend{recipe}
+end
+cableMachine("test-dedicated-assembler", "test-dedicated-crafting", "test-dedicated-cable")

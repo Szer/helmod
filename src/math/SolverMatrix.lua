@@ -286,6 +286,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
         ---begin loop children
         for _, child in spairs(children, sorter) do
             local is_block = Model.isBlock(child)
+            local row_factor = factor
             local child_name = nil
             local child_type = nil
             local child_tooltip = nil
@@ -323,13 +324,17 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                 child_type = recipe.type
                 child_tooltip = recipe.name .. "\nRecette"
                 child_recipe_energy = recipe_prototype:getEnergy(recipe.factory)
-                child_factory_count = recipe.factory.input or 0
+                child_factory_count = recipe.factory and recipe.factory.input or 0
 
                 if not factories_prepared then
                     ModelCompute.prepareRecipeFactory(recipe, block.time, parameters)
                 end
                 
-                child_factory_speed = recipe.factory.speed or 0
+                child_factory_speed = recipe.factory and recipe.factory.speed or 0
+                if recipe.unbuildable then
+                    row_factor = 0
+                    child_factory_count = 0
+                end
 
                 child_products = recipe_prototype:getQualityProducts(recipe.factory, recipe.quality)
                 child_ingredients = recipe_prototype:getQualityIngredients(recipe.factory, recipe.quality)
@@ -408,7 +413,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                     col_header.is_ingredient = false
                     col_header.product = lua_product
 
-                    local value = lua_product.amount * factor
+                    local value = lua_product.amount * row_factor
                     local cell_value = value
                     row:add_value(col_header, cell_value)
 
@@ -452,7 +457,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                     col_header.product = lua_ingredient
 
                     local cell_value = row:get_value(col_header) or 0
-                    local value = - lua_ingredients[ingredient_key].amount * factor
+                    local value = - lua_ingredients[ingredient_key].amount * row_factor
                     cell_value = cell_value + value
                     row:add_value(col_header, cell_value)
 
@@ -483,7 +488,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                     col_header.is_ingredient = true
                     col_header.product = lua_ingredient
 
-                    local value = -lua_ingredient.amount * factor
+                    local value = -lua_ingredient.amount * row_factor
                     local cell_value = value
                     row:add_value(col_header, cell_value)
 
@@ -524,7 +529,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                     col_header.is_ingredient = false
                     col_header.product = lua_product
 
-                    local value = lua_product.amount * factor
+                    local value = lua_product.amount * row_factor
                     local cell_value = row:get_value(col_header) or 0
                     cell_value = cell_value + value
                     row:add_value(col_header, cell_value)

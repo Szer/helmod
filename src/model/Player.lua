@@ -1,3 +1,4 @@
+local FixedRecipe = require "model.recipe.FixedRecipe"
 local OffshoreFluids = require "model.recipe.OffshoreFluids"
 -------------------------------------------------------------------------------
 ---Description of the module.
@@ -1195,7 +1196,7 @@ function Player.getProductionsCrafting(category, lua_recipe)
                 end
             end
             ---ok to add entity
-            if check then
+            if check and (lua_recipe.name == nil or FixedRecipe.allows(Player.getEntityPrototype(lua_entity.name), lua_recipe.type, lua_recipe.name)) then
                 productions[lua_entity.name] = lua_entity
             end
         end

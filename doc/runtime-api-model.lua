@@ -82,6 +82,7 @@
 ---@field input number
 
 ---@class RecipeData
+---@field unbuildable? boolean
 ---@field orbit? OrbitDetails
 ---@field class "Recipe"
 ---@field id string

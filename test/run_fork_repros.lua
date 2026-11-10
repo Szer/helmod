@@ -41,12 +41,18 @@ for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolb
     end
     assert(log:find("FORK REGRESSION PASS " .. case, 1, true), case .. ": see " .. work)
 end
-local offshore = saves .. "/upstream-2.6.0"
+local upstream = saves .. "/upstream-2.6.0"
 local fixture = "triage-prototypes_1.0.0.zip"
-Runner.copy(offshore .. "/" .. fixture, work .. "/mods/" .. fixture)
-Runner.copy(offshore .. "/639/repro.zip", work .. "/offshore.zip")
-Runner.copy(root .. "/test/test_offshore_save.lua", mod .. "/test_offshore_save.lua")
-Runner.write(mod .. "/control.lua", control .. '\nrequire "test_offshore_save"\n')
-local log = Runner.factorio(executable, work, {"--benchmark", work .. "/offshore.zip", "--benchmark-ticks", "5"})
-assert(log:find("OFFSHORE SAVE PASSED", 1, true), "offshore extraction: see " .. work)
+Runner.copy(upstream .. "/" .. fixture, work .. "/mods/" .. fixture)
+for _, case in ipairs({
+    {directory="639", suite="test_offshore_save", marker="OFFSHORE SAVE PASSED"},
+    {directory="495", suite="test_fixed_recipe_save", marker="FIXED RECIPE SAVE PASSED"}
+}) do
+    local copy = work .. "/" .. case.suite .. ".zip"
+    Runner.copy(upstream .. "/" .. case.directory .. "/repro.zip", copy)
+    Runner.copy(root .. "/test/" .. case.suite .. ".lua", mod .. "/" .. case.suite .. ".lua")
+    Runner.write(mod .. "/control.lua", control .. '\nrequire "' .. case.suite .. '"\n')
+    local log = Runner.factorio(executable, work, {"--benchmark", copy, "--benchmark-ticks", "5"})
+    assert(log:find(case.marker, 1, true), case.suite .. ": see " .. work)
+end
 Runner.cleanup(work)

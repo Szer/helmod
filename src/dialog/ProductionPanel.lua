@@ -1479,7 +1479,9 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 
 	---col factory
 	local cell_factory = GuiElement.add(gui_table, GuiTable("factory", recipe.id):column(2):style("helmod_table_list"))
-	if is_support_factory then
+	if recipe.unbuildable then
+		GuiElement.add(cell_factory, GuiLabel("unbuildable"):caption({"helmod_common.unbuildable"}):tooltip({"helmod_common.no-compatible-machine"}))
+	elseif is_support_factory then
 		local factory = recipe.factory
 		if factory ~= nil then
 			local gui_cell_factory = GuiCellFactory(self.classname, "factory-action", model.id, block.id, recipe.id):element(factory):tooltip("tooltip.edit-recipe"):color(recipe_color):byLimit(block.by_limit):controlInfo( "crafting-add")

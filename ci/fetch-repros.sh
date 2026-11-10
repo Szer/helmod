@@ -2,7 +2,7 @@
 set -euo pipefail
 dest=${1:?destination required}
 manifest=$(realpath ci/repros.sha256)
-base=https://raw.githubusercontent.com/Szer/helmod/b94614bc39e303d67a37284fc45c820abf7f2f33/audit-repros
+base=https://raw.githubusercontent.com/Szer/helmod/59791a9c72ff5aee6100aaf1fd58019ccd90da6c/audit-repros
 mkdir -p "$dest"
 cd "$dest"
 while read -r digest file; do

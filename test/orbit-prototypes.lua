@@ -136,3 +136,19 @@ else
     hot_inlet.fluid_box.minimum_temperature = 50
 end
 data:extend{low_target, hot_inlet}
+
+data:extend{{
+    type="recipe", name="test-split-steam", categories={"chemistry"}, enabled=true,
+    energy_required=1, ingredients={{type="item", name="stone", amount=1}},
+    icon="__base__/graphics/icons/fluid/steam.png", auto_recycle=false,
+    results={{type="fluid", name="steam", temperature=125, amount=4},
+             {type="fluid", name="steam", temperature=175, amount=6}}
+}}
+for _, product in ipairs({"iron-plate", "copper-plate"}) do
+    local inlet = {type="fluid", name="steam", amount=1}
+    if product == "copper-plate" then inlet.minimum_temperature = 150 end
+    data:extend{{
+        type="recipe", name="test-steam-" .. product, categories={"chemistry"}, enabled=true,
+        energy_required=1, ingredients={inlet}, results={{type="item", name=product, amount=1}}, auto_recycle=false
+    }}
+end

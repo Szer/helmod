@@ -10,7 +10,7 @@ local Electricity = require "model.energy.Electricity"
 ---@field sysname string
 ---@field tooltip string
 ---@field is_ingredient boolean
----@field product table
+---@field product SolverMaterialFlow
 MatrixHeader = newclass(function(base, type, name, quality, tooltip)
   base.name = name
   base.type = type
@@ -82,6 +82,7 @@ end
 
 -------------------------------------------------------------------------------
 ---@class MatrixRowParameters
+---@field temperature_transfer? TemperatureTransfer
 ---@field base string
 ---@field contraints table
 ---@field factory_count number
@@ -136,7 +137,7 @@ end)
 
 -------------------------------------------------------------------------------
 ---@param header MatrixHeader
----@return number
+---@return integer
 function Matrix:get_column_index(header)
   local key = header:get_column_key()
   if self.columnIndex[key] then

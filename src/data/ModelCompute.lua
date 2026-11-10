@@ -1,3 +1,4 @@
+local TemperatureSupply = require "math.balance.TemperatureSupply"
 local BoilerRouting = require "data.BoilerRouting"
 local FixedRecipe = require "model.recipe.FixedRecipe"
 local SheetPlanner = require "data.SheetPlanner"
@@ -832,44 +833,9 @@ end
 ---@param by_product boolean
 ---@return boolean
 function ModelCompute.checkLinkedTemperatureFluid(item1, item2, by_product)
-    local result = false
-
-    local product, ingredient
-    if by_product ~= false then
-        product = item1
-        ingredient = item2
-    else
-        product = item2
-        ingredient = item1
-    end
-    if product.key == ingredient.key then
-        return true
-    end
-
-    local T = product.temperature
-    local T2 = ingredient.temperature
-    local T2min = ingredient.minimum_temperature
-    local T2max = ingredient.maximum_temperature
-    if T ~= nil or T2 ~= nil or T2min ~= nil or T2max ~= nil then
-        ---traitement seulement si une temperature
-        if T2min == nil and T2max == nil then
-            ---Temperature sans intervale
-            if T == nil or T2 == nil or T2 == T then
-                result = true
-            end
-        else
-            ---Temperature avec intervale
-            ---securise les valeurs
-            T = T or 25
-            T2min = T2min or -defines.constant.max_float
-            T2max = T2max or defines.constant.max_float
-            if T >= T2min and T <= T2max then
-                result = true
-            end
-        end
-    end
-
-    return result
+    if item1.key == item2.key then return true end
+    if by_product == false then return TemperatureSupply.compatible(item2, item1) end
+    return TemperatureSupply.compatible(item1, item2)
 end
 -------------------------------------------------------------------------------
 ---Compute production block

@@ -1,3 +1,4 @@
+local TemperatureLinks = require "math.TemperatureLinks"
 local Balance = require "math.SimplexBalance"
 -------------------------------------------------------------------------------
 ---Description of the module.
@@ -242,10 +243,9 @@ function SolverLinkedMatrixSimplex:table_compute(matrix, matrix_result)
 		end
 	end
 
-	---remove recipe helmod-temperature-convert
 	for irow = #matrix_result.headers, 1, -1 do
 		local header = matrix_result.headers[irow]
-		if header.name == "helmod-temperature-convert" then
+		if header.name == TemperatureLinks.recipeName then
 			table.remove(matrix_result.headers, irow)
 			table.remove(matrix_result.rows, irow)
 		end

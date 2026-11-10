@@ -4,8 +4,8 @@ local Pivot = {}
 ---@field columns table[]
 ---@field rows number[][]
 
----@class BalancePivotSolver
----@field pivot fun(self: BalancePivotSolver, matrix: BalanceTableau, row: integer, column: integer): BalanceTableau
+---@class BalancePivotSolver<T>
+---@field pivot fun(self: BalancePivotSolver<T>, matrix: T, row: integer, column: integer, preserve_precision?: boolean): T
 
 ---@class PivotRow
 ---@field row integer
@@ -47,20 +47,22 @@ local function nextPivot(matrix)
     return {kind="pivot", row={row=row}, column={column=column}}
 end
 
--- Unwrap the coordinates only at the legacy numeric solver boundary.
----@param solver BalancePivotSolver
----@param matrix BalanceTableau
+-- Small coefficients from earlier pivots can contribute to later material balances.
+---@generic T: BalanceTableau
+---@param solver BalancePivotSolver<T>
+---@param matrix T
 ---@param row PivotRow
 ---@param column PivotColumn
----@return BalanceTableau
+---@return T
 local function apply(solver, matrix, row, column)
-    return solver:pivot(matrix, row.row, column.column)
+    return solver:pivot(matrix, row.row, column.column, true)
 end
 
----@param solver BalancePivotSolver
----@param matrix BalanceTableau
+---@generic T: BalanceTableau
+---@param solver BalancePivotSolver<T>
+---@param matrix T
 ---@param limit integer
----@return BalanceTableau?
+---@return T?
 function Pivot.solve(solver, matrix, limit)
     for _ = 1, limit do
         local choice = nextPivot(matrix)

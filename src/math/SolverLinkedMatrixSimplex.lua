@@ -1,7 +1,7 @@
 local Balance = require "math.SimplexBalance"
 -------------------------------------------------------------------------------
 ---Description of the module.
----@class SolverLinkedMatrixSimplex : SolverLinkedMatrix
+---@class SolverLinkedMatrixSimplex : SolverLinkedMatrix, BalancePivotSolver<Matrix>
 SolverLinkedMatrixSimplex = newclass(SolverLinkedMatrix, function(base, object)
 	SolverLinkedMatrix.init(base, object)
 end)
@@ -11,8 +11,9 @@ end)
 ---@param matrix Matrix
 ---@param xrow integer
 ---@param xcol integer
+---@param preserve_precision? boolean
 ---@return Matrix
-function SolverLinkedMatrixSimplex:pivot(matrix, xrow, xcol)
+function SolverLinkedMatrixSimplex:pivot(matrix, xrow, xcol, preserve_precision)
 	local rows = matrix.rows
 
 	local matrix_clone = self:clone(matrix)
@@ -35,7 +36,7 @@ function SolverLinkedMatrixSimplex:pivot(matrix, xrow, xcol)
 				local B = rows[irow][xcol] or 0
 				local D = rows[xrow][icol] or 0
 				local value = cell_value - (B * D) / pivot_value
-				if math.abs(value) < 1e-8 then
+				if not preserve_precision and math.abs(value) < 1e-8 then
 					rows_clone[irow][icol] = 0
 				else
 					rows_clone[irow][icol] = value
@@ -117,53 +118,31 @@ function SolverLinkedMatrixSimplex:prepare(matrix)
 	local columns = matrix_clone.columns
 	local parameters = matrix_clone.parameters
 
-	---ajoute les recettes d'ingredient
-	---initialise l'analyse
-	local ckeck_cols = {}
-	for icol, column in pairs(columns) do
-		ckeck_cols[icol] = true
-	end
-	for irow, row in pairs(rows) do
-		if irow <= #rows then
-			for icol, column in pairs(columns) do
-				local cell_value = row[icol] or 0
-				---si une colonne est un produit au moins une fois on l'exclus
-				if cell_value > 0 then
-					ckeck_cols[icol] = false
-				end
-			end
-		end
-	end
-	---ajout des faux recipe
-	local index = 1
-	for xcol, check in pairs(ckeck_cols) do
-		if check then
-			-- Add new header
-			local new_header = table.deepcopy(columns[xcol])
-			table.insert(headers, new_header)
-			-- Add coefficient value
-			local rowParameters = MatrixRowParameters()
-			rowParameters.base = new_header
-			rowParameters.contraint = nil
-			rowParameters.factory_count = 0
+	for index, xcol in ipairs(Balance.supplyColumns(matrix)) do
+		-- Add new header
+		local new_header = table.deepcopy(columns[xcol])
+		table.insert(headers, new_header)
+		-- Add coefficient value
+		local rowParameters = MatrixRowParameters()
+		rowParameters.base = new_header
+		rowParameters.contraint = nil
+		rowParameters.factory_count = 0
             rowParameters.factory_speed = 0
             rowParameters.recipe_count = 0
             rowParameters.recipe_production = 1
             rowParameters.recipe_energy = 1
             rowParameters.coefficient = 1e4 * index --important ne pas changer
-			--rowParameters.coefficient = math.pow(10,index)*10
-			table.insert(parameters, rowParameters)
-			local new_row = {}
-			for icol, column in pairs(columns) do
-				if icol == xcol then
-					table.insert(new_row, 1)
-				else
-					table.insert(new_row, 0)
-				end
+		--rowParameters.coefficient = math.pow(10,index)*10
+		table.insert(parameters, rowParameters)
+		local new_row = {}
+		for icol, column in pairs(columns) do
+			if icol == xcol then
+				table.insert(new_row, 1)
+			else
+				table.insert(new_row, 0)
 			end
-			table.insert(rows, new_row)
-			index = index + 1
 		end
+		table.insert(rows, new_row)
 	end
 	self:prepare_z_and_objectives(matrix_clone, true)
 

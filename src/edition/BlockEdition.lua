@@ -1,3 +1,5 @@
+local MatrixSupplies = require "model.MatrixSupplies"
+local MatrixSupply = require "gui.controls.MatrixSupply"
 -------------------------------------------------------------------------------
 ---Class to build product edition dialog
 ---@class BlockEdition : FormModel
@@ -75,6 +77,10 @@ function BlockEdition:updateInfo(event)
     if is_model then
         GuiElement.add(form, GuiLabel("label-owner"):caption({ "helmod_result-panel.owner" }))
         GuiElement.add(form, GuiLabel("value-owner"):caption(model.owner))
+    end
+
+    if MatrixSupplies.available(block) then
+        self:addSupplyOptions(form, model, block)
     end
 
     -- Title input label
@@ -202,11 +208,60 @@ function BlockEdition:updateNote(event)
 end
 
 -------------------------------------------------------------------------------
+---Show materials that the block both returns and consumes, including balanced flows.
+---@param form LuaGuiElement
+---@param model ModelData
+---@param block BlockData
+function BlockEdition:addSupplyOptions(form, model, block)
+    local list
+    local function materialOrder(items, a, b)
+        local left, right = items[a], items[b]
+        if left.name ~= right.name then return left.name < right.name end
+        local leftQuality = left.quality and prototypes.quality[left.quality]
+        local rightQuality = right.quality and prototypes.quality[right.quality]
+        if leftQuality and rightQuality and leftQuality.level ~= rightQuality.level then
+            return leftQuality.level < rightQuality.level
+        end
+        return a < b
+    end
+    for key, item in spairs(block.ingredients, materialOrder) do
+        if block.products[key] then
+            if not list then
+                GuiElement.add(form, GuiLabel(MatrixSupply.element.label):caption({MatrixSupply.label.supplies}))
+                local scroll = GuiElement.add(form, GuiScroll(MatrixSupply.element.scroll))
+                scroll.style.maximal_height = 128
+                list = GuiElement.add(scroll, GuiFlowV(MatrixSupply.element.options))
+            end
+            local caption = Player.getLocalisedName(item)
+            if Player.hasFeatureQuality() and item.quality and prototypes.quality[item.quality] then
+                caption = {MatrixSupply.label.quality, item.quality, caption, prototypes.quality[item.quality].localised_name}
+            end
+            local button = GuiCheckBox(self.classname, MatrixSupply.buttonArgs{
+                action=MatrixSupply.action, model_id=model.id, block_id=block.id, material=key
+            }):caption(caption):tooltip({MatrixSupply.tooltip.help})
+            local checkbox = GuiElement.add(list, button:state(MatrixSupplies.editable(block, key) and MatrixSupplies.selected(block, key)))
+            checkbox.enabled = User.isWriter(model)
+            if block.products[key].input ~= nil then
+                checkbox.enabled = false
+                checkbox.tooltip = {MatrixSupply.tooltip.target}
+            end
+        end
+    end
+end
+
 ---On event
 ---@param event LuaEvent
 function BlockEdition:onEvent(event)
     local model, block = self:getParameterObjects()
     if User.isWriter(model) then
+        local edit = MatrixSupply.decode(event)
+        if edit and edit.model_id == model.id and edit.block_id == block.id
+            and MatrixSupplies.set(block, edit.material, event.element.state) then
+            ModelCompute.update(model, block)
+            Controller:send("on_gui_refresh", event)
+            return
+        end
+
         if event.action == "change-title" then
             local block_infos = Model.getBlockInfos(block)
             local block_title = event.element.text

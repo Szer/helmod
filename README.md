@@ -52,6 +52,10 @@ function UnitTestPanel:loopDataRemoteAPI(data)
 end
 ```
 
+## Balancing recycling loops
+
+In a product-driven **Matrix Solver** block, Ctrl-click an internally produced material in the top **Input** row to allow external supply for its quality, or Shift-click to clear it. Use the Input filter to show zero flows or select the same materials in **Block Edition → External supplies**. For copper upcycling, select **Copper plate (Normal)**, craft cable at normal through epic quality, recycle cable at every quality, and set the legendary plate output target.
+
 ## Experimental background solver
 
 Enable **Experimental background sheet solver** under **Settings → Mod settings → Map** to try it for everyone in the save. Adding or moving recipes, changing machines and modules, editing quantities, and switching block modes all use the same solver. A small dot beside the block title turns yellow during calculation and green when the new totals appear.

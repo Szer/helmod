@@ -116,13 +116,14 @@ function MatrixRowParameters:setVoider(row, child, is_block, products, ingredien
 end
 
 -------------------------------------------------------------------------------
----@class Matrix
+---@class Matrix : BalanceTableau
 ---@field columns {[integer] : MatrixHeader}
 ---@field headers {[integer] : MatrixHeader}
 ---@field rows {[integer] : {[integer] : number}}
 ---@field columnIndex {[string] : integer}
 ---@field parameters {[integer] : MatrixRowParameters}
----@field objectives {[string] : number}
+---@field objectives table<string,ObjectiveData>
+---@field external_supplies? table<string,boolean>
 ---@field objective_values {[integer] : number}
 
 Matrix = newclass(function(base)

@@ -1,10 +1,12 @@
-## Features and fixes
+## What the fork adds to Helmod
 
-- **Send to orbit** calculates rocket-part ingredients and silo counts for your target delivery rate. It accounts for cargo capacity, productivity, and the silo’s launch animation.
-- **Linked recipes and matrix planning** now balance intermediate products across nested blocks and keep production rates consistent when you add a supply recipe.
-- **Linked electricity** sizes your steam engines, boilers, and fuel supply to the power your factories and beacons consume.
+- **Plan shipments to orbit.** Pick a delivery rate, such as 60 science packs per second, and see the rocket ingredients and silos you need. The plan uses each item’s rocket capacity, your modules and productivity research, and the launch cycle at the silo’s quality. If a modded silo offers several rocket-part recipes, you can choose which one to use.
+- **Size power plants from factory demand.** Link a power block to your machines and beacons. Boiler and fuel counts reflect the inlet temperature. For fusion, two normal reactors producing 8 plasma/s can feed four generators in isolation or eight as a connected pair. The planner accounts for hotter plasma, generator limits and returned coolant.
+- **Balance recycling and quality loops.** Ctrl-click materials in the main Input row to let Matrix Solver draw those materials at the selected quality from outside the block. Linked blocks carry intermediates across nested production lines and account for fluid temperatures, including make-up coolant in recycling loops.
+- **Edit large and shared plans.** Keep your scroll position as you edit rows, switch a sub-block’s mode from its icon, and clear constraints even at zero throughput. For multiplayer, an experimental solver spreads recalculation across ticks to reduce stalls during edits. It’s off by default under **Settings → Mod settings → Map**.
+- **Plan modded recipes more accurately.** The fork handles repeated outputs with different productivity rules, spent fuel that matches a recipe output, pumps with a fixed fluid, and machines locked to a recipe. Custom recipes keep their item qualities and crafting categories, and saved quantities survive a reload.
 
-The planner works with or without Space Age. **Send to orbit** requires space travel and a compatible silo.
+Works with or without Space Age. Orbital shipping requires space travel and a compatible silo. See the [full changelog](https://mods.factorio.com/mod/helmod-fork/changelog) for individual fixes.
 
 ## Switching from Helmod on Factorio 2.1
 

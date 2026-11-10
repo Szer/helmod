@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 : "${FACTORIO_APIKEY:?Configure the FACTORIO_APIKEY Actions secret}"
-dir=${1:?verified artifact directory required}
 name=$(jq -er .name src/info.json)
-version=$(jq -er .version src/info.json)
-[[ $name == helmod-fork && ${GITHUB_REF_TYPE:-} == tag && $GITHUB_REF_NAME == "$name-$version" ]]
-archive="$dir/${name}_${version}.zip"
-(cd "$dir" && sha256sum -c SHA256SUMS)
-digest=$(sha1sum "$archive" | cut -d' ' -f1)
+[[ $name == helmod-fork ]]
 api=https://mods.factorio.com/api
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -29,6 +24,18 @@ sync_description() {
     "$api/v2/mods/edit_details" -o "$work/edit"
   jq -e '.success == true' "$work/edit" >/dev/null
 }
+if [[ ${1:-} == --description-only ]]; then
+  [[ ${GITHUB_REF:-} == refs/heads/fork && $(lookup) == 200 ]]
+  sync_description
+  exit 0
+fi
+
+dir=${1:?verified artifact directory required}
+version=$(jq -er .version src/info.json)
+[[ ${GITHUB_REF_TYPE:-} == tag && $GITHUB_REF_NAME == "$name-$version" ]]
+archive="$dir/${name}_${version}.zip"
+(cd "$dir" && sha256sum -c SHA256SUMS)
+digest=$(sha1sum "$archive" | cut -d' ' -f1)
 status=$(lookup)
 case "$status" in
   404) endpoint=init_publish ;;

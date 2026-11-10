@@ -1,0 +1,24 @@
+name: Update Mod Portal description
+on:
+  push:
+    branches: [fork]
+    paths: [portal-description.md]
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    if: github.repository == 'Szer/helmod'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency: portal-publish
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fork
+          persist-credentials: false
+      - name: Sync the listing
+        run: ci/publish.sh --description-only
+        env:
+          FACTORIO_APIKEY: ${{ secrets.FACTORIO_APIKEY }}

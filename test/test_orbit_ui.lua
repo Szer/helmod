@@ -16,6 +16,32 @@ local function click(element, player)
  game.tick_paused=false
 end
 
+local function checkReactorSettings(player)
+ local model = Model.newModel()
+ local block = model.block_root
+ for _, name in ipairs({"heating-tower", "nuclear-reactor"}) do
+  local _, recipe = ModelBuilder.addRecipeIntoProductionBlock(model, block, name, "energy")
+  recipe.factory.neighbour_bonus = "∞"
+  ModelCompute.update(model)
+  Controller:send("on_gui_open", {name="OPEN",item1=model.id,item2=block.id,item3=recipe.id}, "HMRecipeEdition")
+  local dropdown = find_element(player.gui.screen.HMRecipeEdition, function(el)
+   return el.name:find("neighbour-bonus-update", 1, true)
+  end)
+  if name == "heating-tower" then
+   assert(not dropdown, "heating tower has no neighbour bonus to configure")
+  else
+   assert(dropdown and dropdown.selected_index == 5, "saved reactor layout is selected")
+   local caption = dropdown.items[5]
+   assert(helpers.table_to_json(caption[4]) == helpers.table_to_json(prototypes.entity[name].localised_name))
+   dropdown.selected_index = 3
+   EventController.onGuiClick{player_index=player.index, element=dropdown}
+   assert(recipe.factory.neighbour_bonus == 4, "reactor selection preserves stored layout values")
+  end
+  Controller:getView("HMRecipeEdition"):close()
+ end
+ game.tick_paused = false
+end
+
 local function inputFilter(panel)
  return assert(find_element(panel, function(el)
   return el.name:find(BlockHeader.action.ingredients, 1, true)
@@ -186,6 +212,7 @@ script.on_nth_tick(60, function(event)
   assert(marked(panel, "iron-plate", "normal") and marked(panel, "copper-cable", "normal"))
   recycling.checkCircuitBalances(block)
   game.take_screenshot{player=player,resolution={2200,1100},show_gui=true,path="circuit-external-supplies.png"}
+  checkReactorSettings(player)
   log("ORBIT UI SMOKE PASSED")
   storage.orbit_ui_step=10
  end

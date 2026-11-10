@@ -44,6 +44,7 @@
 ---@field quality number
 
 ---@class FactoryData
+---@field neighbour_bonus? ReactorLayout
 ---@field class string
 ---@field name string
 ---@field type string

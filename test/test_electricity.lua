@@ -45,16 +45,38 @@ local function checkFusionGenerator()
     factory.products["iron-gear-wheel"].input = 50000000 / 77500
     ModelBuilder.updateChildContraint(plant, {type="master", item={name="energy", type="energy"}})
     ModelCompute.update(fusion)
+    local flow = prototypes.entity["fusion-generator"].get_fluid_usage_per_tick() * 60
     near(plant.factory.count_deep, 1)
-    near(factory.products["fluoroketone-hot"].amount, 2)
-    near(factory.ingredients["fusion-plasma"].amount, 2)
+    near(factory.products["fluoroketone-hot"].amount, flow)
+    near(factory.ingredients["fusion-plasma"].amount, flow)
     ModelBuilder.updateChildContraint(plant, {type="master", item={name="energy", type="energy"}})
     ModelBuilder.updateChildContraint(plant, {type="master", item={name="fluoroketone-hot", type="fluid"}})
-    factory.products["fluoroketone-hot"].input = 4
+    factory.products["fluoroketone-hot"].input = 2 * flow
     ModelCompute.update(fusion)
     near(plant.factory.count_deep, 2)
     near(factory.products.energy.amount, 50000000)
-    near(factory.ingredients["fusion-plasma"].amount, 4)
+    near(factory.ingredients["fusion-plasma"].amount, 2 * flow)
+end
+
+local function checkFusionGeneratorLimits()
+    for _, case in ipairs({
+        {name="test-capped-turbine", fluid="steam", power=4.5e6, flow=90},
+        {name="test-hot-turbine", fluid="steam", power=3.6e6, flow=45},
+        {name="test-unusable-turbine", fluid="steam", power=0, flow=0},
+        {name="test-inefficient-turbine", fluid="steam", power=4.5e6, flow=90},
+        {name="test-burning-turbine", fluid="test-turbine-fuel", power=9e6, flow=45}
+    }) do
+        local model = Model.newModel()
+        local block, row = ModelBuilder.addRecipeIntoProductionBlock(model, model.block_root, case.name, "energy")
+        ModelCompute.update(model)
+        block.products.energy.input = case.power > 0 and case.power or 9e6
+        ModelCompute.update(model)
+        near(row.factory.count, case.power > 0 and 1 or 0)
+        near(block.products.energy.amount, case.power)
+        near(row.factory.energy, case.power)
+        near(block.ingredients[case.fluid].amount, case.flow)
+        near(block.products.water.amount, case.flow)
+    end
 end
 
 local function checkTurbineByproduct()
@@ -115,5 +137,6 @@ return function()
     checkElectricityDemand()
     User.setParameter("solver_selected", defines.constant.solvers.default)
     checkFusionGenerator()
+    checkFusionGeneratorLimits()
     checkTurbineByproduct()
 end

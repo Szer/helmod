@@ -50,7 +50,7 @@ for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolb
     assert(log:find("FORK REGRESSION PASS " .. case, 1, true), case .. ": see " .. work)
 end
 local upstream = saves .. "/upstream-2.6.0"
-for _, fixture in ipairs({"triage-prototypes_1.0.0.zip", "triage-loop-prototypes_1.0.0.zip"}) do
+for _, fixture in ipairs({"triage-prototypes_1.0.0.zip", "triage-loop-prototypes_1.0.0.zip", "triage-turbine_1.0.0.zip"}) do
     Runner.copy(upstream .. "/" .. fixture, work .. "/mods/" .. fixture)
 end
 for _, case in ipairs({
@@ -59,7 +59,8 @@ for _, case in ipairs({
     {directory="496", suite="test_boiler_inlet_save", marker="BOILER INLET SAVE PASSED"},
     {directory="376", suite="test_temperature_supply_save", marker="TEMPERATURE SUPPLY SAVE PASSED"},
     {directory="377", suite="test_coolant_deficit_save", marker="COOLANT DEFICIT SAVE PASSED"},
-    {directory="507", suite="test_selectable_silo_save", marker="SELECTABLE SILO SAVE PASSED"}
+    {directory="507", suite="test_selectable_silo_save", marker="SELECTABLE SILO SAVE PASSED"},
+    {directory="624", suite="test_fusion_generator_save", marker="FUSION GENERATOR SAVE PASSED"}
 }) do
     local copy = work .. "/" .. case.suite .. ".zip"
     Runner.copy(upstream .. "/" .. case.directory .. "/repro.zip", copy)

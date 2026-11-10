@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local FixedRecipe = require "model.recipe.FixedRecipe"
 local Electricity = require "model.energy.Electricity"
 local Orbit = require "model.Orbit"
@@ -618,23 +619,12 @@ function RecipePrototype:getEnergyProducts(factory)
                 local product = { name = fluid_name, type = "fluid", amount = amount }
                 table.insert(products, product)
             end
-        elseif prototype_type == "fusion-generator" then
-            -- value per tick
-            local amount = prototype:getMaxEnergyProduction() * 60
-            local product = { name = "energy", type = "energy", amount = amount }
-            table.insert(products, product)
-
-            if prototype_type == "fusion-generator" then
-                local fluid_name = "fluoroketone-hot"
-                local fluid_consumption = prototype:getFluidProductionFilter()
-                if fluid_consumption ~= nil and fluid_consumption.name ~= nil then
-                    fluid_name = fluid_consumption.name
-                end
-                if fluid_name ~= nil then
-                    local amount = prototype:getFluidConsumptionFusionGenerator()
-                    local ingredient = { name = fluid_name, type = "fluid", amount = amount }
-                    table.insert(products, ingredient)
-                end
+        elseif prototype_type == EntityType.fusionGenerator then
+            local rates = prototype:getFusionGeneratorRates()
+            table.insert(products, {name="energy", type="energy", amount=rates.power})
+            local output = prototype:getFluidProductionFilter()
+            if output then
+                table.insert(products, {name=output.name, type="fluid", amount=rates.flow})
             end
         end
         return products
@@ -715,16 +705,10 @@ function RecipePrototype:getRawIngredients(factory)
                 end
             end
 
-            if prototype_type == "fusion-generator" then
-                local fluid_name = "fusion-plasma"
-                local fluid_consumption = prototype:getFluidConsumptionFilter()
-                if fluid_consumption ~= nil and fluid_consumption.name ~= nil then
-                    fluid_name = fluid_consumption.name
-                end
-                if fluid_name ~= nil then
-                    local amount = prototype:getFluidConsumptionFusionGenerator()
-                    local ingredient = { name = fluid_name, type = "fluid", amount = amount }
-                    table.insert(ingredients, ingredient)
+            if prototype_type == EntityType.fusionGenerator then
+                local input = prototype:getFluidConsumptionFilter()
+                if input then
+                    table.insert(ingredients, {name=input.name, type="fluid", amount=prototype:getFluidConsumptionFusionGenerator()})
                 end
             end
 

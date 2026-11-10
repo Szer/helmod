@@ -1,0 +1,1 @@
+Release-note: In Matrix Solver loops, you can now choose which materials may come from outside the block so the solver can balance the remaining flows. Ctrl-click a material in the main Input row to toggle external supply for that quality.

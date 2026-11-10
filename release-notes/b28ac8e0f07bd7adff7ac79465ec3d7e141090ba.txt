@@ -1,0 +1,1 @@
+Release-note: Added an experimental background sheet solver, off by default. Enable it under Settings → Mod settings → Map. It spreads recalculation across ticks to reduce stutter when editing shared sheets in multiplayer, even if recalculation takes just as long overall.

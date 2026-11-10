@@ -331,7 +331,7 @@ function SolverMatrix:get_block_matrix(block, parameters, factories_prepared)
                 end
                 
                 child_factory_speed = recipe.factory and recipe.factory.speed or 0
-                if recipe.unbuildable then
+                if not ModelCompute.canRunRecipe(recipe) then
                     row_factor = 0
                     child_factory_count = 0
                 end

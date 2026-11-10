@@ -77,6 +77,7 @@ local success, message = xpcall(function()
             Runner.copy(root .. "/test/test_recycling_balance.lua", work .. "/mods/helmod-fork/test_recycling_balance.lua")
         end
         if mode == "integration" then
+            Runner.copy(root .. "/test/test_boiler_inlet.lua", work .. "/mods/helmod-fork/test_boiler_inlet.lua")
             Runner.copy(root .. "/test/test_fixed_recipe.lua", work .. "/mods/helmod-fork/test_fixed_recipe.lua")
             Runner.copy(root .. "/test/test_electricity.lua", work .. "/mods/helmod-fork/test_electricity.lua")
             Runner.copy(root .. "/test/test_nested_intermediates.lua", work .. "/mods/helmod-fork/test_nested_intermediates.lua")

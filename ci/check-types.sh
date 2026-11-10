@@ -67,7 +67,9 @@ panel="$tmp/panel"
 mkdir -p "$panel/gui/controls" "$panel/model" "$panel/data" "$panel/math/incremental"
 mkdir -p "$panel/model/recipe"
 cp src/model/recipe/{FixedRecipe,RecipeTypes}.lua "$panel/model/recipe/"
-cp src/data/{SheetPlanner,SheetDependencies,ModelCompute}.lua "$panel/data/"
+mkdir -p "$panel/model/energy"
+cp src/model/energy/BoilerInlet.lua "$panel/model/energy/"
+cp src/data/{SheetPlanner,SheetDependencies,ModelCompute,BoilerRouting}.lua "$panel/data/"
 echo 'ModelCompute = require "data.ModelCompute"' > "$panel/globals.lua"
 mkdir -p "$panel/math/balance"
 cp src/math/{SimplexBalance,Matrix,SolverMatrix,SolverLinkedMatrix,SolverMatrixSimplex,SolverLinkedMatrixSimplex}.lua "$panel/math/"
@@ -129,6 +131,15 @@ reject_panel_edit 's/limit = function(model, block, event)/limti = function(mode
 reject_panel_edit 's/location = function(event, model)/loaction = function(event, model)/' missing-fields location
 reject_panel_edit 's/panelAction{action=BlockToolbar.action.location}/panelAction{action=BlockToolbar.action.deep}/' assign-type-mismatch display-count-deep
 cp src/dialog/ProductionPanel.lua "$panel/"
+sed '/action=BoilerInletControl.action/s/, recipe_id=recipe.id//' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"
+if check_panel > "$tmp/boiler-inlet.log" 2>&1; then
+  echo 'A boiler inlet edit must identify its recipe.' >&2
+  exit 1
+fi
+grep -q '(missing-fields)' "$tmp/boiler-inlet.log" && grep -q 'recipe_id' "$tmp/boiler-inlet.log" || {
+  cat "$tmp/boiler-inlet.log" >&2
+  exit 1
+}
 sed 's/ModelCompute.update(model, block)/ModelCompute.update(model, recipe)/' src/edition/RecipeEdition.lua > "$panel/RecipeEdition.lua"
 if check_panel > "$tmp/percentage.log" 2>&1; then
   echo 'Queueing a recipe in place of its production block must fail the type check.' >&2

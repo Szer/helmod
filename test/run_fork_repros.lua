@@ -46,7 +46,8 @@ local fixture = "triage-prototypes_1.0.0.zip"
 Runner.copy(upstream .. "/" .. fixture, work .. "/mods/" .. fixture)
 for _, case in ipairs({
     {directory="639", suite="test_offshore_save", marker="OFFSHORE SAVE PASSED"},
-    {directory="495", suite="test_fixed_recipe_save", marker="FIXED RECIPE SAVE PASSED"}
+    {directory="495", suite="test_fixed_recipe_save", marker="FIXED RECIPE SAVE PASSED"},
+    {directory="496", suite="test_boiler_inlet_save", marker="BOILER INLET SAVE PASSED"}
 }) do
     local copy = work .. "/" .. case.suite .. ".zip"
     Runner.copy(upstream .. "/" .. case.directory .. "/repro.zip", copy)

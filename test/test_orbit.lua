@@ -1,3 +1,4 @@
+local checkBoilerInlet = require "test_boiler_inlet"
 local checkFixedRecipe = require "test_fixed_recipe"
 local check_electricity = require "test_electricity"
 local check_nested = require "test_nested_intermediates"
@@ -210,6 +211,7 @@ local function check(background)
     local defaults=Model.newModel()
     local _,dr=ModelBuilder.addRecipeIntoProductionBlock(defaults,defaults.block_root,"transport-belt","orbit")
     assert(dr.factory.quality=="legendary","saved silo quality default")
+    checkBoilerInlet()
     checkFixedRecipe()
     checkOffshoreExtraction()
     checkSplitCoalReturn()

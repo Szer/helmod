@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local FixedRecipe = require "model.recipe.FixedRecipe"
 local OffshoreFluids = require "model.recipe.OffshoreFluids"
 -------------------------------------------------------------------------------
@@ -201,7 +202,7 @@ function Player.setSmartTool(recipe, type, index)
     end
     local inventory_indexes = {}
     inventory_indexes["beacon"] = defines.inventory.beacon_modules
-    inventory_indexes["rocket-silo"] = defines.inventory.crafter_modules
+    inventory_indexes[EntityType.rocketSilo] = defines.inventory.crafter_modules
     inventory_indexes["mining-drill"] = defines.inventory.mining_drill_modules
     inventory_indexes["lab"] = defines.inventory.lab_modules
     inventory_indexes["assembling-machine"] = defines.inventory.crafter_modules
@@ -1637,7 +1638,7 @@ end
 ---@return table
 function Player.getRocketMachines()
     local filters = {}
-    table.insert(filters, { filter = "type", type = "rocket-silo", mode = "or" })
+    table.insert(filters, { filter = "type", type = EntityType.rocketSilo, mode = "or" })
     table.insert(filters, { filter = "hidden", mode = "and", invert = true })
     local entities = prototypes.get_entity_filtered(filters)
 
@@ -1937,7 +1938,7 @@ function Player.getRocketPartRecipe(factory)
         silos = { prototypes.entity[factory.name] }
     else
         local entity_filters = {
-            { filter = "type",   invert = false, mode = "and", type = "rocket-silo" },
+            { filter = "type",   invert = false, mode = "and", type = EntityType.rocketSilo },
             { filter = "hidden", invert = true,  mode = "and" },
         }
         silos = prototypes.get_entity_filtered(entity_filters)
@@ -2320,7 +2321,7 @@ function Player.getItemsLogistic(type)
     elseif type == "container" then
         filters = { { filter = "type", mode = "or", invert = false, type = "container" }, { filter = "minable", mode = "and", invert = false }, { filter = "type", mode = "or", invert = false, type = "logistic-container" }, { filter = "minable", mode = "and", invert = false } }
     elseif type == "transport" then
-        filters = { { filter = "type", mode = "or", invert = false, type = "cargo-wagon" },{ filter = "type", mode = "or", invert = false, type = "rocket-silo" }, { filter = "type", mode = "or", invert = false, type = "logistic-robot" }, { filter = "type", mode = "or", invert = false, type = "car" } }
+        filters = { { filter = "type", mode = "or", invert = false, type = "cargo-wagon" },{ filter = "type", mode = "or", invert = false, type = EntityType.rocketSilo }, { filter = "type", mode = "or", invert = false, type = "logistic-robot" }, { filter = "type", mode = "or", invert = false, type = "car" } }
     end
     return Player.getEntityPrototypes(filters)
 end

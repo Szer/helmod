@@ -1,4 +1,5 @@
-local silo = table.deepcopy(data.raw["rocket-silo"]["rocket-silo"])
+local EntityType = require "model.EntityType"
+local silo = table.deepcopy(data.raw[EntityType.rocketSilo]["rocket-silo"])
 silo.name = "orbit-test-silo"
 silo.hidden = true
 silo.fixed_recipe = "orbit-test-parts"

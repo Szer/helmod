@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 -------------------------------------------------------------------------------
 ---Description of the module.
 ---@class Product : Prototype
@@ -299,7 +300,7 @@ function Product:countContainer(count, container, time)
       local belt_speed = entity_prototype:getBeltSpeed()
       local belt_bonus = 1 + User.getBeltStackSizeBonus()
       return count / (belt_speed * belt_bonus * self.belt_ratio * (time or 1))
-    elseif entity_prototype:getType() == "rocket-silo" then
+    elseif entity_prototype:getType() == EntityType.rocketSilo then
       local item_prototype = ItemPrototype(self.lua_prototype.name)
       local rocket_capacity = math.floor(item_prototype:geRocketCapacity())
       if rocket_capacity < 1 then

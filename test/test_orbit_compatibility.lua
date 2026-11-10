@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local Orbit = require "model.Orbit"
 local function near(actual, expected, label)
     assert(math.abs(actual - expected) < 1e-7, label .. ": " .. tostring(actual) .. " / " .. tostring(expected))
@@ -6,7 +7,7 @@ script.on_init(function()
     EventController.onInit()
     Player.set{name="OrbitTester", index=1, force=game.forces.player, mod_settings=settings.global, admin=true, print=function(message) error(message) end}
     local count = 0
-    for name, silo in pairs(prototypes.get_entity_filtered{{filter="type",type="rocket-silo"}}) do
+    for name, silo in pairs(prototypes.get_entity_filtered{{filter="type",type=EntityType.rocketSilo}}) do
         log("COMPAT SILO " .. name .. " platform=" .. tostring(silo.launch_to_space_platforms))
         if silo.fixed_recipe then
             local model=Model.newModel()

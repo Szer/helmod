@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local PartRecipe = require "model.launch.PartRecipe"
 local SiloRecipes = {}
 
@@ -55,7 +56,7 @@ end
 ---@param selected? string
 ---@return LuaRecipePrototype?
 function SiloRecipes.resolve(silo, selected)
-    if not silo or silo.type ~= "rocket-silo" then return nil end
+    if not silo or silo.type ~= EntityType.rocketSilo then return nil end
     if silo.fixed_recipe then return silo.fixed_recipe end
     local options = SiloRecipes.options(silo)
     return options.byName[selected] or options.byName["rocket-part"] or options.recipes[1]

@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local SiloRecipes = require "model.SiloRecipes"
 local RocketTiming = require "model.RocketTiming"
 ---@class OrbitDetails
@@ -20,7 +21,7 @@ function Orbit.capacity(item_name, silo)
     if script.feature_flags.space_travel == false then
         return 0
     end
-    if item == nil or item.weight <= 0 or silo == nil or silo.type ~= "rocket-silo" or silo.launch_to_space_platforms == false then
+    if item == nil or item.weight <= 0 or silo == nil or silo.type ~= EntityType.rocketSilo or silo.launch_to_space_platforms == false then
         return 0
     end
     return math.floor(silo.lift_weight / item.weight)
@@ -30,7 +31,7 @@ end
 ---@param item_name? string
 ---@return boolean
 function Orbit.canLaunch(silo, item_name)
-    return script.feature_flags.space_travel and silo ~= nil and silo.type == "rocket-silo"
+    return script.feature_flags.space_travel and silo ~= nil and silo.type == EntityType.rocketSilo
         and silo.launch_to_space_platforms and (item_name == nil or Orbit.capacity(item_name, silo) > 0)
         and SiloRecipes.resolve(silo) ~= nil and RocketTiming.getLaunchTicks(silo, "normal") ~= nil
 end
@@ -42,7 +43,7 @@ function Orbit.machines(item_name)
     if script.feature_flags.space_travel == false then
         return machines
     end
-    for name, silo in pairs(prototypes.get_entity_filtered{{filter="type", type="rocket-silo"}}) do
+    for name, silo in pairs(prototypes.get_entity_filtered{{filter="type", type=EntityType.rocketSilo}}) do
         if not silo.hidden and not silo.has_flag("not-in-made-in") and Orbit.canLaunch(silo, item_name) then
             machines[name] = silo
         end

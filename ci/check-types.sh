@@ -68,7 +68,7 @@ mkdir -p "$panel/gui/controls" "$panel/model" "$panel/data" "$panel/math/increme
 mkdir -p "$panel/model/recipe"
 cp src/model/recipe/{FixedRecipe,RecipeTypes}.lua "$panel/model/recipe/"
 mkdir -p "$panel/model/energy" "$panel/model/launch"
-cp src/model/{Orbit,SiloRecipes}.lua "$panel/model/"
+cp src/model/{EntityType,Orbit,SiloRecipes}.lua "$panel/model/"
 cp src/model/launch/PartRecipe.lua "$panel/model/launch/"
 cp src/model/energy/BoilerInlet.lua "$panel/model/energy/"
 cp src/data/{SheetPlanner,SheetDependencies,ModelCompute,BoilerRouting}.lua "$panel/data/"

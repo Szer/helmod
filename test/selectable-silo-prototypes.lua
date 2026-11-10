@@ -1,7 +1,8 @@
+local EntityType = require "model.EntityType"
 local category = "test-orbit-construction"
 data:extend{{type="recipe-category", name=category}}
 
-local silo = table.deepcopy(data.raw["rocket-silo"]["rocket-silo"])
+local silo = table.deepcopy(data.raw[EntityType.rocketSilo]["rocket-silo"])
 silo.name = "test-selectable-silo"
 silo.fixed_recipe = nil
 silo.launch_to_space_platforms = true

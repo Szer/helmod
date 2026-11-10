@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 local SiloPartControl = require "gui.controls.SiloPartControl"
 local SiloRecipes = require "model.SiloRecipes"
 local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
@@ -285,7 +286,7 @@ function RecipeEdition:onEvent(event)
             if picker.model_id ~= model.id or picker.block_id ~= block.id or picker.recipe_id ~= recipe.id
                 or recipe.type ~= defines.mod.recipes.orbit.name or picker.silo ~= recipe.factory.name then return end
             local silo = EntityPrototype(recipe.factory):native()
-            if not silo or silo.type ~= "rocket-silo" or silo.fixed_recipe then return end
+            if not silo or silo.type ~= EntityType.rocketSilo or silo.fixed_recipe then return end
             local name = event.element.tags.recipes[event.element.selected_index]
             if not SiloRecipes.options(silo).byName[name] then return end
             recipe.factory.rocket_part_recipe = name
@@ -851,7 +852,7 @@ function RecipeEdition:updateFactoryInfo(event)
         GuiElement.add(input_panel, GuiLabel("label-module-slots"):caption({ "helmod_label.module-slots" }))
         GuiElement.add(input_panel, GuiLabel("module-slots"):caption(factory_prototype:getModuleInventorySize()))
 
-        if recipe.type == defines.mod.recipes.orbit.name and factory_prototype:getType() == "rocket-silo" then
+        if recipe.type == defines.mod.recipes.orbit.name and factory_prototype:getType() == EntityType.rocketSilo then
             local silo = factory_prototype:native()
             if not silo.fixed_recipe then
                 local part = SiloRecipes.resolve(silo, factory.rocket_part_recipe)

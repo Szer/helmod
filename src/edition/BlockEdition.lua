@@ -227,23 +227,23 @@ function BlockEdition:addSupplyOptions(form, model, block)
     for key, item in spairs(block.ingredients, materialOrder) do
         if block.products[key] then
             if not list then
-                GuiElement.add(form, GuiLabel("supply-label"):caption({"helmod_block_edition_panel.external-supplies"}))
-                local scroll = GuiElement.add(form, GuiScroll("supply-scroll"))
+                GuiElement.add(form, GuiLabel(MatrixSupply.element.label):caption({MatrixSupply.label.supplies}))
+                local scroll = GuiElement.add(form, GuiScroll(MatrixSupply.element.scroll))
                 scroll.style.maximal_height = 128
-                list = GuiElement.add(scroll, GuiFlowV("supply-options"))
+                list = GuiElement.add(scroll, GuiFlowV(MatrixSupply.element.options))
             end
             local caption = Player.getLocalisedName(item)
             if Player.hasFeatureQuality() and item.quality and prototypes.quality[item.quality] then
-                caption = {"", "[quality=" .. item.quality .. "] ", caption, " (", prototypes.quality[item.quality].localised_name, ")"}
+                caption = {MatrixSupply.label.quality, item.quality, caption, prototypes.quality[item.quality].localised_name}
             end
             local button = GuiCheckBox(self.classname, MatrixSupply.buttonArgs{
                 action=MatrixSupply.action, model_id=model.id, block_id=block.id, material=key
-            }):caption(caption):tooltip({"helmod_block_edition_panel.external-supplies-help"})
+            }):caption(caption):tooltip({MatrixSupply.tooltip.help})
             local checkbox = GuiElement.add(list, button:state(MatrixSupplies.editable(block, key) and MatrixSupplies.selected(block, key)))
             checkbox.enabled = User.isWriter(model)
             if block.products[key].input ~= nil then
                 checkbox.enabled = false
-                checkbox.tooltip = {"helmod_block_edition_panel.external-supply-target"}
+                checkbox.tooltip = {MatrixSupply.tooltip.target}
             end
         end
     end

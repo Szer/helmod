@@ -1,5 +1,18 @@
 local ConstraintView = require "gui.controls.ConstraintView"
-local MatrixSupply = {action = "matrix-external-supply", hint = "matrix-external-supply"}
+local MatrixSupply = {action = "matrix-external-supply"}
+MatrixSupply.hint = MatrixSupply.action
+
+MatrixSupply.element = {label = "supply-label", scroll = "supply-scroll", options = "supply-options"}
+MatrixSupply.label = {
+    supplies = "helmod_block_edition_panel.external-supplies",
+    quality = "helmod_block_edition_panel.external-supply-quality",
+}
+MatrixSupply.tooltip = {
+    help = "helmod_block_edition_panel.external-supplies-help",
+    target = "helmod_block_edition_panel.external-supply-target",
+    add = "controls.matrix-supply-add",
+    remove = "controls.matrix-supply-remove",
+}
 
 ---@class MatrixSupplyEdit
 ---@field action "matrix-external-supply"

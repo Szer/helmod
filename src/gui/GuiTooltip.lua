@@ -217,8 +217,8 @@ function GuiTooltip:appendControlInfo(tooltip, element)
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.contraint-minus" } })
 		end
 		if self.m_with_control_info == MatrixSupply.hint then
-			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {"controls.matrix-supply-add"}})
-			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {"controls.matrix-supply-remove"}})
+			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {MatrixSupply.tooltip.add}})
+			table.insert(tooltip_section, {"", "\n", "[img=helmod-tooltip-blank] ", {MatrixSupply.tooltip.remove}})
 		end
 		if self.m_with_control_info == "link-intermediate" then
 			table.insert(tooltip_section, { "", "\n", "[img=helmod-tooltip-blank]", " ", { "controls.link-intermediate" } })

@@ -10,12 +10,13 @@ Runner.write(work .. "/mods/mod-list.json", [[{"mods":[{"name":"base","enabled":
 Runner.copy(root .. "/test/test_fork_repros.lua", mod .. "/test_fork_repros.lua")
 Runner.copy(root .. "/test/test_consumer_controls.lua", mod .. "/test_consumer_controls.lua")
 Runner.copy(root .. "/test/test_sheet_jobs.lua", mod .. "/test_sheet_jobs.lua")
+Runner.copy(root .. "/test/test_recycling_balance.lua", mod .. "/test_recycling_balance.lua")
 local control = Runner.read(mod .. "/control.lua")
-for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolbar-scroll", "header-scroll", "tree-controls", "excluded-output", "electricity-inputs", "header-block-removal", "row-removal-scroll", "consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
+for _, case in ipairs({"sheet-jobs", "refresh-scroll", "quantity-scroll", "toolbar-scroll", "header-scroll", "tree-controls", "excluded-output", "zero-row-flows", "electricity-inputs", "header-block-removal", "row-removal-scroll", "consumer-controls", "empty-explorer", "custom-recipe-quality", "custom-recipe-categories",
                        "blank-selector-rule", "empty-ingredient-search", "truncated-import", "empty-blueprint-book", "quantity-after-reload", "quantity-confirm"}) do
     Runner.write(mod .. "/control.lua", control .. '\nrequire "test_fork_repros"("' .. case .. '")\n')
     local save = saves .. "/" .. case .. "/repro.zip"
-    if case == "sheet-jobs" or case == "refresh-scroll" or case == "quantity-scroll" or case == "toolbar-scroll" or case == "header-scroll" or case == "tree-controls" or case == "excluded-output" or case == "electricity-inputs" or case == "header-block-removal" or case == "consumer-controls" or case == "row-removal-scroll" then save = saves .. "/empty-explorer/repro.zip" end
+    if case == "sheet-jobs" or case == "refresh-scroll" or case == "quantity-scroll" or case == "toolbar-scroll" or case == "header-scroll" or case == "tree-controls" or case == "zero-row-flows" or case == "excluded-output" or case == "electricity-inputs" or case == "header-block-removal" or case == "consumer-controls" or case == "row-removal-scroll" then save = saves .. "/empty-explorer/repro.zip" end
     local log
     if case == "empty-ingredient-search" and not headless then
         local copy = work .. "/empty-ingredient-search.zip"

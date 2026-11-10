@@ -46,59 +46,64 @@ function ConstraintView.hint(simplex, action)
     return nil
 end
 
----@param constraints table<string, {type: ConstraintKind}>?
+---@param constraints table<string, {type: ConstraintKind, side:ConstraintSide?}>?
 ---@param key string
+---@param side ConstraintSide
+---@param legacySide? ConstraintSide Side inferred for an older sub-block constraint
 ---@return ConstraintKind?
-function ConstraintView.icon(constraints, key)
-    if constraints and constraints[key] then return constraints[key].type end
-    return nil
+function ConstraintView.icon(constraints, key, side, legacySide)
+    local constraint = constraints and constraints[key]
+    if constraint then
+        local markedSide = constraint.side or legacySide
+        if not markedSide or markedSide == side then return constraint.type end
+    end
 end
 
--- Active constraints need a clickable cell even when they stop the flow.
----@param constraint ConstraintKind?
----@param state integer?
----@param amount number?
+---@param product {amount:number}?
+---@param ingredient {amount:number}?
+---@param byProduct boolean
+---@return ConstraintSide
+function ConstraintView.legacySide(product, ingredient, byProduct)
+    if not product then return ConstraintView.side.ingredients end
+    if not ingredient then return ConstraintView.side.products end
+    if product.amount > 0 and ingredient.amount == 0 then return ConstraintView.side.products end
+    if ingredient.amount > 0 and product.amount == 0 then return ConstraintView.side.ingredients end
+    if byProduct then return ConstraintView.side.products end
+    return ConstraintView.side.ingredients
+end
+
+---@param cell {count:number, count_limit:number?}
+---@param byLimit boolean?
+---@return number
+function ConstraintView.displayCount(cell, byLimit)
+    if byLimit then return cell.count_limit or 0 end
+    return cell.count
+end
+
+---@param count number
+---@param showAll boolean?
 ---@return boolean
-local function keepVisible(constraint, state, amount)
-    return constraint ~= nil or (state == 3 and amount == 0)
+function ConstraintView.showQuantity(count, showAll)
+    return showAll == true or count > 0
 end
 
----@param state integer?
----@param amount number?
----@param drivingSide boolean
----@param threshold number
----@param constraint ConstraintKind?
----@return boolean
-function ConstraintView.showFlow(state, amount, drivingSide, threshold, constraint)
-    return (state == 1 and drivingSide) or (amount or 0) > threshold or keepVisible(constraint, state, amount)
-end
-
----@param constraint ConstraintKind?
----@param outputCount number
----@param hasVisibleInput boolean
----@param inputAction ConstraintAction
----@return boolean
-function ConstraintView.duplicateOutput(constraint, outputCount, hasVisibleInput, inputAction)
-    return constraint ~= nil and outputCount == 0 and hasVisibleInput and inputAction == ConstraintView.action.ingredient
-end
-
----@param rowCount number?
 ---@param expanded boolean
 ---@param mode ProductDisplayMode
 ---@param threshold number
 ---@param maxCount number
 ---@return number? threshold Nil shows every cell in the row.
-function ConstraintView.rowThreshold(rowCount, expanded, mode, threshold, maxCount)
-    if (rowCount or 0) == 0 or expanded or threshold == 0 then return nil end
+function ConstraintView.rowThreshold(expanded, mode, threshold, maxCount)
+    if expanded or threshold == 0 then return nil end
     if mode == DisplayMode.relative then return threshold * maxCount end
     return threshold
 end
 
----@param cell {count:number, state:integer?, contraint_type:ConstraintKind?}
+---@param cell {count:number, count_limit:number?, contraint_type:ConstraintKind?}
 ---@param threshold number?
+---@param byLimit? boolean
 ---@return boolean
-function ConstraintView.showCell(cell, threshold)
-    return threshold == nil or cell.count > threshold or keepVisible(cell.contraint_type, cell.state, cell.count)
+function ConstraintView.showCell(cell, threshold, byLimit)
+    return threshold == nil or ConstraintView.displayCount(cell, byLimit) > threshold or cell.contraint_type ~= nil
 end
 
 return ConstraintView

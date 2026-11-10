@@ -765,7 +765,7 @@ function ProductionPanel:updateInputBlock(model, block)
 	input_tool.clear()
 	local all_visible = User.getParameter(BlockHeader.setting.ingredients)
 	local filter = GuiButton(self.classname, BlockHeader.buttonArgs{action=BlockHeader.action.ingredients, model_id=model.id, block_id=block.id})
-	local filterTooltip = {BlockHeader.tooltip.filter}
+	local filterTooltip = {BlockHeader.tooltip.ingredients}
 	if MatrixSupplies.available(block) then
 		filterTooltip = {MatrixSupply.tooltip.filter}
 	elseif block_by_product then
@@ -820,7 +820,7 @@ function ProductionPanel:updateInputBlock(model, block)
 			for index, lua_ingredient in spairs(visible, User.getProductSorter()) do
 				local supplyEligible = not combinator_select_mode and MatrixSupplies.editable(block, index)
 				local supplied = supplyEligible and MatrixSupplies.selected(block, index)
-				if supplied or all_visible == true or ((lua_ingredient.state or 0) == 1 and not (block_by_product)) or (lua_ingredient.amount or 0) > ModelCompute.waste_value then
+				if all_visible == true or (lua_ingredient.amount or 0) > ModelCompute.waste_value then
 					local ingredient = Product(lua_ingredient):clone()
 					ingredient.key = Product(lua_ingredient):getTableKey()
 					ingredient.time = model.time
@@ -982,7 +982,7 @@ function ProductionPanel:updateOutputBlock(model, block)
 			
 			local max_count = 0
 			for index, lua_product in spairs(block.products, User.getProductSorter()) do
-				if all_visible == true or ((lua_product.state or 0) == 1 and block_by_product) or (lua_product.amount or 0) > ModelCompute.waste_value then
+				if all_visible == true or (lua_product.amount or 0) > ModelCompute.waste_value then
 					local product = Product(lua_product):clone()
 					product.key = Product(lua_product):getTableKey()
 					product.time = model.time
@@ -1517,8 +1517,9 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			---products
 			local all_products = {}
 			local hidden_products = {}
+			local showAll = User.getParameter(BlockHeader.setting.products)
 			local show_hidden_recipe_products = User.getParameter("show_hidden_recipe_products")
-			local skip_hidden_products = show_hidden_recipe_products == recipe.id
+			local skip_hidden_products = showAll or show_hidden_recipe_products == recipe.id
 
 			local display_product_cols = User.getPreferenceSetting("display_product_cols")
 			local cell_scroll = addRowScroll(gui_table, ConstraintView.side.products, recipe.id)
@@ -1549,7 +1550,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 				product.count_limit = product_prototype:countLimitProduct(recipe)
 				product.count_deep = product_prototype:countDeepProduct(recipe)
 				
-				product.contraint_type = ConstraintView.icon(recipe.contraints, product_key)
+				product.contraint_type = ConstraintView.icon(recipe.contraints, product_key, ConstraintView.side.products)
 				
 				product.control_info = ConstraintView.hint(block.solver, ConstraintView.action.product)
 				
@@ -1561,13 +1562,16 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 					end
 				end
 
-				table.insert(all_products, product)
-				max_count = math.max(max_count, product.count)
+				local count = ConstraintView.displayCount(product, block.by_limit)
+				if ConstraintView.showQuantity(count, showAll) then
+					table.insert(all_products, product)
+					max_count = math.max(max_count, count)
+				end
 			end
 
-			local threshold = ConstraintView.rowThreshold(recipe.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
+			local threshold = ConstraintView.rowThreshold(skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 			for index, product in pairs(all_products) do
-				if ConstraintView.showCell(product, threshold) then
+				if ConstraintView.showCell(product, threshold, block.by_limit) then
 					GuiElement.add(cell_products, GuiCellElement(self.classname, ConstraintView.action.product, model.id, block.id, recipe.id):element(product):tooltip("tooltip.add-recipe")
 					:color(product_color):index(index):byLimit(block.by_limit):contraintIcon(product.contraint_type):isPivot(product.is_pivot):controlInfo(product.control_info))
 				else
@@ -1583,8 +1587,9 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 			local all_ingredients = {}
 			local hidden_ingredients = {}
 			
+			local showAll = User.getParameter(BlockHeader.setting.ingredients)
 			local show_hidden_recipe_ingredients = User.getParameter("show_hidden_recipe_ingredients")
-			local skip_hidden_products = show_hidden_recipe_ingredients == recipe.id
+			local skip_hidden_products = showAll or show_hidden_recipe_ingredients == recipe.id
 
 			local display_ingredient_cols = User.getPreferenceSetting("display_ingredient_cols")
 			local cell_scroll = addRowScroll(gui_table, ConstraintView.side.ingredients, recipe.id)
@@ -1619,7 +1624,7 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 					ingredient.count = ingredient_prototype:countProduct(recipe)
 				end
 				
-				ingredient.contraint_type = ConstraintView.icon(recipe.contraints, ingredient_key)
+				ingredient.contraint_type = ConstraintView.icon(recipe.contraints, ingredient_key, ConstraintView.side.ingredients)
 
 				ingredient.control_info = ConstraintView.hint(block.solver, ConstraintView.action.ingredient)
 
@@ -1631,13 +1636,16 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 					end
 				end
 
-				table.insert(all_ingredients, ingredient)
-				max_count = math.max(max_count, ingredient.count)
+				local count = ConstraintView.displayCount(ingredient, block.by_limit)
+				if ConstraintView.showQuantity(count, showAll) then
+					table.insert(all_ingredients, ingredient)
+					max_count = math.max(max_count, count)
+				end
 			end
 			
-			local threshold = ConstraintView.rowThreshold(recipe.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
+			local threshold = ConstraintView.rowThreshold(skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 			for index, ingredient in pairs(all_ingredients) do
-				if ConstraintView.showCell(ingredient, threshold) then
+				if ConstraintView.showCell(ingredient, threshold, block.by_limit) then
 					GuiElement.add(cell_ingredients, GuiCellElement(self.classname, ConstraintView.action.ingredient, model.id, block.id, recipe.id):element(ingredient):tooltip("tooltip.add-recipe")
 					:color(ingredient_color):index(index):byLimit(block.by_limit):contraintIcon(ingredient.contraint_type):isPivot(ingredient.is_pivot):controlInfo(ingredient.control_info))
 				else
@@ -1742,6 +1750,15 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 
 	local product_sorter = User.getProductSorter()
 	local visibleInputs = GuiElement.visibleIngredients(block.ingredients or {})
+	local function constraintIcon(key, side)
+		local constraint = block.contraints and block.contraints[key]
+		if not constraint then return nil end
+		local legacySide
+		if not constraint.side then
+			legacySide = ConstraintView.legacySide(block.products[key], visibleInputs[key], block_by_product)
+		end
+		return ConstraintView.icon(block.contraints, key, side, legacySide)
+	end
 	local inputAction = ConstraintView.action.ingredient
 	if not block_by_product and block.unlinked and block.by_factory ~= true then
 		inputAction = ConstraintView.action.edition
@@ -1760,8 +1777,9 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 			local cell_products = GuiElement.add(cell_scroll, GuiTable(ConstraintView.side.products, block.id):column(display_product_cols):style("helmod_table_list"))
 			cell_products.style.horizontally_stretchable = false
 			if block.products ~= nil then
+				local showAll = User.getParameter(BlockHeader.setting.products)
 				local show_hidden_block_products = User.getParameter("show_hidden_block_products")
-				local skip_hidden_products = show_hidden_block_products == block.id
+				local skip_hidden_products = showAll or show_hidden_block_products == block.id
 				local all_products = {}
 				local hidden_products = {}
 				
@@ -1771,11 +1789,9 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 
 				local max_count = 0
 				for index, lua_product in spairs(block.products, product_sorter) do
-					local constraint = ConstraintView.icon(block.contraints, index)
 					local amount = lua_product.amount or 0
 					local count = amount * (block.count or 0)
-					local duplicate = ConstraintView.duplicateOutput(constraint, count, visibleInputs[index] ~= nil, inputAction)
-					if not duplicate and ConstraintView.showFlow(lua_product.state, lua_product.amount, block_by_product, ModelCompute.waste_value, constraint) then
+					if ConstraintView.showQuantity(count, showAll) then
 						local product_prototype = Product(lua_product)
 						local product = product_prototype:clone()
 						product.parent_id = parent.id
@@ -1795,7 +1811,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 							product.parent_id = block.id
 						end
 
-						product.contraint_type = constraint
+						product.contraint_type = constraintIcon(index, ConstraintView.side.products)
 						---color
 						product.product_color = User.getThumbnailColor(defines.thumbnail_color.names.product_default)
 						if product.state == 1 then
@@ -1826,7 +1842,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 					end
 				end
 
-				local threshold = ConstraintView.rowThreshold(block.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
+				local threshold = ConstraintView.rowThreshold(skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 				for index, product in pairs(all_products) do
 					if ConstraintView.showCell(product, threshold) then
 						GuiElement.add(cell_products, GuiCellElement(self.classname, product.button_action, model.id, product.parent_id, block.id):element(product):byLimit(by_limit)
@@ -1854,8 +1870,9 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 			local cell_ingredients = GuiElement.add(cell_scroll, GuiTable(ConstraintView.side.ingredients, block.id):column(display_ingredient_cols))
 			cell_ingredients.style.horizontally_stretchable = false
 			if block.ingredients ~= nil then
+				local showAll = User.getParameter(BlockHeader.setting.ingredients)
 				local show_hidden_block_ingredients = User.getParameter("show_hidden_block_ingredients")
-				local skip_hidden_products = show_hidden_block_ingredients == block.id
+				local skip_hidden_products = showAll or show_hidden_block_ingredients == block.id
 				
 				if table.size(visibleInputs) <= 2*display_ingredient_cols then
 					skip_hidden_products = true
@@ -1863,12 +1880,12 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 
 				local max_count = 0
 				for index, lua_ingredient in spairs(visibleInputs, product_sorter) do
-					local constraint = ConstraintView.icon(block.contraints, index)
-					if ConstraintView.showFlow(lua_ingredient.state, lua_ingredient.amount, not (block_by_product), ModelCompute.waste_value, constraint) then
+					local count = lua_ingredient.amount * (block.count or 0)
+					if ConstraintView.showQuantity(count, showAll) then
 						local ingredient_prototype = Product(lua_ingredient)
 						local ingredient = ingredient_prototype:clone()
 						ingredient.time = model.time
-						ingredient.count = lua_ingredient.amount * (block.count or 0)
+						ingredient.count = count
 						ingredient.count_limit = lua_ingredient.amount * (block.count_limit or 0)
 						ingredient.count_deep = lua_ingredient.amount * (block.count_deep or 0)
 
@@ -1902,7 +1919,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 							end
 						end
 
-						ingredient.contraint_type = constraint
+						ingredient.contraint_type = constraintIcon(index, ConstraintView.side.ingredients)
 						ingredient.control_info = ConstraintView.hint(parent.solver, ingredient.button_action)
 
 						table.insert(all_ingredients, ingredient)
@@ -1910,7 +1927,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 					end
 				end
 
-				local threshold = ConstraintView.rowThreshold(block.count, skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
+				local threshold = ConstraintView.rowThreshold(skip_hidden_products, display_hidden_products_mode, display_hidden_products, max_count)
 				for index, ingredient in pairs(all_ingredients) do
 					if ConstraintView.showCell(ingredient, threshold) then
 							GuiElement.add(cell_ingredients, GuiCellElement(self.classname, ingredient.button_action, model.id, ingredient.parent_id, block.id, ingredient.name):element(ingredient):byLimit(by_limit)
@@ -2503,7 +2520,7 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 
 	local edit = ConstraintView.edit(event)
 	if edit ~= nil and block ~= nil then
-		ModelBuilder.updateChildContraint(block.children[edit.child_id], {type=edit.kind, item=event.item})
+		ModelBuilder.updateChildContraint(block.children[edit.child_id], {type=edit.kind, item=event.item, side=edit.side})
 		ModelCompute.update(model)
 		Controller:send(defines.mod.events.on_gui_update, event)
 		return

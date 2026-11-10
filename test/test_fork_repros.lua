@@ -1,7 +1,10 @@
 -- Exercise the fixed paths with the planner data and player from the original repro save.
+local recycling = require "test_recycling_balance"
+local ConstraintView = require "gui.controls.ConstraintView"
 local sheetJobs = require "test_sheet_jobs"
 local checkConsumerControls = require "test_consumer_controls"
 local Blueprint = require "core.Blueprint"
+local BlockHeader = require "gui.controls.BlockHeader"
 local BlockToolbar = require "gui.controls.BlockToolbar"
 local function find(element, name, kind)
     if element.name:find(name, 1, true) and (kind == nil or element.type == kind) then return element end
@@ -80,13 +83,67 @@ local function checkExcludedOutput(player)
     end
     for _, threshold in ipairs({User.getPreferenceSetting("display_hidden_products"), 0}) do
         User.setPreference("display_hidden_products", nil, threshold)
+        User.setParameter(BlockHeader.setting.products, false)
         openBlock(model, root)
         assert(child.products.inserter.amount == 1)
         shiftClick()
         assert(child.contraints.inserter.type == "exclude" and child.products.inserter.amount == 0)
-        openBlock(model, root)
+        assert(not find(player.gui.screen, button), "hide the zero output in compact view")
+        click(player, BlockHeader.action.products)
         shiftClick()
         assert(child.contraints.inserter == nil and child.products.inserter.amount == 1)
+    end
+end
+
+local function checkZeroFlows(player)
+    local model, row = recycling.buildNestedFoundries()
+    local root = model.block_root
+    root.products["tungsten-carbide#legendary"].input = 1
+    ModelCompute.updateNow(model)
+    User.setParameter(BlockHeader.setting.products, false)
+    User.setParameter(BlockHeader.setting.ingredients, false)
+    openBlock(model, root)
+
+    local function carbide(side, quality)
+        local key = "tungsten-carbide#" .. quality
+        local prefix = side .. "=" .. model.id .. "=" .. root.id .. "=" .. row.id .. "=tungsten-carbide="
+        if side == ConstraintView.action.ingredient then prefix = prefix .. "tungsten-carbide=" end
+        return find(player.gui.screen, prefix .. key)
+    end
+    local product, ingredient = ConstraintView.action.product, ConstraintView.action.ingredient
+    local function toggle(element, shift)
+        EventController.onGuiClickButton{player_index=player.index, element=assert(element), button=defines.mouse_button_type.left,
+            control=not shift, shift=shift}
+        assert(not Player.getLastError())
+    end
+    local function marked(element, kind)
+        local icons = element.mask_infos
+        return icons and icons[GuiElement.getSprite(defines.sprite_info[kind])] ~= nil
+    end
+    for _, quality in ipairs({"uncommon", "rare", "epic"}) do
+        assert(not carbide(product, quality) and not carbide(ingredient, quality), "hide balanced "..quality.." flows")
+    end
+    assert(carbide(product, "legendary"), "keep the requested output")
+    click(player, BlockHeader.action.products)
+    for _, quality in ipairs({"uncommon", "rare", "epic"}) do
+        assert(carbide(product, quality) and not carbide(ingredient, quality), "expand only outputs")
+    end
+    click(player, BlockHeader.action.ingredients)
+    for _, shift in ipairs({false, true}) do
+        local kind = shift and ConstraintView.kind.exclude or ConstraintView.kind.master
+        toggle(carbide(product, "uncommon"), shift)
+        assert(marked(carbide(product, "uncommon"), kind) and not marked(carbide(ingredient, "uncommon"), kind))
+        assert(not (row.matrix_supplies or {})["tungsten-carbide#uncommon"])
+        assert(not (root.matrix_supplies or {})["tungsten-carbide#uncommon"])
+        click(player, BlockHeader.action.products)
+        assert(not carbide(product, "uncommon") and carbide(ingredient, "epic"), "independent input filter")
+        click(player, BlockHeader.action.products)
+        toggle(carbide(product, "uncommon"), shift)
+        assert(not row.contraints["tungsten-carbide#uncommon"], "clear on the original output")
+        toggle(carbide(ingredient, "uncommon"), shift)
+        assert(marked(carbide(ingredient, "uncommon"), kind) and not marked(carbide(product, "uncommon"), kind))
+        toggle(carbide(ingredient, "uncommon"), shift)
+        assert(not row.contraints["tungsten-carbide#uncommon"], "clear on the original input")
     end
 end
 
@@ -470,6 +527,8 @@ return function(case)
         assert(model and model.block_root, "expected a saved sheet")
         if case == "consumer-controls" then
             checkConsumerControls(player)
+        elseif case == "zero-row-flows" then
+            checkZeroFlows(player)
         elseif case == "excluded-output" then
             checkExcludedOutput(player)
         elseif case == "electricity-inputs" then

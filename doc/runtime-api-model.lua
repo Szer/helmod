@@ -33,6 +33,7 @@
 ---@field temperature number
 
 ---@class ContraintData
+---@field side? ConstraintSide Production row side where the player set the constraint
 ---@field name string
 ---@field type string
 

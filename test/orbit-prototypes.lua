@@ -26,6 +26,14 @@ burner.name = "orbit-test-burner"
 burner.energy_source = {type="burner", fuel_categories={"nuclear"}, effectivity=1, fuel_inventory_size=1, burnt_inventory_size=1}
 data:extend{burner}
 
+local residue_furnace = table.deepcopy(data.raw.furnace["stone-furnace"])
+residue_furnace.name = "test-residue-furnace"
+residue_furnace.energy_source.burnt_inventory_size = 1
+local residue_fuel = table.deepcopy(data.raw.item.coal)
+residue_fuel.name = "test-iron-residue-fuel"
+residue_fuel.burnt_result = "iron-plate"
+data:extend{residue_furnace, residue_fuel}
+
 local unbuffered = table.deepcopy(silo)
 unbuffered.name = "orbit-test-unbuffered"
 unbuffered.rocket_parts_storage_cap = 0

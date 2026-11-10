@@ -86,4 +86,10 @@ for CASE in new next retry conflict bad-hash foreign-url; do
       if [[ $CASE != bad-hash ]]; then test ! -e "$STATE/uploaded"; fi ;;
   esac
 done
+export CASE=details STATE="$work/details"
+mkdir "$STATE"
+GITHUB_REF=refs/heads/fork "$root/ci/publish.sh" --description-only
+test -e "$STATE/edited"
+test ! -e "$STATE/init" && test ! -e "$STATE/uploaded"
+if GITHUB_REF=refs/heads/other "$root/ci/publish.sh" --description-only; then exit 1; fi
 echo 'Portal protocol tests passed.'

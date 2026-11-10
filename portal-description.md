@@ -1,10 +1,21 @@
-## Features and fixes
+## What the fork adds to Helmod
 
-- **Send to orbit** calculates rocket-part ingredients and silo counts for your target delivery rate. It accounts for cargo capacity, productivity, and the silo’s launch animation.
-- **Linked recipes and matrix planning** now balance intermediate products across nested blocks and keep production rates consistent when you add a supply recipe.
-- **Linked electricity** sizes your steam engines, boilers, and fuel supply to the power your factories and beacons consume.
+**Send to orbit.** Set a cargo rate and Helmod calculates rocket-part ingredients and silo counts from cargo capacity, productivity and launch timing.
 
-The planner works with or without Space Age. **Send to orbit** requires space travel and a compatible silo.
+**Electricity and fluid planning.** Size steam, nuclear and fusion power plants for your factory’s demand. Calculations account for reactor neighbour bonuses and the temperature of mixed fluid supplies.
+
+**Quality upcycling.** Choose which materials and qualities can come from outside a block. Matrix Solver balances crafting and recycling across quality tiers to meet your production target.
+
+**Smoother shared-sheet edits.** The experimental background solver spreads recalculation across ticks to reduce multiplayer stutter when someone edits a large sheet. Enable it in **Settings → Mod settings → Map**.
+
+### Smaller improvements
+
+- Keep your place when editing rows or switching a sub-block’s mode.
+- Link intermediate products across nested production blocks.
+- Plan modded pumps, recipe-locked machines and alternative rocket-part recipes.
+- Count productivity and spent fuel correctly when recipe outputs overlap.
+
+Works with or without Space Age. Orbital shipping requires space travel and a compatible silo. [Full changelog](https://mods.factorio.com/mod/helmod-fork/changelog)
 
 ## Switching from Helmod on Factorio 2.1
 

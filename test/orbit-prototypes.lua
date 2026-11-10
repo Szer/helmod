@@ -60,3 +60,17 @@ data:extend{
         icon="__base__/graphics/icons/fluid/water.png"
     }
 }
+
+data:extend{{
+    type="recipe", name="test-split-coal-return", categories={"crafting"}, enabled=true,
+    energy_required=1, allow_productivity=true, auto_recycle=false, main_product="stone",
+    ingredients={{type="item", name="coal", amount=1}},
+    results={
+        {type="item", name="stone", amount=1, ignored_by_productivity=1},
+        {type="item", name="coal", amount=1, independent_probability=0.15},
+        {type="item", name="coal", amount=1, independent_probability=0.15, ignored_by_productivity=1},
+        {type="item", name="copper-plate", amount=2, independent_probability=0.5, ignored_by_productivity=1},
+        {type="item", name="copper-plate", amount=1, ignored_by_productivity=1},
+        {type="item", name="copper-plate", amount=1}
+    }
+}}

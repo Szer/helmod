@@ -17,6 +17,8 @@ Characterize the current behavior before changing representations. Keep the refa
 - Split bindings that change meaning. Use tagged alternatives for real alternatives; keep `nil`, `false`, and zero distinct. If the contract is ambiguous, stop and discuss it rather than adding `any`, casts, or suppressions to silence the checker.
 - Run the same characterization tests after refactoring, plus a regression for the intended fix. Verify observable quantities or controls in Factorio, not just helper return values.
 
+Keep persisted field names, recipe identifiers and import keys compatible with original Helmod plans. Exercise existing saved data when a change affects how plans are read or recalculated.
+
 ## Sheet calculations
 
 Use `ModelCompute.update(model)` after editing a sheet. Supply a block hint only when the edit is confined to that block. Use `updateNow` for migrations that need completed totals before returning.

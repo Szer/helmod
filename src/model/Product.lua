@@ -95,6 +95,7 @@ function Product:clone()
     quality = self.lua_prototype.quality,
     quality_probality = self.lua_prototype.quality_probality,
     amount = self:getElementAmount(),
+    ignored_by_productivity = self.lua_prototype.ignored_by_productivity,
     spoil = self.lua_prototype.spoil,
     state = self.lua_prototype.state,
     temperature = self.lua_prototype.temperature,

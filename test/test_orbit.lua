@@ -71,6 +71,9 @@ end
 local function check(background)
     settings.global.helmod_incremental_percentages = {value=background}
     assert(script.feature_flags.space_travel == true, "orbit feature flag")
+    local selector = prototypes.custom_input["helmod-recipe-selector-open"]
+    assert(selector.key_sequence == "SHIFT + O", "the recipe selector has a separate default from Trains")
+    assert(script.get_event_handler(selector.name), "the existing recipe selector control is registered")
     EventController.onInit()
     -- Map creation has no player, so supply the player context used by Helmod.
     Player.set{name="OrbitTester", index=1, force=game.forces.player, mod_settings=settings.global, admin=true, print=function(message) error(message) end}

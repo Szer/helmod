@@ -1,3 +1,4 @@
+local Hotkey = require "gui.controls.Hotkey"
 local SheetPlanner = require "data.SheetPlanner"
 ---
 ---Description of the module.
@@ -39,18 +40,18 @@ function EventController.start()
 
   --EventController.pcallNthTick(10, EventController.onNthTick)
   ---event hotkey
-  EventController.pcallEvent("helmod-close", EventController.onCustomInput)
-  EventController.pcallEvent("helmod-open-close", EventController.onCustomInput)
-  EventController.pcallEvent("helmod-recipe-selector-open", EventController.onCustomInput)
-  EventController.pcallEvent("helmod-production-line-open", EventController.onCustomInput)
-  EventController.pcallEvent("helmod-recipe-explorer-open", EventController.onCustomInput)
-  EventController.pcallEvent("helmod-richtext-open", EventController.onCustomInput)
-  EventController.pcallEvent("helmod-create-or-where-used-open", EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.close, EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.openClose, EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.recipeSelector, EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.productionLine, EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.recipeExplorer, EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.richText, EventController.onCustomInput)
+  EventController.pcallEvent(Hotkey.createOrWhereUsed, EventController.onCustomInput)
 end
 
 -------------------------------------------------------------------------------
 ---On input valid
----@param  event LuaEvent
+---@param event HelmodHotkeyEvent
 function EventController.onCustomInput(event)
   if event ~= nil and event.player_index ~= nil then
     Player.load(event)

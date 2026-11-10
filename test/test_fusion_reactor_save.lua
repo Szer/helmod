@@ -18,6 +18,17 @@ script.on_nth_tick(1, function()
         near(block.ingredients["fusion-power-cell"].amount, 0.005)
         near(block.ingredients.energy.amount, 20e6)
     end
+    block.by_factory = false
+    block.products["fusion-plasma"].input = 12
+    reactor.factory.fusion_neighbours = nil
+    ModelCompute.updateNow(model)
+    near(block.products["fusion-plasma"].input, 12)
+    near(reactor.factory.count, 3)
+    reactor.factory.fusion_neighbours = 2
+    ModelCompute.updateNow(model)
+    near(block.products["fusion-plasma"].input, 12)
+    near(block.products["fusion-plasma"].fusion_temperature, 3e6)
+    near(reactor.factory.count, 3)
     log("FUSION REACTOR SAVE PASSED")
     script.on_nth_tick(1, nil)
 end)

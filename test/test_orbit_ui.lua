@@ -16,6 +16,41 @@ local function click(element, player)
  game.tick_paused=false
 end
 
+local function inputFilter(panel)
+ return assert(find_element(panel, function(el)
+  return el.name:find(BlockHeader.action.ingredients, 1, true)
+ end))
+end
+
+local function openInputs(player, sheet)
+ ModelCompute.update(sheet)
+ Controller:send("on_gui_open",{name="OPEN",item1=sheet.id,item2=sheet.block_root.id},"HMProductionPanel")
+ local panel = player.gui.screen.HMProductionPanel
+ assert(helpers.table_to_json(inputFilter(panel).tooltip):find(MatrixSupply.tooltip.filter, 1, true))
+ if not User.getParameter(BlockHeader.setting.ingredients) then click(inputFilter(panel), player) end
+ return panel
+end
+
+local function input(panel, name, quality)
+ return assert(find_element(panel, function(el)
+  return el.name:find(ConstraintView.action.ingredient, 1, true)
+     and el.name:find("=" .. ConstraintView.noTarget .. "=", 1, true)
+     and el.tags.name == name and el.tags.quality == quality
+ end), "missing Input button for " .. name .. " (" .. quality .. ")")
+end
+
+local function clickInput(player, panel, material, control, shift)
+ EventController.onGuiClickButton{player_index=player.index, element=input(panel, material, "normal"),
+  button=defines.mouse_button_type.left, control=control, shift=shift}
+ assert(not Player.getLastError(), "input header raised a GUI error")
+end
+
+local function marked(panel, material, quality)
+ local plus = GuiElement.getSprite(defines.sprite_info.master)
+ local icons = input(panel, material, quality).mask_infos
+ return icons ~= nil and icons[plus] ~= nil
+end
+
 script.on_nth_tick(60, function(event)
  local player = game.players[1]
  if not player then return end
@@ -122,85 +157,34 @@ script.on_nth_tick(60, function(event)
   Controller:getView("HMRecipeEdition"):close()
   local loop = recycling.buildLoop()
   local block = loop.block_root
-  ModelCompute.update(loop)
-  Controller:send("on_gui_open",{name="OPEN",item1=loop.id,item2=block.id},"HMProductionPanel")
-  click(find_element(player.gui.screen.HMProductionPanel, function(el)
-   return el.name == "HMBlockEdition=OPEN=" .. loop.id .. "=" .. block.id .. "=block"
-  end), player)
-  local function supply(key)
-   local name = GuiCheckBox("HMBlockEdition", MatrixSupply.buttonArgs{
-    action=MatrixSupply.action, model_id=loop.id, block_id=block.id, material=key
-   }):getName()
-   return assert(find_element(player.gui.screen.HMBlockEdition, function(el) return el.name == name end))
+  local panel = openInputs(player, loop)
+  for _, selected in ipairs({true, false, true}) do
+   clickInput(player, panel, "copper-plate", true, false)
+   assert(marked(panel, "copper-plate", "normal") == selected)
+   assert(not marked(panel, "copper-plate", "uncommon"))
+   if selected then recycling.checkBalances(block) end
   end
-  for _, state in ipairs({true, false, true}) do
-   local box = supply("copper-plate")
-   assert(box.state ~= state and not supply("copper-plate#uncommon").state)
-   box.state = state
-   EventController.onGuiClick{player_index=player.index, element=box}
-   assert(supply("copper-plate").state == state)
-   if state then recycling.checkBalances(block) end
-  end
-  assert(not Player.getLastError(), "supply control raised a GUI error")
   game.take_screenshot{player=player,resolution={1600,1000},show_gui=true,path="copper-external-supply.png"}
   storage.orbit_ui_step=9
  elseif storage.orbit_ui_step==9 then
-  Controller:getView("HMBlockEdition"):close()
   local loop = recycling.buildCircuitLoop()
   local block = loop.block_root
-  ModelCompute.update(loop)
-  Controller:send("on_gui_open",{name="OPEN",item1=loop.id,item2=block.id},"HMProductionPanel")
-  local panel = player.gui.screen.HMProductionPanel
-  local function inputFilter()
-   return assert(find_element(panel, function(el)
-    return el.name:find(BlockHeader.action.ingredients, 1, true)
-   end))
-  end
-  assert(helpers.table_to_json(inputFilter().tooltip):find(MatrixSupply.tooltip.filter, 1, true))
-  if not User.getParameter(BlockHeader.setting.ingredients) then click(inputFilter(), player) end
-  click(find_element(panel, function(el)
-   return el.name == "HMBlockEdition=OPEN=" .. loop.id .. "=" .. block.id .. "=block"
-  end), player)
-  local function header(name, quality)
-   return assert(find_element(panel, function(el)
-    return el.name:find(ConstraintView.action.ingredient, 1, true) and el.name:find("=none=", 1, true)
-       and el.tags.name == name and el.tags.quality == quality
-   end))
-  end
-  local function box(material)
-   return assert(find_element(player.gui.screen.HMBlockEdition, function(el)
-    return el.name == GuiCheckBox("HMBlockEdition", MatrixSupply.buttonArgs{
-     action=MatrixSupply.action, model_id=loop.id, block_id=block.id, material=material
-    }):getName()
-   end))
-  end
-  local function mark(name, ctrl, selected)
-   EventController.onGuiClickButton{player_index=player.index, element=header(name, "normal"),
-    button=defines.mouse_button_type.left, control=ctrl, shift=not ctrl}
-   assert(box(name).state == selected, "unexpected external supply state after header click")
-   assert(not box(name .. "#uncommon").state)
-  end
-  mark("iron-plate", true, true)
-  assert(not box("copper-cable").state)
-  local cable = box("copper-cable")
-  cable.state = true
-  EventController.onGuiClick{player_index=player.index, element=cable}
-  local plus = GuiElement.getSprite(defines.sprite_info.master)
-  assert(header("copper-cable","normal").mask_infos[plus])
-  mark("iron-plate", true, false)
-  mark("iron-plate", true, true)
-  mark("iron-plate", false, false)
-  assert(box("copper-cable").state)
-  mark("iron-plate", true, true)
+  local panel = openInputs(player, loop)
+  clickInput(player, panel, "iron-plate", true, false)
+  assert(not marked(panel, "copper-cable", "normal"))
+  clickInput(player, panel, "copper-cable", true, false)
+  clickInput(player, panel, "iron-plate", false, true)
+  assert(marked(panel, "iron-plate", "normal"), "Shift-click cleared a supply")
+  clickInput(player, panel, "iron-plate", true, true)
+  assert(marked(panel, "iron-plate", "normal"), "Ctrl+Shift-click cleared a supply")
   recycling.checkCircuitBalances(block)
-  assert(header("iron-plate","normal").mask_infos[plus])
-  Controller:getView("HMBlockEdition"):close()
-  click(find_element(panel, function(el)
-   return el.name:find(BlockHeader.action.ingredients, 1, true)
-  end), player)
+  clickInput(player, panel, "iron-plate", true, false)
+  assert(not marked(panel, "iron-plate", "normal") and marked(panel, "copper-cable", "normal"))
+  clickInput(player, panel, "iron-plate", true, false)
+  click(inputFilter(panel), player)
   assert(not User.getParameter(BlockHeader.setting.ingredients))
-  assert(header("iron-plate","normal").mask_infos[plus] and header("copper-cable","normal").mask_infos[plus])
-  assert(not Player.getLastError(), "input header raised a GUI error")
+  assert(marked(panel, "iron-plate", "normal") and marked(panel, "copper-cable", "normal"))
+  recycling.checkCircuitBalances(block)
   game.take_screenshot{player=player,resolution={2200,1100},show_gui=true,path="circuit-external-supplies.png"}
   log("ORBIT UI SMOKE PASSED")
   storage.orbit_ui_step=10

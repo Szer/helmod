@@ -2490,8 +2490,7 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 	if event.button == defines.mouse_button_type.left and block then
 		local supply = MatrixSupply.headerEdit(event)
 		if supply and supply.model_id == model.id and supply.block_id == block.id then
-			local enable = event.control == true and not MatrixSupplies.selected(block, supply.material)
-			if MatrixSupplies.set(block, supply.material, enable) then
+			if MatrixSupplies.toggle(block, supply.material) then
 				ModelCompute.update(model, block)
 				Controller:send("on_gui_refresh", event)
 			end

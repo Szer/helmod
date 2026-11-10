@@ -23,12 +23,15 @@ end
 
 ---@param block BlockData
 ---@param key string
----@param enabled boolean
 ---@return boolean changed
-function MatrixSupplies.set(block, key, enabled)
-    if not MatrixSupplies.editable(block, key) or enabled == MatrixSupplies.selected(block, key) then return false end
+function MatrixSupplies.toggle(block, key)
+    if not MatrixSupplies.editable(block, key) then return false end
     local supplies = block.matrix_supplies or {}
-    supplies[key] = enabled or nil
+    if supplies[key] then
+        supplies[key] = nil
+    else
+        supplies[key] = true
+    end
     block.matrix_supplies = next(supplies) and supplies or nil
     return true
 end

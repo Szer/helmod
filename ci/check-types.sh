@@ -71,7 +71,7 @@ check_panel() {
     --logpath="$tmp/log" --configpath="$(pwd)/ci/production-panel.luarc.json"
 }
 check_panel
-sed 's/, material=key//' src/edition/BlockEdition.lua > "$panel/BlockEdition.lua"
+sed 's/, material=event.item5//' src/gui/controls/MatrixSupply.lua > "$panel/gui/controls/MatrixSupply.lua"
 if check_panel > "$tmp/supply.log" 2>&1; then
   echo 'An external supply control must identify its material.' >&2
   exit 1
@@ -80,7 +80,7 @@ grep -q '(missing-fields)' "$tmp/supply.log" && grep -q 'material' "$tmp/supply.
   cat "$tmp/supply.log" >&2
   exit 1
 }
-cp src/edition/BlockEdition.lua "$panel/"
+cp src/gui/controls/MatrixSupply.lua "$panel/gui/controls/"
 reject_panel_edit() {
   local edit=$1 diagnostic=$2 detail=$3
   sed "$edit" src/dialog/ProductionPanel.lua > "$panel/ProductionPanel.lua"

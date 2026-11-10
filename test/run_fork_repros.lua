@@ -50,7 +50,8 @@ for _, case in ipairs({
     {directory="495", suite="test_fixed_recipe_save", marker="FIXED RECIPE SAVE PASSED"},
     {directory="496", suite="test_boiler_inlet_save", marker="BOILER INLET SAVE PASSED"},
     {directory="376", suite="test_temperature_supply_save", marker="TEMPERATURE SUPPLY SAVE PASSED"},
-    {directory="377", suite="test_coolant_deficit_save", marker="COOLANT DEFICIT SAVE PASSED"}
+    {directory="377", suite="test_coolant_deficit_save", marker="COOLANT DEFICIT SAVE PASSED"},
+    {directory="507", suite="test_selectable_silo_save", marker="SELECTABLE SILO SAVE PASSED"}
 }) do
     local copy = work .. "/" .. case.suite .. ".zip"
     Runner.copy(upstream .. "/" .. case.directory .. "/repro.zip", copy)

@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 -------------------------------------------------------------------------------
 ---Class to build PrototypeFiltersPanel panel
 ---@class PrototypeFiltersPanel
@@ -18,7 +19,7 @@ table.insert(sample.value, { mode="and", filter="crafting-machine", invert="fals
 table.insert(sample.value, { mode="and", filter="hidden", invert="true"})
 table.insert(sample.value, { mode="or", filter="type", invert="false", option="lab"})
 table.insert(sample.value, { mode="or", filter="type", invert="false", option="mining-drill"})
-table.insert(sample.value, { mode="or", filter="type", invert="false", option="rocket-silo"})
+table.insert(sample.value, { mode="or", filter="type", invert="false", option=EntityType.rocketSilo})
 table.insert(samples, sample)
 
 local sample = {name="list of production machines II", type="entity", value={}}
@@ -34,9 +35,9 @@ table.insert(sample.value, {filter="type", type="mining-drill", mode="or"})
 table.insert(sample.value, {filter="hidden", mode="and", invert="true"})
 table.insert(sample.value, {filter="type", type="mining-drill", mode="or"})
 table.insert(sample.value, {filter="flag", flag="player-creation", mode="and"})
-table.insert(sample.value, {filter="type", type="rocket-silo", mode="or"})
+table.insert(sample.value, {filter="type", type=EntityType.rocketSilo, mode="or"})
 table.insert(sample.value, {filter="hidden", mode="and", invert="true"})
-table.insert(sample.value, {filter="type", type="rocket-silo", mode="or"})
+table.insert(sample.value, {filter="type", type=EntityType.rocketSilo, mode="or"})
 table.insert(sample.value, {filter="flag", flag="player-creation", mode="and"})
 table.insert(samples, sample)
 

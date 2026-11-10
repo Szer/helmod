@@ -1,3 +1,4 @@
+local EntityType = require "model.EntityType"
 -- Store silo animation fields that the runtime API does not expose.
 -- This mod-data prototype contains planner metadata only.
 local function animation_parameters(animation)
@@ -23,7 +24,7 @@ local function animation_parameters(animation)
 end
 
 local silos = {}
-for name, silo in pairs(data.raw["rocket-silo"] or {}) do
+for name, silo in pairs(data.raw[EntityType.rocketSilo] or {}) do
   local front = animation_parameters(silo.arm_03_front_animation)
   local back, retract, back_frames, back_speed = animation_parameters(silo.arm_01_back_animation)
   silos[name] = {

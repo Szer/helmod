@@ -1,3 +1,6 @@
+local EntityType = require "model.EntityType"
+local SiloPartControl = require "gui.controls.SiloPartControl"
+local SiloRecipes = require "model.SiloRecipes"
 local UnbuildableRecipe = require "gui.controls.UnbuildableRecipe"
 local BoilerInletControl = require "gui.controls.BoilerInletControl"
 local ReactorNeighbour = require "gui.controls.ReactorNeighbour"
@@ -276,6 +279,23 @@ function RecipeEdition:onEvent(event)
             ModelCompute.update(model, block)
             self:update(event)
             Controller:send("on_gui_recipe_update", event)
+        end
+
+        local picker = SiloPartControl.decode(event)
+        if picker then
+            if picker.model_id ~= model.id or picker.block_id ~= block.id or picker.recipe_id ~= recipe.id
+                or recipe.type ~= defines.mod.recipes.orbit.name or picker.silo ~= recipe.factory.name then return end
+            local silo = EntityPrototype(recipe.factory):native()
+            if not silo or silo.type ~= EntityType.rocketSilo or silo.fixed_recipe then return end
+            local name = event.element.tags.recipes[event.element.selected_index]
+            if not SiloRecipes.options(silo).byName[name] then return end
+            recipe.factory.rocket_part_recipe = name
+            ModelBuilder.applyFactoryModulePriority(recipe)
+            ModelBuilder.applyBeaconModulePriority(recipe)
+            if ModelCompute.update(model, block) then return end
+            self:update(event)
+            Controller:send("on_gui_recipe_update", event)
+            return
         end
 
         local inlet = BoilerInletControl.decode(event)
@@ -832,6 +852,25 @@ function RecipeEdition:updateFactoryInfo(event)
         GuiElement.add(input_panel, GuiLabel("label-module-slots"):caption({ "helmod_label.module-slots" }))
         GuiElement.add(input_panel, GuiLabel("module-slots"):caption(factory_prototype:getModuleInventorySize()))
 
+        if recipe.type == defines.mod.recipes.orbit.name and factory_prototype:getType() == EntityType.rocketSilo then
+            local silo = factory_prototype:native()
+            if not silo.fixed_recipe then
+                local part = SiloRecipes.resolve(silo, factory.rocket_part_recipe)
+                if part then
+                    local items, names, selected = {}, {}, nil
+                    for index, option in ipairs(SiloRecipes.options(silo).recipes) do
+                        items[index] = {"", "[recipe=" .. option.name .. "] ", option.localised_name}
+                        names[index] = option.name
+                        if option.name == part.name then selected = items[index] end
+                    end
+                    GuiElement.add(input_panel, GuiLabel("label-part-recipe"):caption({"helmod_orbit.part-recipe"}))
+                    local dropdown = GuiElement.add(input_panel, GuiDropDown(self.classname, SiloPartControl.buttonArgs{
+                        action=SiloPartControl.action, model_id=model.id, block_id=block.id, recipe_id=recipe.id, silo=silo.name
+                    }):items(items, selected))
+                    dropdown.tags = {recipes=names}
+                end
+            end
+        end
         if recipe.type == defines.mod.recipes.boiler.name and factory_prototype:getType() == "boiler" then
             local tooltip = {"tooltip.boiler-inlet"}
             GuiElement.add(input_panel, GuiLabel("label-boiler-inlet"):caption({"helmod_label.boiler-inlet"}):tooltip(tooltip))

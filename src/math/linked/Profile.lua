@@ -1,3 +1,4 @@
+local MaterialBalance = require "math.balance.MaterialBalance"
 local Profile = {}
 
 ---@param flows table<string, ProductData>
@@ -9,8 +10,8 @@ local Profile = {}
 local function combineFlows(flows, additions, base, extra, divisor, driving)
     for key, addition in pairs(additions) do
         local flow = flows[key]
-        flow.amount = (flow.amount * base + addition.amount * extra) / divisor
-        if driving and flow.amount > 0 and flow.state == 2 then flow.state = 3 end
+        local amount = (flow.amount * base + addition.amount * extra) / divisor
+        MaterialBalance.setFlow(flow, amount, driving)
     end
 end
 

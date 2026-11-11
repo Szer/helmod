@@ -18,7 +18,8 @@ if check "$tmp/fixed-recipe" > "$tmp/fixed-recipe.log" 2>&1; then
 fi
 grep -Eq 'assign-type-mismatch|param-type-mismatch' "$tmp/fixed-recipe.log" || { cat "$tmp/fixed-recipe.log" >&2; exit 1; }
 check src/math/balance
-mkdir "$tmp/linked"
+mkdir -p "$tmp/linked/math/balance"
+cp src/math/balance/MaterialBalance.lua "$tmp/linked/math/balance/"
 cp src/math/linked/*.lua "$tmp/linked/"
 ln -s "$PWD/doc" "$tmp/doc"
 check_profile() {

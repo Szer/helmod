@@ -1,3 +1,4 @@
+local MaterialBalance = require "math.balance.MaterialBalance"
 local MatrixSupplies = require "model.MatrixSupplies"
 local DefaultObjective = require "math.balance.DefaultObjective"
 local EntityType = require "model.EntityType"
@@ -312,10 +313,10 @@ function ModelCompute.finalizeBlock(block, factor)
         block.count = 1
         block.count_limit = 1
         for _, product in pairs(block.products) do
-            product.amount = product.amount * one_block_factor
+            MaterialBalance.setFlow(product, product.amount * one_block_factor, false)
         end
         for _, ingredient in pairs(block.ingredients) do
-            ingredient.amount = ingredient.amount * one_block_factor
+            MaterialBalance.setFlow(ingredient, ingredient.amount * one_block_factor, false)
         end
     end
     block.count_limit = block.count

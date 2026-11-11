@@ -1,3 +1,4 @@
+local MaterialBalance = require "math.balance.MaterialBalance"
 local function near(actual, expected, label)
     assert(math.abs(actual - expected) < 1e-6, label .. ": expected " .. expected .. ", got " .. actual)
 end
@@ -100,6 +101,36 @@ local function buildNestedFoundries()
     return model, loop
 end
 
+local function checkFoundrySurplus(block)
+    for _, key in ipairs({"steel-plate#uncommon", "tungsten-carbide#uncommon", "foundry#rare", "foundry#epic"}) do
+        local output = block.products[key]
+        assert(output.amount == 0, "balanced foundry material: " .. key)
+        assert(output.state ~= 3, "zero foundry output marked as surplus: " .. key)
+    end
+end
+
+local function checkSurplusThreshold()
+    for _, solver in ipairs({SolverMatrix(), SolverLinkedMatrix()}) do
+        for _, case in ipairs({
+            {net=-1e-10, amount=1e-10, surplus=false},
+            {net=-5e-11, amount=0, surplus=false},
+            {net=0, amount=0, surplus=false},
+            {net=5e-11, amount=0, surplus=false},
+            {net=1e-10, amount=1e-10, surplus=true},
+            {net=2e-10, amount=2e-10, surplus=true}
+        }) do
+            local matrix = {columns={{}}, rows={{1}, {-1}, {case.net}}}
+            solver:apply_state(matrix)
+            assert((matrix.states[1] == 3) == case.surplus, "surplus threshold at " .. case.net)
+            local reported = matrix.rows[#matrix.rows][1]
+            assert(reported == (case.net < 0 and -case.amount or case.amount), "signed net balance")
+            local flow = {state=3, amount=1}
+            MaterialBalance.setFlow(flow, case.net, true)
+            assert(flow.amount == reported and (flow.state == 3) == case.surplus, "scaled block balance")
+        end
+    end
+end
+
 local function checkNestedFoundries()
     local model, loop = buildNestedFoundries()
     local root = model.block_root
@@ -107,11 +138,17 @@ local function checkNestedFoundries()
     local standalone = table.deepcopy(model)
     standalone.block_root = standalone.blocks[loop.id]
     standalone.block_root.products[carbide].input = 1
-    ModelCompute.updateNow(standalone)
+    for _, solver in ipairs({defines.constant.solvers.matrix, defines.constant.solvers.default}) do
+        User.setParameter("solver_selected", solver)
+        ModelCompute.updateNow(standalone)
+        near(standalone.block_root.products[carbide].amount, 1, "standalone legendary target")
+        checkFoundrySurplus(standalone.block_root)
+    end
     root.products[carbide].input = 1
     for _, matrix in ipairs({true, false, true}) do
         root.solver = matrix
         ModelCompute.updateNow(model)
+        checkFoundrySurplus(loop)
         near(root.products[carbide].amount, 1, "parent legendary output")
         near(root.ingredients.foundry.amount, 0, "foundries are made inside the loop")
         near(root.products["tungsten-carbide#uncommon"].amount, 0, "intermediates stay inside the loop")
@@ -145,6 +182,7 @@ local function checkNestedFoundries()
 end
 
 local function check()
+    checkSurplusThreshold()
     local previous = User.getParameter("solver_selected")
     for _, solver in ipairs({defines.constant.solvers.default, defines.constant.solvers.matrix}) do
         User.setParameter("solver_selected", solver)

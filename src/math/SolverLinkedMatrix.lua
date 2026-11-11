@@ -1,3 +1,4 @@
+local MaterialBalance = require "math.balance.MaterialBalance"
 local TemperatureLinks = require "math.TemperatureLinks"
 local RowFlows = require "math.balance.RowFlows"
 local Profile = require "math.linked.Profile"
@@ -88,30 +89,7 @@ end
 ---@param matrix Matrix
 ---@return Matrix
 function SolverLinkedMatrix:apply_state(matrix)
-    local states = {}
-    for irow, row in pairs(matrix.rows) do
-        if irow < #matrix.rows then
-            for icol, column in pairs(matrix.columns) do
-                local cell_value = row[icol] or 0
-                if states[icol] == nil then
-                    table.insert(states, 0)
-                end
-                if cell_value < 0 then
-                    states[icol] = 2
-                end
-                if cell_value > 0 and states[icol] ~= 2 then
-                    states[icol] = 1
-                end
-            end
-        end
-    end
-    local zrow = matrix.rows[#matrix.rows]
-    for icol, cell in pairs(zrow) do
-        if cell > 0 and states[icol] == 2 then
-            states[icol] = 3
-        end
-    end
-    matrix.states = states
+    matrix.states = MaterialBalance.finalize(matrix.rows, #matrix.columns)
     return matrix
 end
 
@@ -304,14 +282,10 @@ function SolverLinkedMatrix:solve_block_finalize(block, matrix)
         if icol > 0 then
             local rows = matrix.rows
             local zrow = rows[#matrix.rows]
-            local Z = math.abs(zrow[icol])
             local product_header = matrix.columns[icol]
             local product_key = product_header.key
             local product = Product(product_header.product):clone()
-            product.amount = Z
-            if math.abs(product.amount) < 1e-10 then
-                product.amount = 0
-            end
+            product.amount = math.abs(zrow[icol])
             product.state = state
             if block.by_product == false then
                 if state == 1 or state == 3 then

@@ -122,7 +122,11 @@ local function checkSurplusThreshold()
             local matrix = {columns={{}}, rows={{1}, {-1}, {case.net}}}
             solver:apply_state(matrix)
             assert((matrix.states[1] == 3) == case.surplus, "surplus threshold at " .. case.net)
-            assert(MaterialBalance.amount(case.net) == case.amount)
+            local reported = matrix.rows[#matrix.rows][1]
+            assert(reported == (case.net < 0 and -case.amount or case.amount), "signed net balance")
+            local flow = {state=3, amount=1}
+            MaterialBalance.setFlow(flow, case.net, true)
+            assert(flow.amount == reported and (flow.state == 3) == case.surplus, "scaled block balance")
         end
     end
 end

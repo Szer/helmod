@@ -10,8 +10,8 @@ local Profile = {}
 local function combineFlows(flows, additions, base, extra, divisor, driving)
     for key, addition in pairs(additions) do
         local flow = flows[key]
-        flow.amount = (flow.amount * base + addition.amount * extra) / divisor
-        if driving then flow.state = MaterialBalance.surplusState(flow.state, flow.amount) end
+        local amount = (flow.amount * base + addition.amount * extra) / divisor
+        MaterialBalance.setFlow(flow, amount, driving)
     end
 end
 

@@ -5,28 +5,35 @@ local consumed, surplus = 2, 3
 
 ---@param balance number Signed net flow
 ---@return number
-function MaterialBalance.amount(balance)
-    local amount = math.abs(balance)
-    if amount < zeroTolerance then return 0 end
-    return amount
+function MaterialBalance.normalize(balance)
+    if math.abs(balance) < zeroTolerance then return 0 end
+    return balance
 end
 
----@param state integer
----@param balance number Signed net flow
----@return integer
-function MaterialBalance.surplusState(state, balance)
+---@param state number
+---@param balance number Normalized signed net flow
+---@return number
+local function surplusState(state, balance)
     if state == consumed or state == surplus then
-        if balance >= zeroTolerance then return surplus end
+        if balance > 0 then return surplus end
         return consumed
     end
     return state
 end
 
----Classify each material from its recipe coefficients and its final net flow.
+---@param flow {amount:number, state:number}
+---@param amount number Combined or scaled block flow
+---@param driving boolean Whether this side can acquire a surplus when combining profiles
+function MaterialBalance.setFlow(flow, amount, driving)
+    flow.amount = MaterialBalance.normalize(amount)
+    if driving or flow.state == surplus then flow.state = surplusState(flow.state, flow.amount) end
+end
+
+---Normalize the final balance row and classify each material from its recipe coefficients and net flow.
 ---@param rows number[][]
 ---@param columnCount integer
----@return integer[]
-function MaterialBalance.states(rows, columnCount)
+---@return number[]
+function MaterialBalance.finalize(rows, columnCount)
     local states = {}
     for row = 1, #rows - 1 do
         for column = 1, columnCount do
@@ -41,8 +48,9 @@ function MaterialBalance.states(rows, columnCount)
         end
     end
     local balances = rows[#rows]
-    for column, state in ipairs(states) do
-        states[column] = MaterialBalance.surplusState(state, balances[column] or 0)
+    for column, value in ipairs(balances) do
+        balances[column] = MaterialBalance.normalize(value)
+        if states[column] then states[column] = surplusState(states[column], balances[column]) end
     end
     return states
 end

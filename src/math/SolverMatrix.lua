@@ -87,7 +87,7 @@ end
 ---@param matrix Matrix
 ---@return Matrix
 function SolverMatrix:apply_state(matrix)
-    matrix.states = MaterialBalance.states(matrix.rows, #matrix.columns)
+    matrix.states = MaterialBalance.finalize(matrix.rows, #matrix.columns)
     return matrix
 end
 
@@ -188,7 +188,7 @@ function SolverMatrix:solve(block, parameters, debug, factories_prepared)
                 local product_header = mC.columns[icol]
                 local product_key = product_header.key
                 local product = Product(product_header):clone()
-                product.amount = MaterialBalance.amount(zrow[icol])
+                product.amount = math.abs(zrow[icol])
                 product.state = state
                 if block.by_product == false then
                     if state == 1 or state == 3 then

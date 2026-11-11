@@ -118,7 +118,7 @@ Squash PR titles determine the version bump and should read well on their own. F
 | `feat:` | Minor | 2.4.0 |
 | `break:` | Major | 3.0.0 |
 
-The largest change since the last fork tag wins. `docs:`, `ci:`, `chore:`, `test:`, `refactor:`, `style:` and `build:` do not bump the version or appear in the notes. Optional scopes such as `fix(ui):` are supported. Squash commits use the PR title and description. Describe the actual change in the title; put the specific reproduction in the body. Every release-worthy PR must include exactly one nonempty standalone line in its description for the public bullet, e.g. `Release-note: The matrix solver now tries to use up intermediate products before leaving a surplus.` The override changes wording only.
+The largest change since the last fork tag wins. `docs:`, `ci:`, `chore:`, `test:`, `refactor:`, `style:` and `build:` do not bump the version or appear in the notes. Optional scopes such as `fix(ui):` are supported. Squash commits use the PR title and description. Describe the actual change in the title; put the specific reproduction in the body. Every release-worthy PR must include exactly one nonempty standalone line in its description for the public bullet, e.g. `Release-note: Fixed false surplus highlights on balanced materials.` Aim for one line in the in-game changelog. The override changes wording only.
 
 ### Editing pending release notes
 

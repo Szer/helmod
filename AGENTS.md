@@ -32,9 +32,11 @@ Record external calculation inputs in `SheetDependencies`. Test changed and inde
 - Use shared named actions in buttons and handlers. When using a handler table, type its required entries and make CI reject a missing handler.
 - The production panel keeps scroll panes when the displayed sheet and block stay the same. Reserve explicit scroll targets for navigation, added recipes, and moved rows.
 
-## PR titles are public release notes
+## PR titles and release notes
 
-Squash PR titles must be user-friendly and readable as standalone changelog bullets. Describe what changes for a player in one short sentence: `fix: Keep the entered quantity after loading a save`, not `fix: Guard input_quantity`. Describe the scope of the actual change. If the fix applies to matrix planning generally, do not title it as a fix for the oil recipe that exposed it. Put the reproduction, implementation details, and test evidence in the PR body. Every release-worthy PR (fix, feat or break, including scoped titles) must include exactly one nonempty standalone `Release-note: <player-facing sentence>` line to the PR body; the title still sets the version bump. For a breaking change, name the incompatible behavior and explain the migration in the body.
+Write a squash title that describes the full player-visible change. Use the PR body for the reproduction, implementation and tests. For breaking changes, include migration steps in the body.
+
+Each `fix`, `feat` or `break` PR (including scoped titles) needs one standalone `Release-note: <text>` line. Lead with the change and aim for one line in the in-game changelog, e.g. “Fixed false surplus highlights on balanced materials.” Include a shortcut or setting only when players need it to find the feature.
 
 Curate a pending batch with the per-commit overrides in `release-notes/`. Use `Release-note: <text>` to amend one entry and `Omit-release-note` to withdraw it. Combine related fixes by keeping one summary.
 

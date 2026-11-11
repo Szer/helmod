@@ -1,0 +1,1 @@
+Release-note: Fixed linked matrix flows after switching parent modes or clearing a target.

@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.6.2
+Date: 2026-11-11
+  Bugfixes:
+    - Fixed linked matrix flows after switching parent modes or clearing a target.
+    - Hid zero inputs and outputs by default. Constraint markers stay on the selected side.
+    - Fixed false surplus highlights on balanced materials.
+---------------------------------------------------------------------------------------------------
 Version: 2.6.1
 Date: 2026-11-10
   Bugfixes:

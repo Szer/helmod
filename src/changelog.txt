@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.6.3
+Date: 2026-11-23
+  Bugfixes:
+    - Fixed inactive constraint markers, orbital cargo filtering and modded silo launch costs.
+---------------------------------------------------------------------------------------------------
 Version: 2.6.2
 Date: 2026-11-11
   Bugfixes:

@@ -36,11 +36,20 @@ function ConstraintView.edit(event)
     return nil
 end
 
----@param simplex boolean?
+---@param block {solver?:boolean, by_factory?:boolean}
+---@param child {children?:table, factory?:{input?:number}}
+---@return boolean
+function ConstraintView.active(block, child)
+    if block.solver == true then return false end
+    if block.by_factory ~= true then return true end
+    return child.children == nil and (child.factory == nil or (child.factory.input or 0) <= 0)
+end
+
+---@param active boolean
 ---@param action ConstraintAction
 ---@return "contraint"?
-function ConstraintView.hint(simplex, action)
-    if simplex ~= true and action ~= ConstraintView.action.edition then
+function ConstraintView.hint(active, action)
+    if active and action ~= ConstraintView.action.edition then
         return "contraint"
     end
     return nil

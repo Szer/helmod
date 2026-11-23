@@ -1418,6 +1418,7 @@ end
 ---@param recipe RecipeData
 ---@return LuaGuiElement
 function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
+	local activeConstraints = ConstraintView.active(block, recipe)
 	local recipe_prototype = RecipePrototype(recipe)
 
 	---col action
@@ -1550,12 +1551,12 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 				product.count_limit = product_prototype:countLimitProduct(recipe)
 				product.count_deep = product_prototype:countDeepProduct(recipe)
 				
-				product.contraint_type = ConstraintView.icon(recipe.contraints, product_key, ConstraintView.side.products)
+				product.contraint_type = ConstraintView.icon(activeConstraints and recipe.contraints or nil, product_key, ConstraintView.side.products)
 				
-				product.control_info = ConstraintView.hint(block.solver, ConstraintView.action.product)
+				product.control_info = ConstraintView.hint(activeConstraints, ConstraintView.action.product)
 				
 				product.is_pivot = false
-				if recipe.pivot ~= nil and not(block.by_product == false) then
+				if activeConstraints and recipe.pivot ~= nil and not(block.by_product == false) then
 					local pivot = recipe.pivot
 					if product_prototype:match(pivot) then
 						product.is_pivot = true
@@ -1624,12 +1625,12 @@ function ProductionPanel:addTableRowRecipe(gui_table, model, block, recipe)
 					ingredient.count = ingredient_prototype:countProduct(recipe)
 				end
 				
-				ingredient.contraint_type = ConstraintView.icon(recipe.contraints, ingredient_key, ConstraintView.side.ingredients)
+				ingredient.contraint_type = ConstraintView.icon(activeConstraints and recipe.contraints or nil, ingredient_key, ConstraintView.side.ingredients)
 
-				ingredient.control_info = ConstraintView.hint(block.solver, ConstraintView.action.ingredient)
+				ingredient.control_info = ConstraintView.hint(activeConstraints, ConstraintView.action.ingredient)
 
 				ingredient.is_pivot = false
-				if recipe.pivot ~= nil and block.by_product == false then
+				if activeConstraints and recipe.pivot ~= nil and block.by_product == false then
 					local pivot = recipe.pivot
 					if ingredient_prototype:match(pivot) then
 						ingredient.is_pivot = true
@@ -1671,6 +1672,7 @@ end
 ---@param block BlockData
 ---@return LuaGuiElement
 function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
+	local activeConstraints = ConstraintView.active(parent, block)
 	local by_limit = false -- parent.by_limit
 	local unlinked = Model.isUnlinkedBlock(block)
 	local block_by_product = not (block ~= nil and block.by_product == false)
@@ -1751,6 +1753,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 	local product_sorter = User.getProductSorter()
 	local visibleInputs = GuiElement.visibleIngredients(block.ingredients or {})
 	local function constraintIcon(key, side)
+		if not activeConstraints then return nil end
 		local constraint = block.contraints and block.contraints[key]
 		if not constraint then return nil end
 		local legacySide
@@ -1828,14 +1831,14 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 						end
 
 						product.is_pivot = false
-						if parent.by_product ~= false and block.pivot ~= nil  then
+						if activeConstraints and parent.by_product ~= false and block.pivot ~= nil  then
 							local pivot = block.pivot
 							if product_prototype:match(pivot) then
 								product.is_pivot = true
 							end
 						end
 						
-						product.control_info = ConstraintView.hint(parent.solver, product.button_action)
+						product.control_info = ConstraintView.hint(activeConstraints, product.button_action)
 
 						table.insert(all_products, product)
 						max_count = math.max(max_count, product.count)
@@ -1912,7 +1915,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 						end
 						
 						ingredient.is_pivot = false
-						if not(block_by_product) and block.pivot ~= nil  then
+						if activeConstraints and not(block_by_product) and block.pivot ~= nil  then
 							local pivot = block.pivot
 							if ingredient_prototype:match(pivot) then
 								ingredient.is_pivot = true
@@ -1920,7 +1923,7 @@ function ProductionPanel:addTableRowBlock(gui_table, model, parent, block)
 						end
 
 						ingredient.contraint_type = constraintIcon(index, ConstraintView.side.ingredients)
-						ingredient.control_info = ConstraintView.hint(parent.solver, ingredient.button_action)
+						ingredient.control_info = ConstraintView.hint(activeConstraints, ingredient.button_action)
 
 						table.insert(all_ingredients, ingredient)
 						max_count = math.max(max_count, ingredient.count)
@@ -2520,7 +2523,9 @@ function ProductionPanel:onEventAccessWrite(event, model, block)
 
 	local edit = ConstraintView.edit(event)
 	if edit ~= nil and block ~= nil then
-		ModelBuilder.updateChildContraint(block.children[edit.child_id], {type=edit.kind, item=event.item, side=edit.side})
+		local child = block.children[edit.child_id]
+		if child == nil or not ConstraintView.active(block, child) then return end
+		ModelBuilder.updateChildContraint(child, {type=edit.kind, item=event.item, side=edit.side})
 		ModelCompute.update(model)
 		Controller:send(defines.mod.events.on_gui_update, event)
 		return

@@ -1,3 +1,4 @@
+local SiloRecipes = require "model.SiloRecipes"
 local EntityType = require "model.EntityType"
 local FixedRecipe = require "model.recipe.FixedRecipe"
 local OffshoreFluids = require "model.recipe.OffshoreFluids"
@@ -1931,31 +1932,19 @@ function Player.buildFluidRecipe(fluid, ingredients, temperature, product_amount
     return recipe
 end
 
+---@param factory? {name:string, rocket_part_recipe?:string}
+---@return LuaRecipePrototype?
 function Player.getRocketPartRecipe(factory)
-    -- Get rocket silos
-    local silos = {}
-    if factory and factory.name then
-        silos = { prototypes.entity[factory.name] }
-    else
-        local entity_filters = {
-            { filter = "type",   invert = false, mode = "and", type = EntityType.rocketSilo },
-            { filter = "hidden", invert = true,  mode = "and" },
-        }
-        silos = prototypes.get_entity_filtered(entity_filters)
+    if factory ~= nil then
+        return SiloRecipes.resolve(prototypes.entity[factory.name], factory.rocket_part_recipe)
     end
-
-    -- Get rocket silo fixed recipes
-    local rocket_part_recipes = {}
-    for _, silo_prototype in pairs(silos) do
-        if silo_prototype.fixed_recipe then
-            table.insert(rocket_part_recipes, silo_prototype.fixed_recipe)
-        end
-    end
-
-    if #rocket_part_recipes == 0 then
-        return nil
-    else
-        return rocket_part_recipes[1]
+    local silos = prototypes.get_entity_filtered({
+        {filter="type", type=EntityType.rocketSilo},
+        {filter="hidden", invert=true, mode="and"},
+    })
+    for _, silo in pairs(silos) do
+        local part = SiloRecipes.resolve(silo)
+        if part ~= nil then return part end
     end
 end
 

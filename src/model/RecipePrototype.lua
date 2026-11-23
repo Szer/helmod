@@ -198,10 +198,11 @@ end
 
 -------------------------------------------------------------------------------
 ---Check customized
----@param object table --prototype
+---@param object? string|table
 ---@return boolean
 function RecipePrototype.isCustomized(object)
-    return object.name ~= nil and string.find(object.name, defines.mod.recipe_customized_prefix, 0, true)
+    if object == nil or type(object) == "string" or object.name == nil then return false end
+    return string.find(object.name, defines.mod.recipe_customized_prefix, 0, true) ~= nil
 end
 
 -------------------------------------------------------------------------------
@@ -726,12 +727,7 @@ function RecipePrototype:getIngredientCount()
 end
 
 function RecipePrototype:getRocketPenalty(factory)
-    local factory_prototype = EntityPrototype(factory)
-    local rocket_prototype = factory_prototype:native()
-    local recipe_part_name = rocket_prototype.fixed_recipe
-    local rocket_part_prototype = RecipePrototype(recipe_part_name):native()
-    local factory_speed = factory.speed_total
-    local cycles_time = rocket_part_prototype.energy * rocket_prototype.rocket_parts_required / factory_speed
+    local cycles_time = self:getRocketEnergy(factory) / factory.speed_total
     cycles_time = cycles_time / (1 + factory.effects.productivity)
     local total_time = defines.constant.rocket_deploy_delay + cycles_time 
     local factor = cycles_time / total_time
@@ -739,12 +735,10 @@ function RecipePrototype:getRocketPenalty(factory)
 end
 
 function RecipePrototype:getRocketEnergy(factory)
-    local factory_prototype = EntityPrototype(factory)
-    local rocket_prototype = factory_prototype:native()
-    local recipe_part_name = rocket_prototype.fixed_recipe
-    local rocket_part_prototype = RecipePrototype(recipe_part_name):native()
-    local rocket_energy = rocket_part_prototype.energy * rocket_prototype.rocket_parts_required
-    return rocket_energy
+    local silo = EntityPrototype(factory):native()
+    local part = Player.getRocketPartRecipe(factory)
+    local energy = part and part.energy or 1
+    return energy * silo.rocket_parts_required
 end
 
 -------------------------------------------------------------------------------
@@ -795,18 +789,15 @@ function RecipePrototype:getProcessIngredients(factory)
         end
 
         if self.lua_type == defines.mod.recipes.rocket.name then
-            -- if allready added, skip
-            if self.is_appended == nil then
-                local rocket_prototype = factory_prototype:native()
-                -- fixed_recipe is a recipe not the name
-                local rocket_part_prototype = rocket_prototype.fixed_recipe
-                local ingredients = rocket_part_prototype.ingredients
-                for _, ingredient in pairs(ingredients) do
-                    ingredient.amount = ingredient.amount * rocket_prototype.rocket_parts_required
+            raw_ingredients = table.deepcopy(raw_ingredients)
+            local part = Player.getRocketPartRecipe(factory)
+            if part ~= nil then
+                local silo = factory_prototype:native()
+                for _, ingredient in pairs(part.ingredients) do
+                    ingredient.amount = ingredient.amount * silo.rocket_parts_required
                     table.insert(raw_ingredients, ingredient)
                 end
             end
-            self.is_appended = true
         elseif self.lua_type ~= defines.mod.recipes.energy.name then
             local consumption_effect = 1
             local factory_speed = 1

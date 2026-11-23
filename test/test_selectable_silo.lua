@@ -73,4 +73,13 @@ return function()
     Model.setFactory(cargo, "rocket-silo")
     ModelCompute.update(model)
     assert(not cargo.factory.rocket_part_recipe and block.ingredients["processing-unit"], "fixed silo uses its own recipe")
+    local factory = {name=silo.name, rocket_part_recipe="test-copper-rocket-part", speed_total=2, effects={productivity=0}}
+    local launch = RecipePrototype("iron-plate", defines.mod.recipes.rocket.name)
+    near(launch:getEnergy(factory), 4 * silo.rocket_parts_required, "legacy launch construction time")
+    local ingredients = launch:getProcessIngredients(factory)
+    local costs = {}
+    for _, ingredient in pairs(ingredients) do costs[ingredient.name] = ingredient.amount end
+    near(costs["copper-plate"], 2 * silo.rocket_parts_required, "legacy launch construction ingredients")
+    assert(costs["iron-plate"] == 1, "legacy launch cargo")
+
 end

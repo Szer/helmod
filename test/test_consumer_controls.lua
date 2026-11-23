@@ -81,4 +81,20 @@ return function(player)
         assert(tooltip:find("controls.contraint-plus", 1, true), "missing Ctrl-click hint")
         assert(tooltip:find("controls.contraint-minus", 1, true), "missing Shift-click hint")
     end
+    for _, mode in ipairs({"solver", "by_factory"}) do
+        root[mode] = true
+        scrap.factory.input = 1
+        ModelBuilder.updateChildContraint(scrap, {type="master", item={name="steel-plate",type="item"}})
+        ModelCompute.updateNow(model)
+        Controller:send("on_gui_update", {}, "HMProductionPanel")
+        local steel = assert(button(player.gui.screen, "product", "steel-plate", scrap.id))
+        local mask = steel.mask_infos
+        assert(not (mask and mask[GuiElement.getSprite(defines.sprite_info.master)]), mode .. " shows inactive constraint")
+        assert(not (mask and mask[GuiElement.getSprite(defines.sprites.pick_cursor.red)]), mode .. " shows stale pivot")
+        assert(not serpent.line(steel.tooltip):find("controls.contraint-plus", 1, true), mode .. " advertises inactive constraint")
+        clickConstraint(steel, false)
+        assert(scrap.contraints["steel-plate"], mode .. " changed stored constraint")
+        root[mode], scrap.factory.input, scrap.contraints = false, nil, nil
+    end
+
 end

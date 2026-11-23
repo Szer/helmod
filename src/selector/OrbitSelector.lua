@@ -18,7 +18,7 @@ function OrbitSelector:updateGroups(list_products, list_ingredients, list_transl
     local silos = Orbit.machines()
     for _, item in pairs(Player.getItemPrototypes()) do
         for _, silo in pairs(silos) do
-            if Orbit.capacity(item.name, silo) > 0 then
+            if not item.parameter and Orbit.capacity(item.name, silo) > 0 then
                 self:appendGroups(item, "orbit", list_products, list_ingredients, list_translate)
                 break
             end
